@@ -36,6 +36,7 @@ import {
   installCatalogMarket
 } from './state/market-baseline'
 import { resolveCatalogMarketPackage } from './state/installer-catalog-seed'
+import { ensureWelcomeNoticeAcknowledged } from './state/onboarding-seed'
 import {
   clearProfileInstallMarker,
   markProfileInstallComplete
@@ -1289,6 +1290,16 @@ function launchHarness(): Promise<void> {
     maintenanceAllowedRestoreId = undefined
     await refreshMigrationRecoveryLock(dshHome)
     await auditInstalledLaunchAgents(dshHome)
+    try {
+      // The welcome notice ships with the Harness UI and is acknowledged once per
+      // install. A prepared bundle records that before the first boot, so the
+      // user starts at the task instead of at a consent screen.
+      ensureWelcomeNoticeAcknowledged({ dshHome, note: (line) => runtime.note(line) })
+    } catch (error) {
+      runtime.note(
+        `[desktop] welcome notice seed failed: ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
     desktopStorageManager?.switchProfile(join(dshHome, 'profiles', 'web'))
     await runtime.start(launchDirectory)
 
