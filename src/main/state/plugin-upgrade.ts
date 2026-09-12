@@ -89,6 +89,13 @@ export interface MarketSharedTreeUpgradeOptions {
   dshHome: string
   dshEntryPath: string
   targetVersion: string
+  /**
+   * Optional pnpm spec to install in place of `dshmarket@targetVersion`. The
+   * installer catalog passes `file:<vendored tarball>` so a profile can receive
+   * the market without registry access; `targetVersion` still states which
+   * version the installed copy has to report.
+   */
+  spec?: string
   nodeExecutablePath: string
   pnpmEntryPath: string
   /**
@@ -121,7 +128,7 @@ export interface MarketSharedTreeUpgradeOptions {
 export async function upgradeMarketInSharedTree(
   options: MarketSharedTreeUpgradeOptions
 ): Promise<PluginUpgradeResult> {
-  const { dshHome, dshEntryPath, targetVersion, nodeExecutablePath, pnpmEntryPath, pnpmRunnerPath, note } = options
+  const { dshHome, dshEntryPath, targetVersion, spec, nodeExecutablePath, pnpmEntryPath, pnpmRunnerPath, note } = options
   const profileDirectory = join(dshHome, 'profiles', 'web')
   const manifestPath = join(profileDirectory, 'package.json')
   const marketPath = join(profileDirectory, 'node_modules', MARKET_PACKAGE)
@@ -154,8 +161,22 @@ export async function upgradeMarketInSharedTree(
       modified = true
     }
     manifest.dependencies ??= {}
-    if (manifest.dependencies[MARKET_PACKAGE] !== targetVersion) {
-      manifest.dependencies[MARKET_PACKAGE] = targetVersion
+    const declaredSpec = spec ?? targetVersion
+    if (manifest.dependencies[MARKET_PACKAGE] !== declaredSpec) {
+      manifest.dependencies[MARKET_PACKAGE] = declaredSpec
+      modified = true
+    }
+    // Installing the market only means something once the profile composes it as
+    // a bundle: an install that left `bundles` alone would land the package and
+    // still never load it.
+    manifest.dsh ??= {}
+    manifest.dsh.profile ??= {}
+    const bundles = manifest.dsh.profile.bundles
+    if (bundles === undefined) {
+      manifest.dsh.profile.bundles = [MARKET_PACKAGE]
+      modified = true
+    } else if (!bundles.includes(MARKET_PACKAGE)) {
+      bundles.push(MARKET_PACKAGE)
       modified = true
     }
     if (modified) await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`, 'utf8')
@@ -172,7 +193,7 @@ export async function upgradeMarketInSharedTree(
         await rm(marketPath, { force: true })
       }
 
-      note?.(`[plugin-upgrade] installing ${MARKET_PACKAGE}@${targetVersion} into the shared profile…`)
+      note?.(`[plugin-upgrade] installing ${spec ?? `${MARKET_PACKAGE}@${targetVersion}`} into the shared profile…`)
       const registry = await resolveMarketRegistry({ profileDir: profileDirectory })
       const result = await installProfileDependenciesWithDsh({
         dshHome,

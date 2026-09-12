@@ -126,4 +126,27 @@ describe('upgradeMarketInSharedTree', () => {
     expect(result).toEqual({ ok: false, detail: 'ERR_PNPM_NO_MATCHING_VERSION' })
     expect(await readFile(join(profile, 'package.json'), 'utf8')).toBe(before)
   })
+  it('installs from an explicit spec and composes the market as a bundle', async () => {
+    const { profile, market, options } = await fixture()
+    await writeFile(
+      join(profile, 'package.json'),
+      JSON.stringify({
+        dependencies: { dshmarket: '1.39.0' },
+        dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } }
+      })
+    )
+    installMock.mockImplementation(async () => {
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.45.1' }))
+      return { ok: true }
+    })
+
+    const spec = 'file:/catalog/plugins/dshmarket-1.45.1.tgz'
+    const result = await upgradeMarketInSharedTree({ ...options, spec })
+
+    expect(result.ok).toBe(true)
+    const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
+    // The Profile keeps the spec it installed from, and the market is composed.
+    expect(manifest.dependencies.dshmarket).toBe(spec)
+    expect(manifest.dsh.profile.bundles).toContain('dshmarket')
+  })
 })

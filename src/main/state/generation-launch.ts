@@ -36,6 +36,7 @@ export type PrepareGenerationsOptions = Pick<
   | 'pnpmEntryPath'
   | 'hostNodeModulesPath'
   | 'installPlugin'
+  | 'installSharedTreeMarket'
 >
 
 /**
@@ -79,10 +80,13 @@ export async function prepareGenerationsForLaunch(
         pnpmEntryPath: options.pnpmEntryPath,
         hostNodeModulesPath: options.hostNodeModulesPath,
         installPlugin: options.installPlugin,
+        installSharedTreeMarket: options.installSharedTreeMarket,
         note
       })
       if (outcome === 'applied') {
         note('[desktop] installer catalog seed complete')
+      } else if (outcome === 'deferred') {
+        note('[desktop] installer catalog is missing the market; the whole catalog is retried on the next launch')
       }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)

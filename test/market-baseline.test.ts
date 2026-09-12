@@ -1,6 +1,6 @@
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { demoteMarketGeneration, ensureMarketBaseline, VERIFIED_MARKET_BASELINE } from '../src/main/state/market-baseline'
 import { runProfileStartupMaintenance, type ProfileStartupMaintenanceDeps } from '../src/main/state/profile-startup-maintenance'
@@ -65,6 +65,55 @@ describe('market baseline at normal startup', () => {
     expect(upgrade).toHaveBeenCalledTimes(1)
   })
 
+  it('installs the market from the vendored catalog copy instead of the registry', async () => {
+    const { home, market, options } = await fixture('1.44.0')
+    const tarball = join(home, 'resources', 'installer-catalog', 'plugins', 'dshmarket-1.45.1.tgz')
+    await mkdir(dirname(tarball), { recursive: true })
+    await writeFile(tarball, 'vendored tarball')
+    const upgrade = vi.fn(async () => {
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: VERIFIED_MARKET_BASELINE }))
+      return { ok: true }
+    })
+
+    await ensureMarketBaseline(
+      {
+        ...options,
+        resolveCatalogMarket: async () => ({ version: VERIFIED_MARKET_BASELINE, tarball })
+      },
+      upgrade
+    )
+
+    const staged = join(home, '.desktop-catalog', 'dshmarket-1.45.1.tgz')
+    expect(upgrade).toHaveBeenCalledWith(
+      expect.objectContaining({ targetVersion: VERIFIED_MARKET_BASELINE, spec: `file:${staged}` })
+    )
+    // The Profile records a spec it can still resolve after an app update, so the
+    // vendored tarball is copied into DSH_HOME rather than referenced in place.
+    await expect(readFile(staged, 'utf8')).resolves.toBe('vendored tarball')
+    expect(await readInstalledPluginVersion(home, 'dshmarket')).toBe(VERIFIED_MARKET_BASELINE)
+  })
+
+  it('falls back to the registry spec when the vendored copy is unusable', async () => {
+    const { market, options } = await fixture('1.44.0')
+    const upgrade = vi.fn(async () => {
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: VERIFIED_MARKET_BASELINE }))
+      return { ok: true }
+    })
+
+    await ensureMarketBaseline(
+      {
+        ...options,
+        resolveCatalogMarket: async () => {
+          throw new Error('catalog manifest is unreadable')
+        }
+      },
+      upgrade
+    )
+
+    expect(upgrade).toHaveBeenCalledWith(
+      expect.objectContaining({ targetVersion: VERIFIED_MARKET_BASELINE, spec: undefined })
+    )
+  })
   it('repairs a dshmarket generation link even when its version already meets the baseline', async () => {
     const { home, profile, market, options } = await fixture(VERIFIED_MARKET_BASELINE)
     // An earlier, buggy build left dshmarket projected as a generation link

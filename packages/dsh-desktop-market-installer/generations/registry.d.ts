@@ -1,3 +1,6 @@
+/** Packages the Profile always keeps as real directories in its shared tree. */
+export const SHARED_TREE_ONLY: Set<string>
+
 export interface Generation {
   id: string
   pluginName: string

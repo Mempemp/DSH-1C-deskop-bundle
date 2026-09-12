@@ -1,11 +1,15 @@
-import { lstat, readFile, rm, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { copyFile, lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import { healProfilesModuleFallback } from '@deepseek-ai/dsh-app-boot'
 import { listGenerations, readDesired, writeDesired } from 'dsh-desktop-market-installer/generations/registry'
 import { compareSemver, parseSemver, readInstalledPluginVersion } from './plugin-market-check'
 import { profilePackageJsonPath } from './plugin-recovery'
 import { clearProfileInstallMarker } from './profile-install-marker'
-import { upgradeMarketInSharedTree, type MarketSharedTreeUpgradeOptions } from './plugin-upgrade'
+import {
+  upgradeMarketInSharedTree,
+  type MarketSharedTreeUpgradeOptions,
+  type PluginUpgradeResult
+} from './plugin-upgrade'
 
 export const VERIFIED_MARKET_BASELINE = '1.45.1'
 
@@ -103,11 +107,63 @@ export async function demoteMarketGeneration(
   return true
 }
 
+/** A vendored market package the installer catalog can install without a registry. */
+export interface CatalogMarketSource {
+  version: string
+  tarball: string
+}
+
+/**
+ * Copy a vendored market tarball into DSH_HOME. A Profile records the spec it
+ * installed from, so that copy has to outlive an app update — the catalog inside
+ * the app resources does not.
+ */
+export async function stageVendoredMarketTarball(dshHome: string, tarball: string): Promise<string> {
+  const directory = join(dshHome, '.desktop-catalog')
+  const destination = join(directory, basename(tarball))
+  await mkdir(directory, { recursive: true })
+  await copyFile(tarball, destination)
+  return destination
+}
+
+export interface CatalogMarketInstallOptions
+  extends Omit<MarketSharedTreeUpgradeOptions, 'targetVersion' | 'spec'> {
+  version: string
+  tarball: string
+}
+
+/**
+ * Install the catalog's vendored market into the Profile shared tree. Catalog
+ * seeding calls this when the bundle ships the market itself, so the declaration
+ * and the pinned version come from the same source as the install.
+ */
+export async function installCatalogMarket(
+  options: CatalogMarketInstallOptions
+): Promise<PluginUpgradeResult> {
+  const { version, tarball, ...sharedTreeOptions } = options
+  const staged = await stageVendoredMarketTarball(options.dshHome, tarball)
+  return upgradeMarketInSharedTree({
+    ...sharedTreeOptions,
+    targetVersion: version,
+    spec: 'file:' + staged
+  })
+}
+
+export interface EnsureMarketBaselineOptions
+  extends Omit<MarketSharedTreeUpgradeOptions, 'targetVersion' | 'spec'> {
+  /**
+   * The catalog's vendored market copy. When the market has to be (re)installed,
+   * this local tarball is preferred over the registry, so a machine without
+   * registry access still reaches the verified baseline.
+   */
+  resolveCatalogMarket?: () => Promise<CatalogMarketSource | undefined>
+}
 /** Run only after startup recovery gates and generation projection, with Harness stopped. */
 export async function ensureMarketBaseline(
-  options: Omit<MarketSharedTreeUpgradeOptions, 'targetVersion'>,
+  options: EnsureMarketBaselineOptions,
   upgrade: (options: MarketSharedTreeUpgradeOptions) => ReturnType<typeof upgradeMarketInSharedTree> = upgradeMarketInSharedTree
 ): Promise<void> {
+  const { resolveCatalogMarket, ...sharedTreeOptions } = options
   let raw: string
   try {
     raw = await readFile(profilePackageJsonPath(options.dshHome), 'utf8')
@@ -122,8 +178,6 @@ export async function ensureMarketBaseline(
   // A removed/disabled market stays removed. First-install UI owns adding it.
   if (!manifest.dependencies?.dshmarket || !manifest.dsh?.profile?.bundles?.includes('dshmarket')) return
 
-  const meetsBaseline = (version: string | undefined): boolean =>
-    !!version && !!parseSemver(version) && compareSemver(version, VERIFIED_MARKET_BASELINE) >= 0
   const installed = await readInstalledPluginVersion(options.dshHome, 'dshmarket')
   // dshmarket must never be a generation (it is a core bundle the migration
   // keeps hoisted — see KEEP_IN_SHARED_TREE in generation-migration.ts). A
@@ -132,12 +186,27 @@ export async function ensureMarketBaseline(
   const isGenerationLink = await lstat(
     join(dirname(profilePackageJsonPath(options.dshHome)), 'node_modules', 'dshmarket')
   ).then((info) => info.isSymbolicLink()).catch(() => false)
-  if (meetsBaseline(installed) && !isGenerationLink) return
+  // The vendored catalog copy, when this build has one, decides the target: it is
+  // what can be installed here without registry access.
+  const catalogMarket =
+    resolveCatalogMarket === undefined
+      ? undefined
+      : await resolveCatalogMarket().catch((error: unknown) => {
+          options.note?.(
+            `[market-baseline] vendored market copy is unavailable: ${error instanceof Error ? error.message : String(error)}`
+          )
+          return undefined
+        })
+  const targetVersion = catalogMarket?.version ?? VERIFIED_MARKET_BASELINE
+  const meetsTarget = (version: string | undefined): boolean =>
+    !!version && !!parseSemver(version) && compareSemver(version, targetVersion) >= 0
+
+  if (meetsTarget(installed) && !isGenerationLink) return
 
   options.note?.(
     isGenerationLink
       ? `[market-baseline] dshmarket ${installed ?? '(unknown)'} is a generation link; reinstalling into the shared tree`
-      : `[market-baseline] upgrading dshmarket ${installed ?? '(missing)'} to ${VERIFIED_MARKET_BASELINE}`
+      : `[market-baseline] upgrading dshmarket ${installed ?? '(missing)'} to ${targetVersion}`
   )
   // This normally happens inside Harness boot, which has not run yet. Ensure
   // generation peer validation sees this installation's host packages first.
@@ -146,12 +215,23 @@ export async function ensureMarketBaseline(
     home: options.dshHome
   })
   await clearProfileInstallMarker(options.dshHome)
-  const result = await upgrade({ ...options, targetVersion: VERIFIED_MARKET_BASELINE })
+  const spec =
+    catalogMarket === undefined
+      ? undefined
+      : 'file:' + (await stageVendoredMarketTarball(options.dshHome, catalogMarket.tarball))
+  options.note?.(
+    spec === undefined
+      ? '[market-baseline] installing from the registry'
+      : `[market-baseline] installing from the vendored catalog copy ${catalogMarket?.version ?? ''}`
+  )
+  const result = await upgrade({ ...sharedTreeOptions, targetVersion, spec })
   if (!result.ok) throw new Error(result.detail ?? 'dshmarket installation failed')
 
   const actual = await readInstalledPluginVersion(options.dshHome, 'dshmarket')
-  if (!meetsBaseline(actual)) {
-    throw new Error(`dshmarket installation reported success, but the active version is ${actual ?? 'missing'}; requires >=${VERIFIED_MARKET_BASELINE}`)
+  if (!meetsTarget(actual)) {
+    throw new Error(
+      `dshmarket installation reported success, but the active version is ${actual ?? 'missing'}; requires >=${targetVersion}`
+    )
   }
   options.note?.(`[market-baseline] verified active dshmarket ${actual}`)
 }

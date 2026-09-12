@@ -43,10 +43,10 @@
       "kind": "plugin",
       "id": "@linxin666/dsh-client-ui-skill-explorer",
       "name": "@linxin666/dsh-client-ui-skill-explorer",
-      "version": "0.3.20",
+      "version": "0.3.21",
       "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
-      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.20.tgz",
-      "digest": "aada0dd25a583a527c4fc62c431dcdd423071419876f3bc21f7615be4fd9537e"
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.21.tgz",
+      "digest": "c8df8ed94b3bdc9c362660ca45ee815ef3e115b7db4cea47f896d15a9d65a505"
     },
     {
       "kind": "plugin",

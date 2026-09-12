@@ -208,7 +208,7 @@ describe('first-run installer catalog seed', () => {
     expect(catalogFingerprint(base, '0.1.1')).toBe(`0.1.1|${catalogFingerprint(base)}`)
   })
 
-  it('installs an explicit dshmarket catalog plugin instead of skipping the host package', async () => {
+  it('seeds the market into the shared tree instead of a generation', async () => {
     const home = await freshHome()
     const catalogRoot = await mkdtemp(join(tmpdir(), 'dsh-catalog-market-'))
     homes.push(catalogRoot)
@@ -232,31 +232,77 @@ describe('first-run installer catalog seed', () => {
         ]
       })
     )
-    const installs: string[] = []
+    const generations: string[] = []
+    const sharedTree: string[] = []
 
     const outcome = await applyInstallerCatalogSeed({
       dshHome: home,
       catalogRoot,
       nodeExecutablePath: 'node',
       pnpmEntryPath: 'pnpm',
-      installPlugin: async ({ pluginSpec, expectedPluginName }) => {
-        installs.push(`${expectedPluginName}:${pluginSpec}`)
-        await fakeGeneration(home, 'dshmarket+1.40.0+seed', 'dshmarket')
-        return {
-          ok: true,
-          generation: {
-            id: 'dshmarket+1.40.0+seed',
-            pluginName: 'dshmarket',
-            version: '1.40.0',
-            directory: join(home, 'profiles', '.generations', 'live', 'dshmarket+1.40.0+seed')
-          }
-        }
+      installPlugin: async ({ expectedPluginName }) => {
+        generations.push(expectedPluginName ?? '')
+        throw new Error('the market must never be installed as a generation')
+      },
+      installSharedTreeMarket: async ({ item, tarball, version }) => {
+        sharedTree.push(`${item.id}:${version}:${tarball}`)
       },
       note: silent
     })
 
     expect(outcome).toBe('applied')
-    expect(installs).toEqual([`dshmarket:file:${join(catalogRoot, 'plugins', 'dshmarket-1.40.0.tgz')}`])
+    expect(generations).toEqual([])
+    expect(sharedTree).toEqual([
+      `dshmarket:1.40.0:${join(catalogRoot, 'plugins', 'dshmarket-1.40.0.tgz')}`
+    ])
+    expect(existsSync(catalogStampPath(home))).toBe(true)
+  })
+
+  it('leaves the stamp unwritten when the market cannot reach the shared tree', async () => {
+    const home = await freshHome()
+    const catalogRoot = await mkdtemp(join(tmpdir(), 'dsh-catalog-market-fail-'))
+    homes.push(catalogRoot)
+    await mkdir(join(catalogRoot, 'plugins'), { recursive: true })
+    await writeFile(join(catalogRoot, 'plugins', 'dshmarket-1.40.0.tgz'), 'tarball')
+    await writeFile(
+      join(catalogRoot, 'manifest.json'),
+      JSON.stringify({
+        name: 'Market Desktop',
+        version: '1.0.0',
+        id: 'market-desktop',
+        items: [
+          {
+            kind: 'plugin',
+            id: 'dshmarket',
+            name: 'dshmarket',
+            version: '1.40.0',
+            label: 'Plugin: dshmarket',
+            file: 'plugins/dshmarket-1.40.0.tgz'
+          }
+        ]
+      })
+    )
+    const notes: string[] = []
+
+    const outcome = await applyInstallerCatalogSeed({
+      dshHome: home,
+      catalogRoot,
+      nodeExecutablePath: 'node',
+      pnpmEntryPath: 'pnpm',
+      installPlugin: async () => {
+        throw new Error('the market must never be installed as a generation')
+      },
+      installSharedTreeMarket: async () => {
+        throw new Error('the profile is busy')
+      },
+      note: (line) => notes.push(line)
+    })
+
+    // No stamp: the next launch applies the whole catalog again, which is how the
+    // market gets another chance to land.
+    expect(outcome).toBe('deferred')
+    expect(existsSync(catalogStampPath(home))).toBe(false)
+    expect(notes.some((line) => line.includes('the profile is busy'))).toBe(true)
   })
 
   it('upgrades catalog plugins and skills when the installer catalog is newer', async () => {

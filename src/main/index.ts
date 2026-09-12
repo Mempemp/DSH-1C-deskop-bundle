@@ -30,7 +30,12 @@ import {
   installProfileDependenciesWithDsh,
   removeProfilePluginWithDsh
 } from './runtime/profile-plugin-command'
-import { demoteMarketGeneration, ensureMarketBaseline } from './state/market-baseline'
+import {
+  demoteMarketGeneration,
+  ensureMarketBaseline,
+  installCatalogMarket
+} from './state/market-baseline'
+import { resolveCatalogMarketPackage } from './state/installer-catalog-seed'
 import {
   clearProfileInstallMarker,
   markProfileInstallComplete
@@ -1219,7 +1224,22 @@ function launchHarness(): Promise<void> {
           appVersion: app.getVersion(),
           nodeExecutablePath: bundledNodePath(),
           pnpmEntryPath: bundledPnpmEntryPath(),
-          hostNodeModulesPath: join(app.getAppPath(), 'node_modules')
+          hostNodeModulesPath: join(app.getAppPath(), 'node_modules'),
+          // The market is a shared-tree package: a generation for it is inert, so
+          // it is installed into the Profile from the same vendored tarball.
+          installSharedTreeMarket: async ({ tarball, version }) => {
+            const result = await installCatalogMarket({
+              dshHome,
+              dshEntryPath: dshEntryPath(),
+              nodeExecutablePath: bundledNodePath(),
+              pnpmEntryPath: bundledPnpmEntryPath(),
+              pnpmRunnerPath: bundledPnpmRunnerPath(),
+              version,
+              tarball,
+              note: (line) => runtime.note(line)
+            })
+            if (!result.ok) throw new Error(result.detail ?? 'market install failed')
+          }
         }),
       shouldDeferProfileMaintenance: () => shouldDeferProfileMaintenance(dshHome),
       migrateProfileToGenerations: () =>
@@ -1249,6 +1269,10 @@ function launchHarness(): Promise<void> {
         nodeExecutablePath: bundledNodePath(),
         pnpmEntryPath: bundledPnpmEntryPath(),
         pnpmRunnerPath: bundledPnpmRunnerPath(),
+        // Prefer the catalog's vendored market so the baseline holds without
+        // registry access; the registry path stays as the fallback.
+        resolveCatalogMarket: async () =>
+          resolveCatalogMarketPackage(desktopResourcePath('installer-catalog')),
         note: (line) => runtime.note(line)
       }),
       reportProfileConsistency: () => reportProfileConsistency(dshHome)

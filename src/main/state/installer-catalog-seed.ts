@@ -8,6 +8,7 @@ import {
 } from 'dsh-desktop-market-installer/generations/installer'
 import { projectGenerations } from 'dsh-desktop-market-installer/generations/projection'
 import {
+  SHARED_TREE_ONLY,
   listGenerations,
   readDesired,
   withRegistryLock,
@@ -42,7 +43,7 @@ export interface CatalogManifest {
   items: CatalogItem[]
 }
 
-export type CatalogSeedOutcome = 'applied' | 'skipped' | 'missing'
+export type CatalogSeedOutcome = 'applied' | 'skipped' | 'missing' | 'deferred'
 
 type Note = (line: string) => void
 
@@ -65,6 +66,16 @@ export interface InstallerCatalogSeedOptions {
   pnpmEntryPath?: string
   hostNodeModulesPath?: string
   installPlugin?: (options: SeedInstallPluginOptions) => Promise<GenerationInstallResult>
+  /**
+   * Install a shared-tree catalog package (the market) into the Profile. Such a
+   * package is never resolved from a generation, so seeding one would leave a
+   * pointer that startup demotes.
+   */
+  installSharedTreeMarket?: (options: {
+    item: CatalogItem
+    tarball: string
+    version: string
+  }) => Promise<void>
   note: Note
 }
 
@@ -285,6 +296,59 @@ function applyRulesFile(dshHome: string, sourceFile: string, note: Note): void {
  * run, every catalog item is forced from the bundled copy — including a
  * downgrade — and plugins/skills/MCP the user added later are left alone.
  */
+/**
+ * Seed a shared-tree catalog package. Returns whether it reached the Profile;
+ * the caller keeps the stamp unwritten when it did not, so the next launch
+ * retries the catalog instead of leaving the market silently missing.
+ */
+async function installCatalogMarketItem(
+  options: InstallerCatalogSeedOptions,
+  item: CatalogItem,
+  tarball: string
+): Promise<boolean> {
+  const pluginName = item.name ?? item.id
+  const install = options.installSharedTreeMarket
+  if (install === undefined) {
+    options.note(`[desktop] catalog market ${pluginName} needs the shared-tree installer; deferred`)
+    return false
+  }
+  if (item.version === undefined || item.version === '') {
+    throw new Error(`catalog market ${item.id} is missing a version`)
+  }
+  try {
+    await install({ item, tarball, version: item.version })
+    options.note(`[desktop] catalog installed market ${pluginName} into the shared profile tree`)
+    return true
+  } catch (error) {
+    options.note(
+      `[desktop] catalog market ${pluginName} install failed: ${error instanceof Error ? error.message : String(error)}`
+    )
+    return false
+  }
+}
+
+/**
+ * The catalog's shared-tree package (the market), when it vendors one. The market
+ * baseline step installs from this copy instead of the registry, so a machine
+ * without registry access can still reach a verified market.
+ * @param catalogRoot
+ */
+export function resolveCatalogMarketPackage(
+  catalogRoot: string
+): { version: string; tarball: string } | undefined {
+  const manifest = readCatalogManifest(catalogRoot)
+  if (manifest === undefined) return undefined
+  for (const item of manifest.items) {
+    if (item.kind !== 'plugin') continue
+    const name = item.name ?? item.id
+    if (!SHARED_TREE_ONLY.has(name)) continue
+    if (item.file === undefined || item.version === undefined || item.version === '') continue
+    const tarball = join(catalogRoot, item.file)
+    if (!existsSync(tarball)) continue
+    return { version: item.version, tarball }
+  }
+  return undefined
+}
 export async function applyInstallerCatalogSeed(
   options: InstallerCatalogSeedOptions
 ): Promise<CatalogSeedOutcome> {
@@ -297,12 +361,21 @@ export async function applyInstallerCatalogSeed(
 
   const upgrading = previous !== undefined
 
+  let marketDeferred = false
+
   for (const item of manifest.items) {
     if (item.kind === 'plugin') {
       const pluginName = item.name ?? item.id
       if (!item.file) throw new Error(`catalog plugin ${item.id} is missing a vendored tarball`)
       const tarball = join(options.catalogRoot, item.file)
       if (!existsSync(tarball)) throw new Error(`catalog plugin tarball is missing: ${tarball}`)
+      if (SHARED_TREE_ONLY.has(pluginName)) {
+        // A shared-tree package is never resolved from a generation: seeding one
+        // would only leave a pointer that startup demotes. Install it into the
+        // Profile instead, from the same vendored tarball.
+        if (!(await installCatalogMarketItem(options, item, tarball))) marketDeferred = true
+        continue
+      }
       await installCatalogPlugin(options, item, tarball)
       options.note(
         upgrading
@@ -353,6 +426,15 @@ export async function applyInstallerCatalogSeed(
       }
       options.note(`[desktop] catalog seeded MCP ${item.id}`)
     }
+  }
+
+  if (marketDeferred) {
+    // Everything else is seeded; leaving the stamp unwritten makes the next
+    // launch retry the catalog, which is how the market gets another chance.
+    options.note(
+      `[desktop] installer catalog ${manifest.id}@${manifest.version} applied without the market; retrying on the next launch`
+    )
+    return 'deferred'
   }
 
   writeFileSync(catalogStampPath(options.dshHome), fingerprint, 'utf8')

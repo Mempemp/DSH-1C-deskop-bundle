@@ -55,7 +55,7 @@ const SAFE_VERSION_PATTERN = /^[0-9a-z][0-9a-z._+-]*$/iu
  * registry at all. Nothing keeps the two in sync — only dshmarket is ever
  * installable from the market, so only dshmarket needs guarding here.
  */
-const SHARED_TREE_ONLY = new Set(['dshmarket'])
+export const SHARED_TREE_ONLY = new Set(['dshmarket'])
 
 function assertSafePackageName(pluginName, context = 'Generation plugin name') {
   if (typeof pluginName !== 'string' || !SAFE_PACKAGE_NAME_PATTERN.test(pluginName)) {
