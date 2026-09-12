@@ -1,130 +1,110 @@
 <h1 align="center">
-  <img src="docs/images/readme-logo-black-v020.png" width="64" alt="DSH Desktop logo" valign="middle" />
-  DSH Desktop
+  <img src="docs/images/readme-logo-black-v020.png" width="64" alt="DSH для 1С" valign="middle" />
+  DSH для 1С
 </h1>
 
 <p align="center">
-  A local-first, cross-platform desktop app for
-  <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a>.
+  Готовая среда для работы с ИИ-агентом DeepSeek Harness,<br />
+  собранная для 1С-разработки и устанавливаемая одним <code>.exe</code>.
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> · <a href="README.zh.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ru.md">Русский</a> · <a href="README.es.md">Español</a> · <a href="README.pt.md">Português</a>
+  <a href="https://mempemp.github.io/1C-DSH-promo/">Промо-сайт</a> ·
+  <a href="#состав-сборки">Состав</a> ·
+  <a href="#как-это-устроено">Как это устроено</a> ·
+  <a href="#сборка-из-исходников">Сборка</a>
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-171513.svg" /></a>
-  <img alt="macOS" src="https://img.shields.io/badge/macOS-Apple%20Silicon%20%7C%20Intel-171513.svg" />
-  <img alt="Windows" src="https://img.shields.io/badge/Windows-x64-171513.svg" />
+  <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-171513.svg" />
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-171513.svg" />
 </p>
 
-![DSH Desktop overview with portable presets, model providers, phone control, and editable PPT generation](docs/images/dsh-desktop-hero-v021.png)
+**DSH для 1С** — сборка десктопного клиента [DSH Desktop](https://github.com/dataelement/dsh-desktop)
+с офлайн-каталогом плагинов, навыков и MCP-серверов для 1С. Один установщик ставит
+всё сразу: приложение, редактор BSL, параметры подключения к базам, веб-поиск,
+маркет плагинов и набор 1С-навыков. Установил — и сразу работаешь.
+## Зачем это нужно
 
-<p align="center"><strong>Use official DeepSeek models or mainstream third-party providers, manage portable Agent presets, continue Harness sessions from your phone, and turn source material into editable PPTX decks.</strong></p>
+Запуск «чистого» DeepSeek Harness требует Node.js, CLI, ручной установки плагинов
+и настройки MCP. Эта сборка убирает весь барьер:
 
-DSH Desktop packages the local DeepSeek Harness experience as an installed desktop application. It starts Harness automatically, keeps profiles, plugins, workspaces, model settings, and sessions outside the application directory, and opens the full Harness interface as soon as the local runtime is ready.
+- **Рабочие области под проекты** — Платформа, ЕРП, ЗУП, прочее: разные задачи в
+  одном окне, сессии не смешиваются.
+- **Редактор BSL** ([DSH-CodeEditor_BSL](https://github.com/Mempemp/DSH-CodeEditor_BSL)) —
+  дерево метаданных 1С, подсветка, diff, отправка фрагмента кода в чат.
+- **Параметры проектов 1С** ([DSH-1CProjectProperties](https://github.com/Mempemp/DSH-1CProjectProperties)) —
+  данные подключения и авторизации для каждой ИБ, доступные инструментам агента.
+- **RLM-инструменты для BSL** ([DSH-runner-rlm-tools-bsl](https://github.com/Mempemp/DSH-runner-rlm-tools-bsl)) —
+  быстрый поиск и навигация по коду 1С.
+- **Навыки и правила для 1С** — работа с метаданными, хранилищем, выгрузкой
+  конфигурации в файлы ([ai_rules_1c](https://github.com/comol/ai_rules_1c)).
+- **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
+  ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
+- **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
+  сообщество DSH доступно сразу, свои плагины и MCP добавляются поверх сборки.
 
-> [!IMPORTANT]
-> DSH Desktop is an early preview built on the rapidly evolving `@deepseek-ai/dsh@0.1.2-rc.1`. macOS releases are code-signed and notarized by Apple. Windows x64 installers are code-signed; Windows security warnings may still decrease gradually as the publisher builds download and installation reputation.
+## Состав сборки
 
-## Download
+Полный список — в `installer-flavor.yml` (источники) и
+`build/installer-catalog/manifest.json` (зафиксированные версии и digest):
 
-We offer stable and preview releases: download the **stable release**, recommended for everyday use, from our [official website](https://www.dshdesktop.com/#download). To try a **preview release**, choose a version marked **Pre-release** on [GitHub Releases](https://github.com/dataelement/dsh-desktop/releases).
+- 9 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+  skill-explorer, archify + три наших 1С-плагина;
+- 12+ навыков (skills) для 1С и повседневных задач;
+- правила (AGENTS.md) для работы агента с 1С.
 
-Preview releases include our newest features and closely track the latest official DeepSeek Harness versions. They may be incompatible with community plugins and are **not recommended for general users**. Early adopters are welcome to try them and share feedback in our community; we roll out updates to the wider community only after validation by early adopters.
+## Как это устроено
 
-Installed builds check for updates shortly after startup and every six hours. When a new version is available, DSH Desktop asks before downloading it; installation begins only after you choose **Restart and install**. You can also check manually from the application menu or skip one version without hiding future releases.
+Сборка состоит из двух собственных слоёв поверх апстрима:
 
-## Community
+1. **Офлайн-каталог установщика.** На этапе сборки `installer-flavor.yml`
+   описывает, откуда взять каждый компонент (npm / git / market). Скрипт
+   `scripts/prepare-installer-catalog.mjs` скачивает их, упаковывает в tarball
+   с зависимостями и фиксирует digest в `build/installer-catalog/`. Первый
+   запуск приложения не требует интернета.
+2. **Кастомный установщик и сидинг.** NSIS-установщик (`build/installer.nsh`)
+   показывает состав сборки, умеет обновлять существующую установку. При запуске
+   `src/main/state/installer-catalog-seed.ts` применяет каталог по
+   fingerprint-штампу: после каждого обновления приложения комплект сборки
+   гарантированно переустанавливается, а плагины и MCP, добавленные пользователем,
+   сохраняются.
 
-<p align="center">
-  Scan the QR code below with WeChat to join the DSH Desktop community group.<br />
-  <img src="docs/images/wechat-group-20260815.png" width="220" alt="DSH Desktop WeChat group QR code" /><br />
-  Prefer Discord? <a href="https://discord.gg/he2gAKCpj">Join the DSH Desktop Discord community</a>.
-</p>
+Данные пользователя (профили, сессии, рабочие области, модели) живут в `%APPDATA%`
+и переживают переустановку. Установленные билды проверяют обновления при старте
+и раз в 6 часов; скачивание — только с вашего согласия.
 
-## What DSH Desktop adds
+Подробнее — в [обзоре проекта](docs/overview.md) и [видении](docs/vision.md).
 
-DeepSeek Harness already provides the Agent runtime and Web UI. DSH Desktop adds the native host capabilities needed for a practical desktop product:
+## Сборка из исходников
 
-- Starts and stops Harness without requiring a separate CLI or browser tab
-- Uses the native system directory picker to add and manage project workspaces
-- Supports official DeepSeek models and mainstream third-party model providers
-- Imports and exports complete custom Agent presets as portable [`.dshpreset` packages](docs/preset-packages.md), with conflict checks and a trust warning before installation
-- Turns source material into editable PPTX decks through the built-in PPT mode
-- Preserves profiles, plugins, workspaces, sessions, and model settings across app upgrades
-- Detects startup and frontend plugin failures, keeps diagnostics in `harness.log`, and offers guided recovery actions
-- Provides a non-destructive Safe Mode that temporarily blocks third-party plugins
-- Lets a paired phone continue sessions over the local network or an optional temporary public tunnel
-- Checks for desktop updates and keeps download and installation under user control
-- Adapts native menus, titlebar behavior, window focus, theme, and application branding for macOS and Windows
-
-## PPT generation
-
-Enable the **PPT** button, choose a template, and describe the deck you need. The built-in catalog includes **16 templates and 192 layouts** with editable PPTX output. Previews use English; decks can use English or Chinese, with corresponding font settings. Preview language does not determine output language.
-
-PPT is preinstalled, and its automatic instructions apply only to sessions where the PPT button is enabled. See the [PPT runtime guide](packages/ppt-runtime/README.md) for templates, validation, and source acknowledgments.
-
-## Phone access
-
-Choose **Connect Phone…** from the `Harness` menu and scan the pairing code. The desktop asks you to approve the connection before the phone can access sessions.
-
-Harness itself remains on a random `127.0.0.1` port. Phone access uses a separate paired bridge. It can stay on the local network or, when you choose remote access, use a temporary Cloudflare Quick Tunnel. Disconnecting the phone from the desktop invalidates the mobile session.
-
-If Cloudflare fails to start, the app tries Pinggy. If a Cloudflare pairing link appears but your phone cannot open it, choose **Can’t open? Try another link** to switch to Pinggy.
-
-## Safe Mode and recovery
-
-If a third-party plugin interferes with startup or rendering, DSH Desktop can identify the implicated plugin from runtime and frontend evidence and open a guided recovery surface.
-
-Choose **Restart as Safe Mode…** from the `Harness` menu to start an isolated profile containing only official core bundles. The Agent, sessions, model settings, and workspaces remain available while third-party plugins from the normal profile stay blocked. You can remove selected plugins or return to a normal launch from the Safe Mode banner.
-
-Recovery screens check for compatible plugin updates. When available, you can upgrade an affected plugin; Safe Mode also offers batch upgrades. For help, hover over **WeChat group** to display its QR code, or click **Discord** to open the community.
-
-If the normal interface cannot be reached, start DSH Desktop with `--safe-mode`. On macOS:
+Требования: Windows x64, Node.js LTS, npm.
 
 ```sh
-open -a "DSH Desktop" --args --safe-mode
+npm install
+npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 ```
 
-## Local data and security
+Проверки перед изменениями: `npm test`, `npm run typecheck`, `npm run build`.
 
-- The Harness Web UI is served only on a random loopback port.
-- The renderer has no Node.js privileges and uses context isolation and sandboxing.
-- Webviews, untrusted in-app navigation, and unexpected permission requests are blocked.
-- External web links open in the system browser.
-- User profiles and sessions live under Electron's per-user application data directory, not inside the installed app.
-- Phone access requires a short-lived pairing token and explicit desktop approval.
+Инженерная документация апстрима: [архитектура](docs/architecture.md),
+[разработка](docs/development.md), [релизный процесс](docs/release-runbook.md).
 
-## Platform support
+## Благодарности
 
-| Platform | Distribution | Status |
-| --- | --- | --- |
-| macOS Apple Silicon | Signed and notarized DMG/ZIP | Supported |
-| macOS Intel | Signed and notarized DMG/ZIP | Supported |
-| Windows x64 | Code-signed NSIS installer | Supported |
-| Windows ARM64 | — | Not currently supported |
-| Linux | — | Not currently supported |
+Проект построен на открытых разработках, и мы благодарны их авторам:
 
-Harness includes target-native dependencies, so every release artifact is built on the matching operating system and architecture.
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — агентный рантайм;
+- [DSH Desktop](https://github.com/dataelement/dsh-desktop) — десктопная оболочка (MIT), основа нашей сборки: мы развиваем её поверх апстрима, не переписывая рантайм, и добавляем свои плагины, навыки и установщик;
+- [dsh-market](https://github.com/dsh-market/dsh-market) — маркет плагинов сообщества;
+- плагины [wingsky-1](https://github.com/wingsky-1/dsh-plugin-hub),
+  [liustack](https://github.com/liustack/modsearch),
+  [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
+  [tt-a1i](https://github.com/tt-a1i/archify),
+  [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- навыки [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
 
-## Development and architecture
+## Лицензия
 
-Contributions are welcome. Start with the public engineering documentation:
-
-- [Development guide](docs/development.md) — setup, validation, patch maintenance, and target-native packaging
-- [Architecture](docs/architecture.md) — runtime flow, persistent data, security boundaries, recovery, mobile access, and updates
-- [Release runbook](docs/release-runbook.md) — signing and publication controls
-- [Preset package format](docs/preset-packages.md) — portable Agent preset contract
-
-Before submitting a change, run `npm test`, `npm run typecheck`, and `npm run build`, then exercise the affected real application flow. Never include real API keys in issues, logs, screenshots, or test data.
-
-## Friends
-
-[dsh-market](https://github.com/dsh-market/dsh-market) is the community plugin market for DeepSeek Harness. Browse and search plugins, preview screenshots, install or update packages, enable or disable plugins, and switch themes from the Harness interface.
-
-## License
-
-DSH Desktop is open source under the [MIT License](LICENSE).
-
-DeepSeek Harness and its dependencies remain subject to their respective upstream licenses and trademark policies. DSH Desktop is an independent community desktop application.
+Сборка распространяется под [лицензией MIT](LICENSE), как и апстрим DSH Desktop.
+DeepSeek Harness и остальные зависимости подчиняются своим лицензиям.
