@@ -1,4 +1,6 @@
 node_modules/
+# Tool caches redirected into the repo (sandboxed builds cannot write %LOCALAPPDATA%)
+/.cache/
 out/
 dist/
 dist-dev/

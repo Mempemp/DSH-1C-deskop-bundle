@@ -721,7 +721,21 @@ export function renderCatalogLabelsNsh(items) {
 /**
  * @param {CatalogManifest} manifest
  */
-export function emptyCatalogManifest(name = 'DSH Desktop', version = '0.8.0-rc.4', id = 'dsh-desktop') {
+/**
+ * App version from package.json — release builds stamp it from the release tag,
+ * so a manifest built without an explicit version must follow the same source.
+ * @param {string} [root]
+ */
+function appVersion(root = projectRoot) {
+  try {
+    const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+    return typeof manifest.version === 'string' && manifest.version !== '' ? manifest.version : '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
+
+export function emptyCatalogManifest(name = 'DSH Desktop', version = appVersion(), id = 'dsh-desktop') {
   return { name, version, id, items: /** @type {CatalogItem[]} */ ([]) }
 }
 
@@ -751,10 +765,16 @@ export async function prepareInstallerCatalog(options = {}) {
   mkdirSync(paths.rulesDir, { recursive: true })
 
   const snapshotPath = options.registrySnapshotPath
-    ?? join(root, 'packages', 'dshmarket', 'data', 'registry-snapshot.json')
-  const snapshot = flavor.sources.some((source) => source.from === 'market')
-    ? loadRegistrySnapshot(snapshotPath)
-    : { plugins: [] }
+    ?? process.env.DSH_INSTALLER_REGISTRY_SNAPSHOT
+    ?? join(root, 'build', 'market-registry-snapshot.json')
+  const needsSnapshot = flavor.sources.some((source) => source.from === 'market')
+  if (needsSnapshot && !existsSync(snapshotPath)) {
+    throw new Error(
+      `flavor declares "from: market" sources but the registry snapshot is missing: ${snapshotPath}. ` +
+        'Point DSH_INSTALLER_REGISTRY_SNAPSHOT at a snapshot file, or switch those sources to npm/git.'
+    )
+  }
+  const snapshot = needsSnapshot ? loadRegistrySnapshot(snapshotPath) : { plugins: [] }
 
   /** @type {CatalogItem[]} */
   const items = []

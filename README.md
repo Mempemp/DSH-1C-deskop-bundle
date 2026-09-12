@@ -52,7 +52,8 @@
 - 9 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify + три наших 1С-плагина;
 - 12+ навыков (skills) для 1С и повседневных задач;
-- правила (AGENTS.md) для работы агента с 1С.
+- правила (AGENTS.md) для работы агента с 1С;
+- рантайм `@deepseek-ai/dsh@0.1.2-rc.1` внутри приложения — ставить Node.js и CLI не нужно.
 
 ## Как это устроено
 

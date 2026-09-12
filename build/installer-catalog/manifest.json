@@ -1,6 +1,6 @@
 {
   "name": "DSH Desktop",
-  "version": "0.8.0-rc.4",
+  "version": "0.8.2",
   "id": "dsh-desktop",
   "items": [
     {
@@ -28,7 +28,7 @@
       "version": "5.10.2",
       "label": "Plugin: @liustack/modsearch",
       "file": "plugins/liustack-modsearch-5.10.2.tgz",
-      "digest": "9c23a71810d95f1941ac7917dfb22618207c92d135aec5ba0bb56b4335bff05c"
+      "digest": "dec197aa5bad264785d3b8f1bc4ff809e6f1dc8b555eecd47769081b647a5dcd"
     },
     {
       "kind": "plugin",
@@ -61,10 +61,10 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.3.0.tgz",
-      "digest": "6251e9d48d244905db610e9f59f94bc4159d4639fcd958aee43e9f747d15d6ea"
+      "file": "plugins/dsh-1c-project-properties-0.4.0.tgz",
+      "digest": "d9a8bd5c15186e8a7e75d7e25126c2b0df11bfc03e624d932433f975d381d7ac"
     },
     {
       "kind": "plugin",

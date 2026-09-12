@@ -1,0 +1,14 @@
+{
+  "plugins": [
+    {
+      "name": "dsh-mcp-connector",
+      "owner": "duhu2000",
+      "npm": "dsh-mcp-connector"
+    },
+    {
+      "name": "dsh-plugin-open-app",
+      "owner": "2nd1st",
+      "npm": "@2nd1st/dsh-plugin-open-app"
+    }
+  ]
+}

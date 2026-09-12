@@ -529,12 +529,12 @@ describe('GitHub release contract', () => {
   })
 
   it('routes stable downloads through the website and previews through GitHub', async () => {
+    const upstreamReadmes = ['README.zh.md', 'README.ja.md', 'README.ru.md', 'README.es.md', 'README.pt.md']
     const readmes = await Promise.all(
-      ['README.md', 'README.zh.md', 'README.ja.md', 'README.ru.md', 'README.es.md', 'README.pt.md'].map((file) =>
-        readFile(path.join(projectRoot, file), 'utf8')
-      )
+      upstreamReadmes.map((file) => readFile(path.join(projectRoot, file), 'utf8'))
     )
 
+    // The upstream translations keep the upstream download contract.
     for (const readme of readmes) {
       expect(readme).toMatch(/https:\/\/(?:www\.)?dshdesktop\.com\/(?:#download|zh\/)/)
       expect(readme).not.toContain('| Platform | Package | Download |')
@@ -546,6 +546,16 @@ describe('GitHub release contract', () => {
       for (const asset of releaseAssets) {
         expect(readme).not.toContain(`releases/latest/download/${asset}`)
       }
+    }
+
+    // README.md documents this bundle's own distribution: it must not promise
+    // upstream download routes that this project does not own.
+    const bundleReadme = await readFile(path.join(projectRoot, 'README.md'), 'utf8')
+    expect(bundleReadme).not.toContain('dshdesktop.com')
+    expect(bundleReadme).not.toContain('| Platform | Package | Download |')
+    expect(bundleReadme).not.toContain('Coming soon')
+    for (const asset of releaseAssets) {
+      expect(bundleReadme).not.toContain(`releases/latest/download/${asset}`)
     }
   })
 })

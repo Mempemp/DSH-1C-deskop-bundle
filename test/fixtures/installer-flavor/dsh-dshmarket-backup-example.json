@@ -1,0 +1,33 @@
+{
+  "format": "dsh-profile-backup",
+  "version": 0.2,
+  "createdAt": "2026-09-10T11:55:28.185Z",
+  "profile": "web",
+  "files": [
+    {
+      "path": "package.json",
+      "json": {
+        "name": "dsh-profile-web",
+        "private": true,
+        "dependencies": {
+          "dshmarket": "^1.45.1",
+          "dsh-better-sidebar": "0.18.1",
+          "@liustack/modsearch": "5.10.2",
+          "@wingsky-1/dsh-mcp-manager": "0.2.3"
+        },
+        "dsh": {
+          "profile": {
+            "bundles": [
+              "@deepseek-ai/dsh-base",
+              "@deepseek-ai/dsh-web-app",
+              "dshmarket",
+              "dsh-better-sidebar",
+              "@liustack/modsearch",
+              "@wingsky-1/dsh-mcp-manager"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

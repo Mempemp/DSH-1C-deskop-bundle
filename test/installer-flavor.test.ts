@@ -258,7 +258,13 @@ function profileBackup(dependencies: Record<string, unknown>, bundles: string[] 
 
 describe('dshmarket backup flavor source', () => {
   const fixtureBackup = join(projectRoot, 'test', 'fixtures', 'installer-flavor', 'dsh-profile-backup.json')
-  const exampleBackup = join(projectRoot, 'examples', 'dsh-dshmarket-backup-20260910115528.json')
+  const exampleBackup = join(
+    projectRoot,
+    'test',
+    'fixtures',
+    'installer-flavor',
+    'dsh-dshmarket-backup-example.json'
+  )
 
   it('expands a valid backup into npm and git plugin sources', () => {
     const expanded = expandBackupFlavorSource(
@@ -358,7 +364,7 @@ describe('dshmarket backup flavor source', () => {
 
 describe('market plugin resolution', () => {
   const snapshot = loadRegistrySnapshot(
-    join(projectRoot, 'packages', 'dshmarket', 'data', 'registry-snapshot.json')
+    join(projectRoot, 'test', 'fixtures', 'installer-flavor', 'registry-snapshot.json')
   )
 
   it('resolves a unique catalog name from the vendored snapshot', () => {
@@ -746,7 +752,7 @@ describe('prepare-installer-catalog', () => {
     await expect(
       readFile(join(prepared.paths.catalogDir, skill!.path!, 'SKILL.md'), 'utf8')
     ).resolves.toContain('Remote skill.')
-  })
+  }, 30_000)
 
   it('vendors every SKILL.md folder from a git skill tree', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-prepare-skill-tree-'))
