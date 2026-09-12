@@ -1,0 +1,55 @@
+# Installer delivery catalog. Remote sources (git / npm / market / backup)
+# are downloaded at prepare time and packed into build/installer-catalog/
+# for offline first-run seed. Plugin tarballs embed non-host production deps
+# (bundleDependencies); first launch unpacks them without registry.npmjs.org.
+# Override the file with DSH_INSTALLER_FLAVOR=/path/to/flavor.yml.
+#
+# Plugin from types: git, local, npm, market, backup.
+# A dshmarket profile backup (format: dsh-profile-backup, version: 0.2) expands
+# into every community plugin, then each is fetched and packed:
+#   - kind: plugin
+#     from: backup
+#     path: ./examples/dsh-dshmarket-backup-20260910115528.json
+name: DSH Desktop
+version: 0.8.0-rc.4
+sources:
+  # Official market host. Same pin as packages/dsh-desktop-market-installer
+  # RECOMMENDED_MARKET_VERSION / MARKET_PACKAGE (`dsh plugin --profile web add dshmarket`).
+  - kind: plugin
+    from: npm
+    spec: dshmarket@^1.40.0
+  - kind: plugin
+    from: git
+    url: https://github.com/wingsky-1/dsh-plugin-hub.git#main
+    path: packages/dsh-mcp-manager
+  - kind: plugin
+    from: git
+    url: https://github.com/liustack/modsearch.git#main
+  - kind: plugin
+    from: git
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.18.1
+  - kind: plugin
+    from: git
+    url: https://github.com/zhu1090093659/dsh-web.git#main
+    path: packages/dsh-skill-explorer
+  - kind: plugin
+    from: git
+    url: https://github.com/tt-a1i/archify.git#main
+    path: integrations/deepseek-harness
+  - kind: plugin
+    from: git
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#main
+    path: dsh-1c-project-properties
+  - kind: plugin
+    from: git
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#main
+    path: dsh-rlm-tools-bsl
+  - kind: plugin
+    from: git
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#main
+    path: dsh-bsl-editor
+  # Agent Skills tree: content/skills/<name>/SKILL.md (comol/ai_rules_1c).
+  - kind: skill
+    from: git
+    url: https://github.com/comol/ai_rules_1c.git#main
+    path: content/skills
