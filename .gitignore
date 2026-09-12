@@ -33,4 +33,6 @@ __pycache__/
 # Project vision / planning docs (local-only, not published)
 /docs/vision.md
 /docs/overview.md
+/docs/editorial-policy.md
+
 
