@@ -1,0 +1,160 @@
+{
+  "name": "DSH Desktop",
+  "version": "0.8.0-rc.4",
+  "id": "dsh-desktop",
+  "items": [
+    {
+      "kind": "plugin",
+      "id": "dshmarket",
+      "name": "dshmarket",
+      "version": "1.45.1",
+      "label": "Plugin: dshmarket",
+      "file": "plugins/dshmarket-1.45.1.tgz",
+      "digest": "dac7383e1fab5959d4d72bb7c9dc17856b2000c00ea7ac8e40c25eb1cd5ef63b"
+    },
+    {
+      "kind": "plugin",
+      "id": "@wingsky-1/dsh-mcp-manager",
+      "name": "@wingsky-1/dsh-mcp-manager",
+      "version": "0.2.3",
+      "label": "Plugin: @wingsky-1/dsh-mcp-manager",
+      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.3.tgz",
+      "digest": "1f1c6587be2a36535dbb2f2f7c75b4cc442d594c7c2699adbefc30c663c76cc2"
+    },
+    {
+      "kind": "plugin",
+      "id": "@liustack/modsearch",
+      "name": "@liustack/modsearch",
+      "version": "5.10.2",
+      "label": "Plugin: @liustack/modsearch",
+      "file": "plugins/liustack-modsearch-5.10.2.tgz",
+      "digest": "9c23a71810d95f1941ac7917dfb22618207c92d135aec5ba0bb56b4335bff05c"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-better-sidebar",
+      "name": "dsh-better-sidebar",
+      "version": "0.18.1",
+      "label": "Plugin: dsh-better-sidebar",
+      "file": "plugins/dsh-better-sidebar-0.18.1.tgz",
+      "digest": "7447567f0f324e6f1dc40f9477ef2287177e1eaa483152c67ac60fbb4e370ffc"
+    },
+    {
+      "kind": "plugin",
+      "id": "@linxin666/dsh-client-ui-skill-explorer",
+      "name": "@linxin666/dsh-client-ui-skill-explorer",
+      "version": "0.3.20",
+      "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.20.tgz",
+      "digest": "aada0dd25a583a527c4fc62c431dcdd423071419876f3bc21f7615be4fd9537e"
+    },
+    {
+      "kind": "plugin",
+      "id": "@tt-a1i/archify-dsh",
+      "name": "@tt-a1i/archify-dsh",
+      "version": "0.2.0",
+      "label": "Plugin: @tt-a1i/archify-dsh",
+      "file": "plugins/tt-a1i-archify-dsh-0.2.0.tgz",
+      "digest": "05bea951993772f5d997dadb7c39d7614abaa6de2cce737973734b8a1a160818"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-1c-project-properties",
+      "name": "dsh-1c-project-properties",
+      "version": "0.3.0",
+      "label": "Plugin: dsh-1c-project-properties",
+      "file": "plugins/dsh-1c-project-properties-0.3.0.tgz",
+      "digest": "6251e9d48d244905db610e9f59f94bc4159d4639fcd958aee43e9f747d15d6ea"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-rlm-tools-bsl",
+      "name": "dsh-rlm-tools-bsl",
+      "version": "0.1.3",
+      "label": "Plugin: dsh-rlm-tools-bsl",
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.3.tgz",
+      "digest": "5766ba15ee19f2d7e77f1bb5b823a55ae7dd63cf5d9d7558c489ac48a6f58a5f"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-bsl-editor",
+      "name": "dsh-bsl-editor",
+      "version": "0.3.0",
+      "label": "Plugin: dsh-bsl-editor",
+      "file": "plugins/dsh-bsl-editor-0.3.0.tgz",
+      "digest": "03c1a8de50f9902c83e29d264108db89b2dda7bd2628d267275a7f0abfb3e31f"
+    },
+    {
+      "kind": "skill",
+      "id": "1c-metadata-manage",
+      "label": "Skill: 1c-metadata-manage",
+      "path": "skills/1c-metadata-manage"
+    },
+    {
+      "kind": "skill",
+      "id": "1c-repository-manage",
+      "label": "Skill: 1c-repository-manage",
+      "path": "skills/1c-repository-manage"
+    },
+    {
+      "kind": "skill",
+      "id": "caveman",
+      "label": "Skill: caveman",
+      "path": "skills/caveman"
+    },
+    {
+      "kind": "skill",
+      "id": "handoff",
+      "label": "Skill: handoff",
+      "path": "skills/handoff"
+    },
+    {
+      "kind": "skill",
+      "id": "img-grid-analysis",
+      "label": "Skill: img-grid-analysis",
+      "path": "skills/img-grid-analysis"
+    },
+    {
+      "kind": "skill",
+      "id": "mcp-1c-tools",
+      "label": "Skill: mcp-1c-tools",
+      "path": "skills/mcp-1c-tools"
+    },
+    {
+      "kind": "skill",
+      "id": "md-to-docx",
+      "label": "Skill: md-to-docx",
+      "path": "skills/md-to-docx"
+    },
+    {
+      "kind": "skill",
+      "id": "mermaid-diagrams",
+      "label": "Skill: mermaid-diagrams",
+      "path": "skills/mermaid-diagrams"
+    },
+    {
+      "kind": "skill",
+      "id": "powershell-windows",
+      "label": "Skill: powershell-windows",
+      "path": "skills/powershell-windows"
+    },
+    {
+      "kind": "skill",
+      "id": "prompt-enhancer",
+      "label": "Skill: prompt-enhancer",
+      "path": "skills/prompt-enhancer"
+    },
+    {
+      "kind": "skill",
+      "id": "transcribe",
+      "label": "Skill: transcribe",
+      "path": "skills/transcribe"
+    },
+    {
+      "kind": "skill",
+      "id": "v8unpack-cf",
+      "label": "Skill: v8unpack-cf",
+      "path": "skills/v8unpack-cf"
+    }
+  ]
+}

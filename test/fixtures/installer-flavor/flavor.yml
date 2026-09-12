@@ -1,0 +1,17 @@
+name: Fixture Desktop
+version: 1.0.0
+sources:
+  - kind: plugin
+    from: local
+    path: ./oem/acme-internal-plugin
+  - kind: mcp
+    from: local
+    path: ./oem/mcp-intranet
+    id: intranet
+    transport: stdio
+  - kind: skill
+    from: local
+    path: ./oem/invoice-review
+  - kind: rules
+    from: local
+    path: ./oem/AGENTS.md
