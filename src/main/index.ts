@@ -36,6 +36,7 @@ import {
   installCatalogMarket
 } from './state/market-baseline'
 import { resolveCatalogMarketPackage } from './state/installer-catalog-seed'
+import { DEVELOPMENT_CHANNEL, readAppChannel } from './app-channel'
 import { ensureWelcomeNoticeAcknowledged } from './state/onboarding-seed'
 import {
   clearProfileInstallMarker,
@@ -307,15 +308,7 @@ function appendPluginRecoveryDetectionLog(plugins: readonly string[]): void {
 
 function isDevelopmentBuild(): boolean {
   if (!app.isPackaged) return true
-
-  try {
-    const metadata = JSON.parse(
-      readFileSync(join(app.getAppPath(), 'package.json'), 'utf8')
-    ) as { dshDesktopChannel?: unknown }
-    return metadata.dshDesktopChannel === 'development'
-  } catch {
-    return false
-  }
+  return readAppChannel(app.getAppPath()) === DEVELOPMENT_CHANNEL
 }
 
 const developmentBuild = isDevelopmentBuild()

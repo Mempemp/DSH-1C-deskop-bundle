@@ -328,6 +328,7 @@ describe('GitHub release contract', () => {
       build: {
         publish: Array<{ provider: string; url?: string; owner?: string; repo?: string }>
         win: { verifyUpdateCodeSignature: boolean }
+        extraMetadata?: { dshDesktopChannel?: string }
       }
     }
     const workflow = await readFile(
@@ -340,6 +341,10 @@ describe('GitHub release contract', () => {
       { provider: 'generic', url: 'https://dshdesktop.com/updates/latest/' }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
+    // The channel marker is what keeps this bundle off the upstream update
+    // feed: without it a packaged build would offer to replace itself with
+    // plain DSH Desktop.
+    expect(packageJson.build.extraMetadata?.dshDesktopChannel).toBe('bundle')
     for (const asset of [
       'latest-mac-arm64.yml',
       'latest-mac-x64.yml',

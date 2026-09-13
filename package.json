@@ -302,6 +302,9 @@
   },
   "build": {
     "appId": "io.dsh.desktop",
+    "extraMetadata": {
+      "dshDesktopChannel": "bundle"
+    },
     "productName": "DSH Desktop",
     "asar": false,
     "npmRebuild": false,

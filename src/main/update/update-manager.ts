@@ -1,3 +1,4 @@
+import { readAppChannel } from '../app-channel'
 import { checkDesktopUpdate } from '../desktop-service'
 import { isPrereleaseVersion, isVersion } from '../desktop-service/service'
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
@@ -7,6 +8,7 @@ import {
   AUTO_INSTALL_ON_APP_QUIT,
   shouldCheckAfterResume,
   supportsAutoUpdates,
+  updateChannelEnabled,
   UPDATE_CHECK_INTERVAL_MS,
   UPDATE_STARTUP_DELAY_MS,
   UPDATE_STARTUP_JITTER_MS
@@ -102,7 +104,7 @@ export function startUpdateManager(options: { prepareToInstall: () => Promise<vo
   if (!supportsUpdates()) {
     transition({
       type: 'unsupported',
-      message: 'Updates are available in installed macOS and Windows builds.'
+      message: unsupportedMessage('Updates are available in installed macOS and Windows builds.')
     })
     return
   }
@@ -121,7 +123,7 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
     transition(
       {
         type: 'unsupported',
-        message: 'Update checks are only available in installed macOS and Windows builds.'
+        message: unsupportedMessage('Update checks are only available in installed macOS and Windows builds.')
       },
       manual
     )
@@ -328,8 +330,26 @@ function checkAfterResume(): void {
   if (shouldCheckAfterResume(lastCheckedAt)) void checkForUpdates()
 }
 
+function appChannel(): string | undefined {
+  try {
+    return readAppChannel(app.getAppPath())
+  } catch {
+    // A host without app paths carries no marker: keep upstream behavior.
+    return undefined
+  }
+}
+
 function supportsUpdates(): boolean {
-  return supportsAutoUpdates(app.isPackaged, process.platform)
+  return supportsAutoUpdates(app.isPackaged, process.platform) && updateChannelEnabled(appChannel())
+}
+
+/**
+ * User-facing reason a build cannot take updates. A channel that ships no feed
+ * has to say so instead of promising updates for installed builds.
+ * @param fallback - message used when only packaging or the platform is at fault.
+ */
+function unsupportedMessage(fallback: string): string {
+  return updateChannelEnabled(appChannel()) ? fallback : 'Automatic updates are turned off in this build.'
 }
 
 function errorMessage(error: unknown): string {

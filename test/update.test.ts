@@ -9,6 +9,7 @@ import {
   AUTO_INSTALL_ON_APP_QUIT,
   shouldCheckAfterResume,
   supportsAutoUpdates,
+  updateChannelEnabled,
   UPDATE_CHECK_INTERVAL_MS
 } from '../src/main/update/update-policy'
 
@@ -30,6 +31,20 @@ describe('desktop update policy', () => {
     expect(supportsAutoUpdates(true, 'win32')).toBe(true)
     expect(supportsAutoUpdates(true, 'linux')).toBe(false)
     expect(supportsAutoUpdates(false, 'darwin')).toBe(false)
+  })
+
+  it('refuses updates on a channel that ships no feed of its own', () => {
+    expect(updateChannelEnabled(undefined)).toBe(true)
+    expect(updateChannelEnabled('production')).toBe(true)
+    expect(updateChannelEnabled('bundle')).toBe(false)
+    expect(updateChannelEnabled('development')).toBe(false)
+  })
+
+  it('consults the build channel before it contacts the update service', async () => {
+    const manager = await readFile(path.join(projectRoot, 'src/main/update/update-manager.ts'), 'utf8')
+
+    expect(manager).toContain('updateChannelEnabled(appChannel())')
+    expect(manager).toContain('readAppChannel(app.getAppPath())')
   })
 
   it('checks after resume only when the interval has elapsed', () => {
