@@ -50,6 +50,13 @@ sources:
     from: git
     url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#main
     path: dsh-bsl-editor
+  # Russian localization for the web UI. Pinned exactly for the same reason as
+  # the market above: the offline seed must stay reproducible, and a floating
+  # range would silently change what a release delivers. Smart UX stays off by
+  # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
+  - kind: plugin
+    from: npm
+    spec: "@goodandready/dsh-russian-lang@0.2.14"
   # Agent Skills tree: content/skills/<name>/SKILL.md (comol/ai_rules_1c).
   - kind: skill
     from: git

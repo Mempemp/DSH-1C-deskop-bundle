@@ -67,7 +67,7 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@^1.40.0' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.45.1' },
       {
         kind: 'plugin',
         from: 'git',
@@ -113,6 +113,11 @@ describe('installer flavor schema', () => {
         from: 'git',
         url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#main',
         path: 'dsh-bsl-editor'
+      },
+      {
+        kind: 'plugin',
+        from: 'npm',
+        spec: '@goodandready/dsh-russian-lang@0.2.14'
       },
       {
         kind: 'skill',

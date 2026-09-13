@@ -38,6 +38,7 @@ import {
 import { resolveCatalogMarketPackage } from './state/installer-catalog-seed'
 import { DEVELOPMENT_CHANNEL, readAppChannel } from './app-channel'
 import { ensureWelcomeNoticeAcknowledged } from './state/onboarding-seed'
+import { ensureRussianLangDefaults } from './state/plugin-defaults-seed'
 import {
   clearProfileInstallMarker,
   markProfileInstallComplete
@@ -1291,6 +1292,16 @@ function launchHarness(): Promise<void> {
     } catch (error) {
       runtime.note(
         `[desktop] welcome notice seed failed: ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
+    try {
+      // The bundled install ships the Russian localization pack: keep the
+      // language preselected and its Smart UX toggles off until the user says
+      // otherwise (see plugin-defaults-seed.ts for why both live in settings).
+      ensureRussianLangDefaults({ dshHome, note: (line) => runtime.note(line) })
+    } catch (error) {
+      runtime.note(
+        `[desktop] plugin default seed failed: ${error instanceof Error ? error.message : String(error)}`
       )
     }
     desktopStorageManager?.switchProfile(join(dshHome, 'profiles', 'web'))

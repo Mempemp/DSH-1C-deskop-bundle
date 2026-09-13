@@ -7,10 +7,10 @@
       "kind": "plugin",
       "id": "dshmarket",
       "name": "dshmarket",
-      "version": "1.46.0",
+      "version": "1.45.1",
       "label": "Plugin: dshmarket",
-      "file": "plugins/dshmarket-1.46.0.tgz",
-      "digest": "661b4f2a054d2f8a5eefc9699d37f8909c537a8f9e18f5bde49f58a10b0d3581"
+      "file": "plugins/dshmarket-1.45.1.tgz",
+      "digest": "dac7383e1fab5959d4d72bb7c9dc17856b2000c00ea7ac8e40c25eb1cd5ef63b"
     },
     {
       "kind": "plugin",
@@ -83,6 +83,15 @@
       "label": "Plugin: dsh-bsl-editor",
       "file": "plugins/dsh-bsl-editor-0.3.0.tgz",
       "digest": "03c1a8de50f9902c83e29d264108db89b2dda7bd2628d267275a7f0abfb3e31f"
+    },
+    {
+      "kind": "plugin",
+      "id": "@goodandready/dsh-russian-lang",
+      "name": "@goodandready/dsh-russian-lang",
+      "version": "0.2.14",
+      "label": "Plugin: @goodandready/dsh-russian-lang",
+      "file": "plugins/goodandready-dsh-russian-lang-0.2.14.tgz",
+      "digest": "6cb795670e6da96299ec56948c69374f64d546745cfbc5eedc6cc8c01bcd428d"
     },
     {
       "kind": "skill",
