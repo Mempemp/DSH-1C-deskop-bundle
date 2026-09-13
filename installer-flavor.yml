@@ -13,11 +13,13 @@
 name: DSH Desktop
 version: 0.8.2
 sources:
-  # Official market host. Same pin as packages/dsh-desktop-market-installer
-  # RECOMMENDED_MARKET_VERSION / MARKET_PACKAGE (`dsh plugin --profile web add dshmarket`).
+  # Official market host. Pinned exactly, not by range: this is the version the
+  # offline seed installs, so it stays reproducible and at or above
+  # VERIFIED_MARKET_BASELINE (src/main/state/market-baseline.ts) and the app's own
+  # dshmarket dependency in package.json.
   - kind: plugin
     from: npm
-    spec: dshmarket@^1.40.0
+    spec: dshmarket@1.45.1
   - kind: plugin
     from: git
     url: https://github.com/wingsky-1/dsh-plugin-hub.git#main
