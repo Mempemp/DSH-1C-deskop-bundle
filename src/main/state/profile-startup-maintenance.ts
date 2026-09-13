@@ -44,6 +44,13 @@ export async function runProfileStartupMaintenance(
 ): Promise<ProfileStartupMaintenanceResult> {
   const reportConsistency = async (): Promise<void> => {
     try {
+      // A profile records the store it was linked from only once something has
+      // installed into it, so on a fresh profile the pin this run opened with
+      // had nothing to state. Pin again after the market and catalog installs,
+      // so the store they actually used is the one written down — otherwise the
+      // inspection below reports the drift this very run created and warns about
+      // a pnpm run that would have agreed with it.
+      await deps.preparePackageStore()
       await deps.reportProfileConsistency()
     } catch (error) {
       deps.note(

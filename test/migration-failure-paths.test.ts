@@ -662,4 +662,20 @@ describe('migration failure paths (issue #250)', () => {
     // Desired generation pointer is preserved (not reset by confirmMigration).
     expect(await readDesired(home)).toContain('previous-generation')
   })
+
+  it('pins the store the installs left behind before reporting consistency', async () => {
+    // A fresh profile records no store until something installs into it, so the
+    // pin this run opens with has nothing to state. Without a second pin after
+    // the market and catalog installs, the inspection reports the drift the run
+    // itself created — the profile's very first launch reported exactly that.
+    const home = await preUpgradeProfile({ 'dsh-vision-router': '2.0.1' })
+    const launch = startup(home)
+
+    expect((await launch.run()).outcome).toBe('normal-profile')
+
+    expect(launch.report).toHaveBeenCalledOnce()
+    const pins = launch.prepareStore.mock.invocationCallOrder
+    expect(pins.length).toBeGreaterThanOrEqual(2)
+    expect(pins.at(-1) ?? 0).toBeLessThan(launch.report.mock.invocationCallOrder[0] ?? 0)
+  })
 })
