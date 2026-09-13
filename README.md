@@ -9,7 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://mempemp.github.io/1C-DSH-promo/">Промо-сайт</a> ·
   <a href="https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest">Скачать</a> ·
   <a href="#состав-сборки">Состав</a> ·
   <a href="#сборка-из-исходников">Сборка</a> ·
