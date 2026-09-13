@@ -18,6 +18,7 @@ import {
 } from '../packages/dsh-desktop-market-installer/generations/registry'
 
 const installCalls: string[] = []
+const installSources: Array<{ name: string; sourceDirectory?: string }> = []
 
 // The installer's pnpm step is stubbed via a module mock so the migration's
 // generation installs run offline.
@@ -31,6 +32,10 @@ vi.mock('dsh-desktop-market-installer/generations/installer', async () => {
       options: Parameters<typeof actual.installGeneration>[0]
     ) => {
       installCalls.push(options.expectedPluginName ?? options.pluginSpec)
+      installSources.push({
+        name: options.expectedPluginName ?? options.pluginSpec,
+        sourceDirectory: options.sourceDirectory
+      })
       const name = options.expectedPluginName ?? options.pluginSpec.replace(/@[^@/]+$/u, '')
       let version = options.pluginSpec.split('@').at(-1) ?? '0.0.0'
       if (options.sourceDirectory) {
@@ -121,6 +126,7 @@ describe('one-time profile migration to generations', () => {
     await Promise.all(homes.map((home) => rm(home, { recursive: true, force: true })))
     homes.length = 0
     installCalls.length = 0
+    installSources.length = 0
   })
 
   it('moves community plugins to generations and trims the manifest', async () => {
@@ -309,5 +315,61 @@ describe('one-time profile migration to generations', () => {
     // The pre-upgrade tree is still intact so the launch flow has something
     // to start from on the next run.
     expect(existsSync(join(home, 'profiles', 'web', 'node_modules', 'staging-fail'))).toBe(true)
+  })
+
+  it('adopts a generation the profile already owns instead of asking the registry for it', async () => {
+    // The catalog vendors plugins straight from git, so a projected dependency
+    // is a bare version no registry can resolve: re-staging it deferred every
+    // launch on ERR_PNPM_FETCH_404. The generation it already runs is the
+    // artifact, so the migration adopts it and leaves the registry to the
+    // plugins that are genuinely legacy.
+    const home = await preUpgradeProfile(
+      { 'git-only-plugin': '0.4.0', 'legacy-plugin': '1.2.0' },
+      { 'git-only-plugin': '0.4.0' }
+    )
+    const generationId = 'git-only-plugin+0.4.0+aaaa'
+    const generationDirectory = join(registryLayout(home).generations, generationId)
+    const packageDirectory = join(generationDirectory, 'node_modules', 'git-only-plugin')
+    await mkdir(packageDirectory, { recursive: true })
+    await writeFile(
+      join(packageDirectory, 'package.json'),
+      JSON.stringify({
+        name: 'git-only-plugin',
+        version: '0.4.0',
+        dsh: { bundle: { patch: 'cordis.patch.yml' } }
+      })
+    )
+    await writeFile(join(packageDirectory, 'cordis.patch.yml'), '[]\n')
+    await writeGenerationMeta(generationDirectory, { pluginName: 'git-only-plugin', version: '0.4.0' })
+
+    const manifestPath = join(home, 'profiles', 'web', 'package.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    manifest.pnpm = {
+      overrides: {
+        'git-only-plugin': `link:../.generations/live/${generationId}/node_modules/git-only-plugin`
+      }
+    }
+    manifest.dsh.desktop = {
+      generationProjection: {
+        version: 1,
+        plugins: {
+          'git-only-plugin': {
+            generationId,
+            visibleVersion: '0.4.0',
+            previousOverride: { present: false }
+          }
+        }
+      }
+    }
+    await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
+
+    expect(await migrateProfileToGenerations(deps(home))).toEqual({ outcome: 'migrated' })
+
+    // Only the genuinely legacy plugin reached the installer, and it kept the
+    // registry path: no local source was handed to it.
+    expect(installCalls).toEqual(['legacy-plugin'])
+    expect(installSources).toEqual([{ name: 'legacy-plugin', sourceDirectory: undefined }])
+    expect(await readDesired(home)).toContain(generationId)
+    expect(isProfileMigrated(home)).toBe(true)
   })
 })

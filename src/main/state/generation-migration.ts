@@ -7,7 +7,11 @@ import {
   verifyGenerationPeers
 } from 'dsh-desktop-market-installer/generations/installer'
 import { projectGenerations } from 'dsh-desktop-market-installer/generations/projection'
-import { readDesired, writeDesired } from 'dsh-desktop-market-installer/generations/registry'
+import {
+  listGenerations,
+  readDesired,
+  writeDesired
+} from 'dsh-desktop-market-installer/generations/registry'
 import { resolveMarketRegistry } from 'dsh-desktop-market-installer/market-registry'
 
 /**
@@ -100,7 +104,10 @@ export function isProfileMigrated(dshHome: string): boolean {
  */
 async function profileManifest(dshHome: string): Promise<{
   dependencies?: Record<string, string>
-  dsh?: { profile?: { bundles?: string[] } }
+  dsh?: {
+    profile?: { bundles?: string[] }
+    desktop?: { generationProjection?: { plugins?: Record<string, unknown> } }
+  }
 }> {
   return JSON.parse(await readFile(join(profileDir(dshHome), 'package.json'), 'utf8'))
 }
@@ -120,6 +127,38 @@ interface PlannedPlugin {
   sourceSpec: string
   sourceDirectory?: string
   installedManifest: Record<string, unknown>
+  /** Generation the profile already runs this plugin as, when it owns one. */
+  adoptionId?: string
+}
+
+/**
+ * Generations the profile already owns, keyed by plugin name.
+ *
+ * A dependency the projection wrote is not necessarily a registry package: the
+ * desktop marker records the generation behind each visible version dependency,
+ * and the catalog vendors several plugins straight from git, so re-fetching one
+ * by name fails with a 404 that defers every launch. Only a generation that
+ * still exists and still belongs to the same plugin counts — anything else
+ * falls back to staging it.
+ */
+function adoptableGenerations(
+  manifest: Awaited<ReturnType<typeof profileManifest>>,
+  generations: readonly { id: string; pluginName: string }[]
+): Map<string, string> {
+  const adopted = new Map<string, string>()
+  const projected = manifest.dsh?.desktop?.generationProjection?.plugins
+  if (projected === undefined) return adopted
+  const owners = new Map(generations.map((generation) => [generation.id, generation.pluginName]))
+  for (const [name, entry] of Object.entries(projected)) {
+    const id =
+      entry !== null && typeof entry === 'object'
+        ? (entry as { generationId?: unknown }).generationId
+        : undefined
+    if (typeof id !== 'string' || id === '') continue
+    if (owners.get(id) !== name) continue
+    adopted.set(name, id)
+  }
+  return adopted
 }
 
 function usesExternalSource(spec: string): boolean {
@@ -158,6 +197,7 @@ async function migrationPlan(dshHome: string, plugins: readonly string[]): Promi
 }> {
   const root = profileDir(dshHome)
   const manifest = await profileManifest(dshHome)
+  const adoption = adoptableGenerations(manifest, await listGenerations(dshHome))
   const planned: PlannedPlugin[] = []
   for (const name of plugins) {
     const packageDir = join(root, 'node_modules', name)
@@ -174,12 +214,14 @@ async function migrationPlan(dshHome: string, plugins: readonly string[]): Promi
         : '0.0.0'
     const declared = manifest.dependencies?.[name]
     const sourceSpec = typeof declared === 'string' ? declared : `${name}@${version}`
+    const adoptionId = adoption.get(name)
     planned.push({
       name,
       pluginSpec: usesExternalSource(sourceSpec) ? sourceSpec : `${name}@${version}`,
       sourceSpec,
       ...(usesExternalSource(sourceSpec) ? { sourceDirectory: packageDir } : {}),
-      installedManifest
+      installedManifest,
+      ...(adoptionId === undefined ? {} : { adoptionId })
     })
   }
   const fingerprint = await migrationInputFingerprint(dshHome, plugins)
@@ -661,6 +703,16 @@ export async function migrateProfileToGenerations(deps: MigrationDeps): Promise<
     // Promoted generations are inert until desired.json moves, so a failure here
     // leaves startup on the exact tree that was already working.
     for (const plugin of plan.plugins) {
+      // A plugin the profile already runs as a generation needs no move: the
+      // projection put it there, and that installed tree *is* the artifact.
+      // Re-staging it would ask the registry for a package that need not be
+      // published at all — which is how a profile carrying a git-only plugin
+      // (the catalog vendors three of them) deferred every launch on a 404.
+      if (plugin.adoptionId !== undefined) {
+        generationIds.push(plugin.adoptionId)
+        note(`[desktop] migration: ${plugin.name} -> ${plugin.adoptionId} (already a generation)`)
+        continue
+      }
       const result = await installGeneration({
         dshHome,
         pluginSpec: plugin.pluginSpec,
