@@ -1,7 +1,7 @@
 import type { InstallerFlavor } from './lib/installer-flavor.mjs'
 
 export interface CatalogItem {
-  kind: 'plugin' | 'mcp' | 'skill' | 'rules'
+  kind: 'plugin' | 'mcp' | 'skill' | 'rules' | 'payload'
   id: string
   label: string
   name?: string
@@ -13,7 +13,8 @@ export interface CatalogItem {
   command?: string
   args?: string[]
   url?: string
-  connector?: string
+  serverName?: string
+  headers?: Record<string, string>
 }
 
 export interface CatalogManifest {

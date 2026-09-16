@@ -96,7 +96,8 @@ function describeItem(item) {
  * @property {string} [command]
  * @property {string[]} [args]
  * @property {string} [url]
- * @property {string} [connector]
+ * @property {string} [serverName]
+ * @property {Record<string, string>} [headers]
  */
 
 /**
@@ -1076,10 +1077,11 @@ async function vendorResolvedSource(input) {
       id,
       label: catalogListLabel('mcp', id),
       transport: source.transport ?? 'stdio',
+      serverName: source.serverName ?? id,
       command: source.command,
       args: Array.isArray(source.args) ? source.args : undefined,
       url: typeof source.url === 'string' && source.from !== 'git' ? source.url : undefined,
-      connector: source.connector
+      headers: source.headers
     }
     if (tree && statSync(tree).isDirectory() && existsSync(join(tree, 'package.json'))) {
       const packed = packDirectoryAsTgz(tree, paths.mcpDir)

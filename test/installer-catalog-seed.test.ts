@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { parse } from 'yaml'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   ensureRegistryDirectories,
@@ -16,6 +17,8 @@ import {
   catalogFingerprint,
   catalogStampPath,
   CATALOG_STAMP_NAME,
+  MCP_CLIENT_PACKAGE,
+  mcpClientEntry,
   mergeMcpServerIntoPatch,
   PAYLOAD_HOME_DIR,
   PAYLOAD_MANIFEST_NAME,
@@ -169,10 +172,27 @@ describe('first-run installer catalog seed', () => {
       'Review invoices'
     )
     expect(await readFile(join(home, 'AGENTS.md'), 'utf8')).toContain('seeded rules')
-    expect(await readFile(join(home, 'cordis.patch.yml'), 'utf8')).toContain('intranet')
-    expect(await readFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), 'utf8')).toContain(
-      '@deepseek-ai/dsh-mcp-client'
-    )
+    // The server is a real loader entry: one @deepseek-ai/dsh-mcp-client
+    // instance, inserted into the home layer every profile reads.
+    const homePatch = parse(await readFile(join(home, 'cordis.patch.yml'), 'utf8')) as Array<{
+      insert?: Array<{ id?: string; name?: string; config?: Record<string, unknown> }>
+    }>
+    const seededServer = homePatch
+      .flatMap((row) => row.insert ?? [])
+      .find((entry) => entry.id === 'mcp-intranet')
+    expect(seededServer).toEqual({
+      id: 'mcp-intranet',
+      name: MCP_CLIENT_PACKAGE,
+      config: {
+        serverName: 'intranet',
+        transport: 'stdio',
+        command: 'node',
+        args: ['intranet.js']
+      }
+    })
+    // Home layer only: the same serverName mounted twice is a hard mcp-client
+    // boot error, not a harmless duplicate.
+    expect(await readFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), 'utf8')).toBe('[]\n')
     // The payload lands beside the skills, whole, with a manifest naming the
     // revision a consumer (a project-scoped plugin) deployed.
     expect(await readFile(join(home, PAYLOAD_HOME_DIR, 'AGENTS.md'), 'utf8')).toContain(
@@ -470,14 +490,23 @@ describe('first-run installer catalog seed', () => {
     await writeFile(join(home, 'skills', 'user-skill', 'SKILL.md'), 'my skill\n')
     await writeFile(
       join(home, 'cordis.patch.yml'),
-      mergeMcpServerIntoPatch(
-        mergeMcpServerIntoPatch('[]\n', 'intranet', {
-          transport: 'stdio',
-          command: 'old-intranet'
-        }).text,
-        'user-mcp',
-        { transport: 'stdio', command: 'user-server' }
-      ).text
+      [
+        '# a comment the desktop must not eat',
+        '- insert:',
+        "    - id: mcp-intranet",
+        `      name: '${MCP_CLIENT_PACKAGE}'`,
+        '      config:',
+        '        serverName: intranet',
+        '        transport: stdio',
+        '        command: old-intranet',
+        "    - id: mcp-mine",
+        `      name: '${MCP_CLIENT_PACKAGE}'`,
+        '      config:',
+        '        serverName: mine',
+        '        transport: stdio',
+        "        command: !!js dshHomePath('bin/mine')",
+        ''
+      ].join('\n')
     )
 
     const outcome = await applyInstallerCatalogSeed({
@@ -512,8 +541,13 @@ describe('first-run installer catalog seed', () => {
     expect(patch).toContain('intranet')
     expect(patch).toContain('node')
     expect(patch).not.toContain('old-intranet')
-    expect(patch).toContain('user-mcp')
-    expect(patch).toContain('user-server')
+    expect(patch).toContain('mcp-mine')
+    expect(patch).toContain('serverName: mine')
+    // The user's own row keeps its comment and its !!js expression verbatim.
+    expect(patch).toContain('# a comment the desktop must not eat')
+    expect(patch).toContain("!!js dshHomePath('bin/mine')")
+    const rows = parse(patch) as Array<{ insert?: Array<{ id?: string }> }>
+    expect(rows.flatMap((row) => row.insert ?? []).filter((entry) => entry.id === 'mcp-intranet')).toHaveLength(1)
   })
 
   it('re-applies the catalog when the desktop app version changes', async () => {
@@ -639,24 +673,44 @@ describe('first-run installer catalog seed', () => {
     )
   })
 
-  it('merges an MCP server without replacing an existing one', () => {
-    const first = mergeMcpServerIntoPatch('[]\n', 'intranet', {
-      transport: 'stdio',
-      command: 'node'
+  it('adds an MCP server as its own loader entry and updates only that entry', () => {
+    const entry = mcpClientEntry('v8std', {
+      serverName: 'v8std',
+      transport: 'streamable-http',
+      url: 'https://ai.v8std.ru/mcp'
     })
+
+    const first = mergeMcpServerIntoPatch('[]\n', entry)
     expect(first.added).toBe(true)
-    const second = mergeMcpServerIntoPatch(first.text, 'intranet', {
-      transport: 'stdio',
-      command: 'other'
-    })
-    expect(second.added).toBe(false)
-    expect(second.changed).toBe(false)
-    expect(second.text).toBe(first.text)
-    const replaced = mergeMcpServerIntoPatch(first.text, 'intranet', {
-      transport: 'stdio',
-      command: 'other'
-    }, { replace: true })
-    expect(replaced.changed).toBe(true)
-    expect(replaced.text).toContain('other')
+    expect(first.changed).toBe(true)
+    expect(first.skipped).toBe(false)
+    expect(parse(first.text)).toEqual([
+      { insert: [{ id: 'mcp-v8std', name: MCP_CLIENT_PACKAGE, config: entry.config }] }
+    ])
+
+    // Re-seeding an identical catalog is a no-op, not a second row.
+    const again = mergeMcpServerIntoPatch(first.text, entry)
+    expect(again.added).toBe(false)
+    expect(again.changed).toBe(false)
+    expect(again.text).toBe(first.text)
+
+    // A moved URL rewrites the desktop's own row in place.
+    const moved = mergeMcpServerIntoPatch(
+      first.text,
+      mcpClientEntry('v8std', { ...entry.config, url: 'https://ai.example.test/mcp' })
+    )
+    expect(moved.added).toBe(false)
+    expect(moved.changed).toBe(true)
+    expect(moved.text).toContain('https://ai.example.test/mcp')
+    expect(moved.text).not.toContain('ai.v8std.ru')
+    expect(moved.text.match(/id: mcp-v8std/g)).toHaveLength(1)
+  })
+
+  it('leaves a patch file the loader could not read exactly as it was', () => {
+    const broken = '- insert: [unclosed\n'
+    const merged = mergeMcpServerIntoPatch(broken, mcpClientEntry('v8std', { serverName: 'v8std' }))
+    expect(merged.skipped).toBe(true)
+    expect(merged.changed).toBe(false)
+    expect(merged.text).toBe(broken)
   })
 })

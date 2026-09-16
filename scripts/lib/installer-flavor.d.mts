@@ -6,7 +6,7 @@ export const PROFILE_BACKUP_VERSION: 0.2
 
 export interface FlavorSource {
   kind: 'plugin' | 'mcp' | 'skill' | 'rules' | 'catalog'
-  from: 'git' | 'local' | 'npm' | 'market' | 'backup'
+  from: 'git' | 'local' | 'npm' | 'market' | 'backup' | 'remote'
   url?: string
   path?: string
   spec?: string
@@ -15,7 +15,8 @@ export interface FlavorSource {
   transport?: 'stdio' | 'streamable-http'
   command?: string
   args?: string[]
-  connector?: string
+  serverName?: string
+  headers?: Record<string, string>
   name?: string
   fromBackup?: boolean
   fromMarket?: boolean

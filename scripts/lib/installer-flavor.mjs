@@ -3,7 +3,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 
 export const FLAVOR_KINDS = Object.freeze(['plugin', 'mcp', 'skill', 'rules', 'payload', 'catalog'])
-export const FLAVOR_FROMS = Object.freeze(['git', 'local', 'npm', 'market', 'backup'])
+export const FLAVOR_FROMS = Object.freeze(['git', 'local', 'npm', 'market', 'backup', 'remote'])
 export const MCP_TRANSPORTS = Object.freeze(['stdio', 'streamable-http'])
 
 /** Same format string as packages/dshmarket/src/backup.ts (`BACKUP_FORMAT`). */
@@ -77,6 +77,14 @@ export function validateFlavorSource(source, index) {
     if (!MCP_TRANSPORTS.includes(transport)) {
       throw new Error(`${at}.transport must be one of ${MCP_TRANSPORTS.join(', ')}`)
     }
+    if (from === 'remote') {
+      // A remote server is reached over the network: there is no tree to vendor
+      // and nothing to launch, so the URL is the whole source.
+      requireString(row.url, `${at}.url`)
+      if (transport === 'stdio') {
+        throw new Error(`${at}: from: remote needs a network transport, not stdio`)
+      }
+    }
   }
   if (kind === 'payload') {
     // A payload is a whole content tree another component unpacks into the
@@ -92,7 +100,7 @@ export function validateFlavorSource(source, index) {
 /**
  * @typedef {object} FlavorSource
  * @property {'plugin' | 'mcp' | 'skill' | 'rules' | 'payload' | 'catalog'} kind
- * @property {'git' | 'local' | 'npm' | 'market' | 'backup'} from
+ * @property {'git' | 'local' | 'npm' | 'market' | 'backup' | 'remote'} from
  * @property {string} [url]
  * @property {string} [path]
  * @property {string} [spec]
@@ -101,7 +109,8 @@ export function validateFlavorSource(source, index) {
  * @property {'stdio' | 'streamable-http'} [transport]
  * @property {string} [command]
  * @property {string[]} [args]
- * @property {string} [connector]
+ * @property {string} [serverName]
+ * @property {Record<string, string>} [headers]
  * @property {string} [name]
  * @property {boolean} [fromBackup]
  * @property {boolean} [fromMarket]

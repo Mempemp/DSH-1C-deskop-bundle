@@ -130,6 +130,14 @@ describe('installer flavor schema', () => {
         spec: 'dsh-univer-office@0.2.14'
       },
       {
+        kind: 'mcp',
+        from: 'remote',
+        id: 'v8std',
+        serverName: 'v8std',
+        transport: 'streamable-http',
+        url: 'https://ai.v8std.ru/mcp'
+      },
+      {
         kind: 'skill',
         from: 'git',
         url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',
@@ -158,6 +166,32 @@ sources:
     expect(() => parseInstallerFlavor(`${base}    id: acme-rules\n    version: 1.0.0\n`)).not.toThrow()
     expect(() => parseInstallerFlavor(base)).toThrow(/sources\[0\]\.id/)
     expect(() => parseInstallerFlavor(`${base}    id: acme-rules\n`)).toThrow(/sources\[0\]\.version/)
+  })
+
+  it('requires a URL for a remote MCP server and rejects stdio there', () => {
+    const base = `
+name: Acme Desktop
+version: 1.0.0
+sources:
+  - kind: mcp
+    from: remote
+    id: v8std
+    transport: streamable-http
+`
+    expect(() => parseInstallerFlavor(`${base}    url: https://ai.example.test/mcp\n`)).not.toThrow()
+    expect(() => parseInstallerFlavor(base)).toThrow(/sources\[0\]\.url/)
+    expect(() =>
+      parseInstallerFlavor(`
+name: Acme Desktop
+version: 1.0.0
+sources:
+  - kind: mcp
+    from: remote
+    id: v8std
+    transport: stdio
+    url: https://ai.example.test/mcp
+`)
+    ).toThrow(/from: remote needs a network transport/)
   })
 
   it('treats an empty sources list as vanilla DSH Desktop', () => {

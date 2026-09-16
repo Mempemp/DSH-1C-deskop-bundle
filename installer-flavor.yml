@@ -10,6 +10,10 @@
 #   - kind: plugin
 #     from: backup
 #     path: ./test/fixtures/installer-flavor/dsh-dshmarket-backup-example.json
+#
+# An MCP server reachable over the network adds one more source: kind: mcp with
+# from: remote, where the URL is the whole source — nothing to download or pack,
+# so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
 version: 0.9.0-1
 sources:
@@ -64,6 +68,18 @@ sources:
   - kind: plugin
     from: npm
     spec: dsh-univer-office@0.2.14
+  # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
+  # standards. `from: remote` because there is nothing to vendor — the installer
+  # seeds one @deepseek-ai/dsh-mcp-client instance into the home patch layer
+  # ($DSH_HOME/cordis.patch.yml), which every profile reads, so the server is
+  # available in every project without a per-project MCP setup. Its tools appear
+  # as mcp__v8std__<tool>.
+  - kind: mcp
+    from: remote
+    id: v8std
+    serverName: v8std
+    transport: streamable-http
+    url: https://ai.v8std.ru/mcp
   # Agent Skills tree: content/skills/<name>/SKILL.md (comol/ai_rules_1c).
   # Pinned to a commit, not `#main`: this is what the offline seed installs, and
   # a floating ref would hand two installs of the same build different rulesets.
