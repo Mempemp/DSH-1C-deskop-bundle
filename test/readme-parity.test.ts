@@ -13,7 +13,7 @@ const readmes = [
 
 // Facts every translated upstream README must carry.
 const upstreamFacts = [
-  '@deepseek-ai/dsh@0.1.2-rc.1',
+  '@deepseek-ai/dsh@0.1.5-rc.2',
   '--safe-mode',
   'Cloudflare Quick Tunnel',
   'NSIS',
@@ -24,7 +24,7 @@ const upstreamFacts = [
 // README.md is this bundle's own document: it states the bundled runtime and
 // points at the upstream engineering docs, without claiming upstream features
 // the bundle does not document.
-const bundleFacts = ['@deepseek-ai/dsh@0.1.2-rc.1', 'docs/development.md', 'docs/architecture.md']
+const bundleFacts = ['@deepseek-ai/dsh@0.1.5-rc.2', 'docs/development.md', 'docs/architecture.md']
 
 describe('localized README parity', () => {
   for (const path of readmes) {

@@ -11,7 +11,7 @@
 #     from: backup
 #     path: ./test/fixtures/installer-flavor/dsh-dshmarket-backup-example.json
 name: DSH Desktop
-version: 0.8.2-1
+version: 0.9.0-1
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above

@@ -23,8 +23,8 @@ publish anything here yet. Releases are published by hand:
 
 1. Stamp the version: `npm version <version> --no-git-tag-version`, set the same value in
    `installer-flavor.yml`, and run `npm run package:win` so the catalog manifest follows.
-2. Commit, push `main`, then tag that commit **without the `v` prefix** (`0.8.2-1`, not
-   `v0.8.2-1`). The `v*` trigger above would otherwise start the upstream pipeline, whose
+2. Commit, push `main`, then tag that commit **without the `v` prefix** (`0.9.0-1`, not
+   `v0.9.0-1`). The `v*` trigger above would otherwise start the upstream pipeline, whose
    macOS jobs and UKey signing step are not available here.
 3. `gh release create <tag> --title "DSH Desktop v<tag>" --latest --notes-file - dist/dsh-desktop-windows-x64-setup.exe`
 

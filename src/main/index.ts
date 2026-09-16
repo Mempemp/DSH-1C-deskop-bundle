@@ -3,6 +3,7 @@ import { checkBlockingPluginUpdates, selectPluginRecoveryTarget, PluginRecoveryE
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
 import { parse } from 'yaml'
 import {
   app,
@@ -23,7 +24,8 @@ import { clearStaleLoopbackHttpCache } from './cache-maintenance'
 import {
   DEFAULT_HARNESS_PORT,
   extractFailureCause,
-  HarnessRuntime
+  HarnessRuntime,
+  prewarmShellEnvironment
 } from './runtime/harness-runtime'
 import { launchDisclaimedUtilityProcess } from './runtime/disclaimed-utility-process'
 import {
@@ -140,6 +142,14 @@ import {
   type DesktopMenuCommand
 } from '../shared/desktop-menu'
 import { buildPluginRecoveryViewModel } from './plugin-recovery-view'
+import { buildWebImportViewModel } from './web-import-view'
+import {
+  defaultWebHome,
+  importWebHome,
+  previewWebHome,
+  shouldOfferWebHomeImport,
+  writeSkipDecision
+} from './state/web-home-import'
 import { buildSafeModeViewModel, shouldStartInSafeMode } from './safe-mode'
 import {
   checkupAllProfilePlugins,
@@ -159,6 +169,7 @@ import {
 } from './main-window-recovery'
 
 type PluginRecoveryAction = `upgrade:${string}` | `uninstall:${string}` | 'uninstall' | 'upgrade' | 'show-log' | 'quit' | 'restart' | 'refresh' | 'safe-mode' | 'auto-process' | 'check-updates'
+type WebImportAction = 'import' | 'skip'
 type SafeModeAction =
   | { type: 'apply'; plugins: string[]; issues: string[] }
   | { type: 'upgrade'; plugins: string[] }
@@ -195,6 +206,7 @@ let quitting = false
 let failureRecoveryVisible = false
 let harnessLaunchOperation: Promise<void> | undefined
 let pluginRecoveryActionResolver: ((action: PluginRecoveryAction) => void) | undefined
+let webImportActionResolver: ((action: WebImportAction) => void) | undefined
 let mainWindowNavigationVersion = 0
 let rendererPluginFailureLogs: string[] = []
 let pluginRecoveryRemovedPlugins: string[] = []
@@ -378,7 +390,16 @@ function installMainWindowRendererRecovery(window: BrowserWindow): void {
     event.preventDefault()
     const reason = details?.reason ?? 'unknown'
     const exitCode = details?.exitCode ?? -1
-    recordMainWindowRendererLoss('render-process-gone', `reason=${reason} exitCode=${exitCode}`)
+    const currentUrl = (() => {
+      try { return webContents.getURL() } catch { return '' }
+    })()
+    const gpuStatus = (() => {
+      try { return JSON.stringify(app.getGPUFeatureStatus()) } catch { return '' }
+    })()
+    recordMainWindowRendererLoss(
+      'render-process-gone',
+      `reason=${reason} exitCode=${exitCode}${currentUrl ? ` url=${currentUrl}` : ''}${gpuStatus ? ` gpu=${gpuStatus}` : ''}`
+    )
     // `did-finish-load` can win the race by milliseconds before a broken
     // graphics stack takes the renderer down. The first post-render crash is
     // allowed the normal bounded reload; if that freshly reloaded renderer
@@ -490,7 +511,7 @@ function attachWindowsMenuView(window: BrowserWindow): void {
   window.on('leave-full-screen', updateBounds)
   window.on('blur', () => setWindowsMenuOpen(window, false, true))
 
-  void menuView.webContents.loadFile(desktopResourcePath('windows-menu.html'), {
+  void loadDesktopResource(menuView.webContents, desktopResourcePath('windows-menu.html'), {
     query: {
       locale: harnessLocale(),
       theme: windowsMenuDark ? 'dark' : 'light'
@@ -606,6 +627,26 @@ function harnessNodeEntryPath(): string {
 
 function desktopResourcePath(name: string): string {
   return app.isPackaged ? join(process.resourcesPath, name) : join(app.getAppPath(), 'build', name)
+}
+
+async function loadDesktopResource(
+  target: {
+    loadURL: (url: string) => Promise<void>
+    loadFile: (file: string, options?: { query?: Record<string, string> }) => Promise<void>
+  },
+  filePath: string,
+  options?: { query?: Record<string, string> }
+): Promise<void> {
+  const query = options?.query ?? {}
+  try {
+    const fileUrl = pathToFileURL(filePath)
+    for (const [key, value] of Object.entries(query)) {
+      fileUrl.searchParams.set(key, value)
+    }
+    await target.loadURL(fileUrl.href)
+  } catch {
+    await target.loadFile(filePath, options)
+  }
 }
 
 function desktopIconPath(): string {
@@ -851,9 +892,24 @@ function isPluginRecoveryPage(url: string): boolean {
   }
 }
 
+function isWebImportPage(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'file:' && parsed.pathname.endsWith('/web-import.html')
+  } catch {
+    return false
+  }
+}
+
 function resolvePluginRecoveryAction(action: PluginRecoveryAction): void {
   const resolve = pluginRecoveryActionResolver
   pluginRecoveryActionResolver = undefined
+  resolve?.(action)
+}
+
+function resolveWebImportAction(action: WebImportAction): void {
+  const resolve = webImportActionResolver
+  webImportActionResolver = undefined
   resolve?.(action)
 }
 
@@ -865,6 +921,13 @@ function resolveSafeModeAction(action: SafeModeAction): void {
 
 function installPluginRecoveryNavigation(window: BrowserWindow): void {
   window.webContents.on('will-navigate', (event, targetUrl) => {
+    if (targetUrl.startsWith('dsh-import://')) {
+      event.preventDefault()
+      if (!isWebImportPage(window.webContents.getURL())) return
+      const action = new URL(targetUrl).hostname
+      if (action === 'import' || action === 'skip') resolveWebImportAction(action)
+      return
+    }
     if (!targetUrl.startsWith('dsh-recovery://')) return
     event.preventDefault()
     if (!isPluginRecoveryPage(window.webContents.getURL())) return
@@ -964,6 +1027,10 @@ function createWindow(): BrowserWindow {
     event.preventDefault()
     window.hide()
   })
+  window.on('session-end', () => {
+    desktopDiagnostics?.markCleanExit()
+    desktopStorageManager?.flushSync()
+  })
   window.on('page-title-updated', (event) => {
     event.preventDefault()
     window.setTitle('')
@@ -986,6 +1053,7 @@ function createWindow(): BrowserWindow {
     windowsMenuView = undefined
     windowsMenuOpen = false
     resolvePluginRecoveryAction('quit')
+    resolveWebImportAction('skip')
     resolveSafeModeAction({ type: 'quit' })
   })
   mainWindow = window
@@ -1045,12 +1113,82 @@ async function openHarness(
   )
 }
 
+async function maybeImportWebHome(dshHome: string): Promise<void> {
+  if (startInSafeMode) return
+  const webHome = defaultWebHome()
+  if (!await shouldOfferWebHomeImport(dshHome, webHome)) return
+
+  let notice: string | undefined
+  while (!quitting) {
+    const preview = await previewWebHome(webHome)
+    const choice = await showWebHomeImport(preview, notice)
+    if (choice !== 'import') {
+      await writeSkipDecision(dshHome, webHome)
+      runtime.note('[desktop] skipped importing web Harness home')
+      return
+    }
+
+    const window = mainWindow
+    try {
+      await importWebHome({
+        source: webHome,
+        dest: dshHome,
+        onProgress: (line) => {
+          runtime.note(`[desktop] web import: ${line}`)
+          if (!window || window.isDestroyed()) return
+          void window.webContents.executeJavaScript(
+            `(() => { const node = document.getElementById('progress'); if (!node) return; node.textContent = ${JSON.stringify(line)}; node.classList.add('visible'); })()`
+          ).catch(() => undefined)
+        }
+      })
+      runtime.note('[desktop] imported web Harness home')
+      await showSplash()
+      return
+    } catch (error) {
+      notice = error instanceof Error ? error.message : String(error)
+      runtime.note(`[desktop] web import failed: ${notice}`)
+    }
+  }
+}
+
+async function showWebHomeImport(
+  preview: Awaited<ReturnType<typeof previewWebHome>>,
+  notice?: string
+): Promise<WebImportAction> {
+  const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow()
+  const state = buildWebImportViewModel({
+    locale: harnessLocale(),
+    preview,
+    notice
+  })
+  const actionPromise = new Promise<WebImportAction>((resolve) => {
+    webImportActionResolver = resolve
+  })
+  const navigationVersion = ++mainWindowNavigationVersion
+  window.webContents.stop()
+  try {
+    await window.loadFile(desktopResourcePath('web-import.html'), {
+      query: {
+        state: JSON.stringify(state),
+        icon: app.isPackaged ? 'icon.png' : 'app-icon.png',
+        theme: harnessThemePreference()
+      }
+    })
+  } catch (error) {
+    webImportActionResolver = undefined
+    throw error
+  }
+  if (window.isDestroyed() || navigationVersion !== mainWindowNavigationVersion) return 'skip'
+  raiseWindowWithoutStealingFocus(window, process.platform, () => app.isActive())
+  return actionPromise
+}
+
 async function showSplash(): Promise<void> {
   clearProfileBootConfirmation()
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : createWindow()
   const navigationVersion = ++mainWindowNavigationVersion
   window.webContents.stop()
-  await window.loadFile(desktopResourcePath('splash.html'), {
+  await loadDesktopResource(window, desktopResourcePath('splash.html'), {
     query: { theme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light' }
   })
   if (window.isDestroyed() || navigationVersion !== mainWindowNavigationVersion) return
@@ -1070,13 +1208,31 @@ async function reportProfileConsistency(dshHome: string): Promise<void> {
     if (healed.length > 0) {
       runtime.note(`[desktop] auto-composed ${healed.length} missing bundle(s): ${healed.join(', ')}`)
     }
-    const findings = await inspectProfileConsistency(dshHome)
-    const store = await inspectStoreConsistency(dshHome)
-    if (store) findings.push(store)
-    for (const finding of findings) runtime.note(`[desktop] profile inconsistency: ${finding}`)
-  } catch {
-    // A profile that cannot be inspected is not a reason to refuse a launch.
+  } catch (error) {
+    runtime.note(
+      `[desktop] bundle healing skipped: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
   }
+
+  // Defer heavy recursive inspections of the profiles directory and package store
+  // so they run asynchronously without blocking the startup launch pipeline.
+  void Promise.all([
+    inspectProfileConsistency(dshHome),
+    inspectStoreConsistency(dshHome)
+  ])
+    .then(([findings, store]) => {
+      if (store) findings.push(store)
+      for (const finding of findings) runtime.note(`[desktop] profile inconsistency: ${finding}`)
+    })
+    .catch((error) => {
+      runtime.note(
+        `[desktop] profile consistency inspection failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    })
 }
 
 /**
@@ -1194,12 +1350,16 @@ function launchHarness(): Promise<void> {
 
   harnessLaunchOperation = (async () => {
     safeModeVisible = false
+    runtime.beginLaunch('web profile')
     const dshHome = join(app.getPath('userData'), 'harness')
     await showSplash()
+    runtime.note('[desktop] splash shown')
     // Migration and generation projection only hold on a stopped Harness, and
     // a restart still has the previous one running: start() stops it, but that
     // is after maintenance. Stopping here owns that mutation window.
     await runtime.stop()
+    runtime.note('[desktop] previous Harness stopped; starting profile maintenance')
+    await maybeImportWebHome(dshHome)
     const maintenance = await runProfileStartupMaintenance({
       note: (line) => runtime.note(line),
       recoverInterruptedMigration: () =>
@@ -1282,8 +1442,19 @@ function launchHarness(): Promise<void> {
     }
     maintenanceRecoveryLocked = false
     maintenanceAllowedRestoreId = undefined
+    runtime.note('[desktop] profile maintenance done')
     await refreshMigrationRecoveryLock(dshHome)
-    await auditInstalledLaunchAgents(dshHome)
+    void auditInstalledLaunchAgents(dshHome)
+      .then(() => {
+        runtime.note('[desktop] LaunchAgent audit done')
+      })
+      .catch((error) => {
+        runtime.note(
+          `[desktop] LaunchAgent audit failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      })
     try {
       // The welcome notice ships with the Harness UI and is acknowledged once per
       // install. A prepared bundle records that before the first boot, so the
@@ -1341,6 +1512,7 @@ function launchSafeHarness(): Promise<void> {
 
   harnessLaunchOperation = (async () => {
     safeModeVisible = true
+    runtime.beginLaunch('safe mode')
     const dshHome = join(app.getPath('userData'), 'harness')
     await refreshMigrationRecoveryLock(dshHome)
     await showSplash()
@@ -1622,6 +1794,27 @@ async function executeDesktopMenuCommand(command: DesktopMenuCommand): Promise<n
     case 'check-for-updates':
       await checkForUpdates(true)
       break
+    case 'export-session':
+      await contents.executeJavaScript(
+        `(() => {
+          const moreBtn = document.querySelector('button[aria-label="更多操作"], button[aria-label="More actions"], button[class*="moreButton"]')
+          if (moreBtn instanceof HTMLElement) {
+            moreBtn.click()
+            setTimeout(() => {
+              const item = document.querySelector('[role="menuitem"]')
+              if (item instanceof HTMLElement) item.click()
+            }, 50)
+            return true
+          }
+          const legacyBtn = document.querySelector('button[class*="sessionLogButton"]')
+          if (legacyBtn instanceof HTMLElement) {
+            legacyBtn.click()
+            return true
+          }
+          return false
+        })()`
+      ).catch(showUnexpectedError)
+      break
     case 'undo':
       contents.undo()
       break
@@ -1689,7 +1882,7 @@ async function waitForPluginRecoveryAction(options: {
   window.webContents.stop()
 
   try {
-    await window.loadFile(desktopResourcePath('plugin-recovery.html'), {
+    await loadDesktopResource(window, desktopResourcePath('plugin-recovery.html'), {
       query: {
         state: JSON.stringify(state),
         icon: app.isPackaged ? 'icon.png' : 'app-icon.png',
@@ -2028,7 +2221,7 @@ async function waitForSafeModeAction(options: {
   })
   window.webContents.stop()
   try {
-    await window.webContents.loadFile(desktopResourcePath('safe-mode.html'), {
+    await loadDesktopResource(window.webContents, desktopResourcePath('safe-mode.html'), {
       query: {
         state: JSON.stringify(model),
         icon: app.isPackaged ? 'icon.png' : 'app-icon.png',
@@ -2817,6 +3010,7 @@ async function bootstrap(): Promise<void> {
   ipcMain.removeHandler('harness:open-recovery')
   ipcMain.handle('harness:open-recovery', async (event, frontendErrorMessage?: unknown) => {
     assertTrustedMainWindowEvent(event)
+    desktopDiagnostics?.discardPendingPluginFailure()
     const message = typeof frontendErrorMessage === 'string' ? frontendErrorMessage : undefined
     if (message) appendRendererPluginFailureLog(message)
     const logs = [...rendererPluginFailureLogs]
@@ -2833,6 +3027,16 @@ async function bootstrap(): Promise<void> {
     assertTrustedMainWindowEvent(event)
     if (typeof action === 'string' && (PLUGIN_RECOVERY_ACTIONS.has(action as PluginRecoveryAction) || /^(upgrade|uninstall):.+$/.test(action))) {
       resolvePluginRecoveryAction(action as PluginRecoveryAction)
+      return { ok: true }
+    }
+    return { ok: false }
+  })
+  ipcMain.removeHandler('web-import:action')
+  ipcMain.handle('web-import:action', (event, action: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    if (!isWebImportPage(event.sender.getURL())) return { ok: false }
+    if (action === 'import' || action === 'skip') {
+      resolveWebImportAction(action)
       return { ok: true }
     }
     return { ok: false }
@@ -2970,6 +3174,9 @@ async function bootstrap(): Promise<void> {
         const dshHome = join(app.getPath('userData'), 'harness')
         await quarantineInstalledLaunchAgentsForUpdate(dshHome)
         quitting = true
+        // NSIS may force-kill before will-quit; clear the marker so the next
+        // launch does not treat this intentional update as an unclean-exit.
+        desktopDiagnostics?.markCleanExit()
         stopUpdateManager()
       }
     })
@@ -2991,6 +3198,10 @@ if (isDaemonLaunch(process.env, process.platform)) {
   if (!singleInstance) {
     app.quit()
   } else {
+    // Start the login-shell capture now so it overlaps Electron's own startup
+    // and the splash instead of blocking the main process right before the
+    // Harness spawn. Only the instance that will actually launch pays for it.
+    void prewarmShellEnvironment()
     initializeDesktopService()
     app.on('second-instance', (_event, argv) => {
       if (!isUserInitiatedInstance(argv)) return
@@ -3025,6 +3236,7 @@ if (isDaemonLaunch(process.env, process.platform)) {
       if (process.platform !== 'darwin') app.quit()
     })
     app.on('before-quit', (event) => {
+      desktopDiagnostics?.markCleanExit()
       if (quitting || !runtime) return
       event.preventDefault()
       quitting = true
