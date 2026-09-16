@@ -1,6 +1,6 @@
 {
   "name": "DSH Desktop",
-  "version": "0.8.2-1",
+  "version": "0.9.0-1",
   "id": "dsh-desktop",
   "items": [
     {
@@ -16,19 +16,19 @@
       "kind": "plugin",
       "id": "@wingsky-1/dsh-mcp-manager",
       "name": "@wingsky-1/dsh-mcp-manager",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "label": "Plugin: @wingsky-1/dsh-mcp-manager",
-      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.3.tgz",
-      "digest": "1f1c6587be2a36535dbb2f2f7c75b4cc442d594c7c2699adbefc30c663c76cc2"
+      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.4.tgz",
+      "digest": "4e5acdbbbb91d1e9b0643e05220c32860b8b80c60a4c01ee5958e9e9ffd4f768"
     },
     {
       "kind": "plugin",
       "id": "@liustack/modsearch",
       "name": "@liustack/modsearch",
-      "version": "5.10.2",
+      "version": "5.10.3",
       "label": "Plugin: @liustack/modsearch",
-      "file": "plugins/liustack-modsearch-5.10.2.tgz",
-      "digest": "dec197aa5bad264785d3b8f1bc4ff809e6f1dc8b555eecd47769081b647a5dcd"
+      "file": "plugins/liustack-modsearch-5.10.3.tgz",
+      "digest": "2bcd741ddbfa8fd76ab24afa0502a21e75a9d4bdd00dc05a555447d67d18950a"
     },
     {
       "kind": "plugin",
@@ -37,16 +37,16 @@
       "version": "0.18.1",
       "label": "Plugin: dsh-better-sidebar",
       "file": "plugins/dsh-better-sidebar-0.18.1.tgz",
-      "digest": "7447567f0f324e6f1dc40f9477ef2287177e1eaa483152c67ac60fbb4e370ffc"
+      "digest": "5f7c002dee5ada84c9e4bc67645680a8a5ea7fa5ad9ac71be10ee811d9168447"
     },
     {
       "kind": "plugin",
       "id": "@linxin666/dsh-client-ui-skill-explorer",
       "name": "@linxin666/dsh-client-ui-skill-explorer",
-      "version": "0.3.21",
+      "version": "0.3.22",
       "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
-      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.21.tgz",
-      "digest": "c8df8ed94b3bdc9c362660ca45ee815ef3e115b7db4cea47f896d15a9d65a505"
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.22.tgz",
+      "digest": "080962ad5f837a61f8bba9a4ff5d7d23233a14720c349d315a93158b3935d6a4"
     },
     {
       "kind": "plugin",
@@ -79,10 +79,10 @@
       "kind": "plugin",
       "id": "dsh-bsl-editor",
       "name": "dsh-bsl-editor",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "label": "Plugin: dsh-bsl-editor",
-      "file": "plugins/dsh-bsl-editor-0.3.0.tgz",
-      "digest": "03c1a8de50f9902c83e29d264108db89b2dda7bd2628d267275a7f0abfb3e31f"
+      "file": "plugins/dsh-bsl-editor-0.4.0.tgz",
+      "digest": "7ca96d3506bb4769380fd4b3de1a087d9e5c5c2c4a1bd88962f31bf3f4d249d6"
     },
     {
       "kind": "plugin",
