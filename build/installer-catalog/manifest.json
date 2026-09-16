@@ -43,10 +43,10 @@
       "kind": "plugin",
       "id": "@linxin666/dsh-client-ui-skill-explorer",
       "name": "@linxin666/dsh-client-ui-skill-explorer",
-      "version": "0.3.22",
+      "version": "0.3.23",
       "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
-      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.22.tgz",
-      "digest": "080962ad5f837a61f8bba9a4ff5d7d23233a14720c349d315a93158b3935d6a4"
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.23.tgz",
+      "digest": "4451bd112b5e6e1897ab452516b82802f820fc4e6a36371db64722dbf1e2f7ea"
     },
     {
       "kind": "plugin",
@@ -61,10 +61,10 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.4.0.tgz",
-      "digest": "d9a8bd5c15186e8a7e75d7e25126c2b0df11bfc03e624d932433f975d381d7ac"
+      "file": "plugins/dsh-1c-project-properties-0.5.0.tgz",
+      "digest": "775d76259f5f5b06bb02cf5acfff7bc7cae3318fcfb6db259cc26d1603ba372e"
     },
     {
       "kind": "plugin",
@@ -101,6 +101,14 @@
       "label": "Plugin: dsh-univer-office",
       "file": "plugins/dsh-univer-office-0.2.14.tgz",
       "digest": "022a1c4983fe7bffb43a459f10b3fdbac795ea1b6b784e675edb178b38e08397"
+    },
+    {
+      "kind": "mcp",
+      "id": "v8std",
+      "label": "MCP: v8std",
+      "transport": "streamable-http",
+      "serverName": "v8std",
+      "url": "https://ai.v8std.ru/mcp"
     },
     {
       "kind": "skill",
