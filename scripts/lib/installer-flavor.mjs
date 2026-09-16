@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 
-export const FLAVOR_KINDS = Object.freeze(['plugin', 'mcp', 'skill', 'rules', 'catalog'])
+export const FLAVOR_KINDS = Object.freeze(['plugin', 'mcp', 'skill', 'rules', 'payload', 'catalog'])
 export const FLAVOR_FROMS = Object.freeze(['git', 'local', 'npm', 'market', 'backup'])
 export const MCP_TRANSPORTS = Object.freeze(['stdio', 'streamable-http'])
 
@@ -78,12 +78,20 @@ export function validateFlavorSource(source, index) {
       throw new Error(`${at}.transport must be one of ${MCP_TRANSPORTS.join(', ')}`)
     }
   }
+  if (kind === 'payload') {
+    // A payload is a whole content tree another component unpacks into the
+    // user's home (a ruleset a plugin deploys per project). Its id names the
+    // destination, and its version is what a consumer reports and pins — a
+    // floating version would make two installs of the same build differ.
+    requireString(row.id, `${at}.id`)
+    requireString(row.version, `${at}.version`)
+  }
   return /** @type {FlavorSource} */ (row)
 }
 
 /**
  * @typedef {object} FlavorSource
- * @property {'plugin' | 'mcp' | 'skill' | 'rules' | 'catalog'} kind
+ * @property {'plugin' | 'mcp' | 'skill' | 'rules' | 'payload' | 'catalog'} kind
  * @property {'git' | 'local' | 'npm' | 'market' | 'backup'} from
  * @property {string} [url]
  * @property {string} [path]
@@ -555,6 +563,8 @@ export function catalogListLabel(kind, title) {
       return `Skill: ${title}`
     case 'rules':
       return `Rules: ${title}`
+    case 'payload':
+      return `Payload: ${title}`
     default:
       return title
   }

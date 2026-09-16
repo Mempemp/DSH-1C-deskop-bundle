@@ -7,10 +7,10 @@
       "kind": "plugin",
       "id": "dshmarket",
       "name": "dshmarket",
-      "version": "1.45.1",
+      "version": "1.47.0",
       "label": "Plugin: dshmarket",
-      "file": "plugins/dshmarket-1.45.1.tgz",
-      "digest": "dac7383e1fab5959d4d72bb7c9dc17856b2000c00ea7ac8e40c25eb1cd5ef63b"
+      "file": "plugins/dshmarket-1.47.0.tgz",
+      "digest": "e6efc533113edfb120a3ae26d417ca1e964138ea535ce9fd3a4445822cd0bf83"
     },
     {
       "kind": "plugin",
@@ -34,10 +34,10 @@
       "kind": "plugin",
       "id": "dsh-better-sidebar",
       "name": "dsh-better-sidebar",
-      "version": "0.18.1",
+      "version": "0.19.1",
       "label": "Plugin: dsh-better-sidebar",
-      "file": "plugins/dsh-better-sidebar-0.18.1.tgz",
-      "digest": "5f7c002dee5ada84c9e4bc67645680a8a5ea7fa5ad9ac71be10ee811d9168447"
+      "file": "plugins/dsh-better-sidebar-0.19.1.tgz",
+      "digest": "68f8a2e28b7929c947716738aa33496c7c9be589f6e3690ee672affe3b3de3dc"
     },
     {
       "kind": "plugin",
@@ -88,82 +88,112 @@
       "kind": "plugin",
       "id": "@goodandready/dsh-russian-lang",
       "name": "@goodandready/dsh-russian-lang",
-      "version": "0.2.14",
+      "version": "0.2.19",
       "label": "Plugin: @goodandready/dsh-russian-lang",
-      "file": "plugins/goodandready-dsh-russian-lang-0.2.14.tgz",
-      "digest": "6cb795670e6da96299ec56948c69374f64d546745cfbc5eedc6cc8c01bcd428d"
+      "file": "plugins/goodandready-dsh-russian-lang-0.2.19.tgz",
+      "digest": "f01840bfba975f8c117906f2fff2bc962e41fa3aabd77fc892997937c35e7dc7"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-univer-office",
+      "name": "dsh-univer-office",
+      "version": "0.2.14",
+      "label": "Plugin: dsh-univer-office",
+      "file": "plugins/dsh-univer-office-0.2.14.tgz",
+      "digest": "022a1c4983fe7bffb43a459f10b3fdbac795ea1b6b784e675edb178b38e08397"
     },
     {
       "kind": "skill",
       "id": "1c-metadata-manage",
       "label": "Skill: 1c-metadata-manage",
-      "path": "skills/1c-metadata-manage"
+      "path": "skills/1c-metadata-manage",
+      "digest": "1209bb98d31d0f204254ffe7662c3711e82c8a0b96500202f0ed2fff0853fbbd"
     },
     {
       "kind": "skill",
       "id": "1c-repository-manage",
       "label": "Skill: 1c-repository-manage",
-      "path": "skills/1c-repository-manage"
+      "path": "skills/1c-repository-manage",
+      "digest": "f6b04db369255d937e16c387f0ec556168dbf8e0e00ceae569071b84dd93c43a"
     },
     {
       "kind": "skill",
       "id": "caveman",
       "label": "Skill: caveman",
-      "path": "skills/caveman"
+      "path": "skills/caveman",
+      "digest": "e237378af829d295f5a6a15d05fb2e092eb1548e376b7816f37de6e13eff980c"
     },
     {
       "kind": "skill",
       "id": "handoff",
       "label": "Skill: handoff",
-      "path": "skills/handoff"
+      "path": "skills/handoff",
+      "digest": "b4c0d32e605e941b2d12f4d9a884348136192f25b4bc39837eed09bcb660a3ce"
     },
     {
       "kind": "skill",
       "id": "img-grid-analysis",
       "label": "Skill: img-grid-analysis",
-      "path": "skills/img-grid-analysis"
+      "path": "skills/img-grid-analysis",
+      "digest": "719155b072afb37e1b8dcfaec7c211ba5233bcf22171c29105eac26bb073f36f"
     },
     {
       "kind": "skill",
       "id": "mcp-1c-tools",
       "label": "Skill: mcp-1c-tools",
-      "path": "skills/mcp-1c-tools"
+      "path": "skills/mcp-1c-tools",
+      "digest": "915c031f2cddc02e6f85af2d8d636e2d6445c2b7841c50eb2472449dcc03e140"
     },
     {
       "kind": "skill",
       "id": "md-to-docx",
       "label": "Skill: md-to-docx",
-      "path": "skills/md-to-docx"
+      "path": "skills/md-to-docx",
+      "digest": "5236666a00ce24c7c9ddab754ee014d925d2880116249e7b8f1d30d65e90c4c9"
     },
     {
       "kind": "skill",
       "id": "mermaid-diagrams",
       "label": "Skill: mermaid-diagrams",
-      "path": "skills/mermaid-diagrams"
+      "path": "skills/mermaid-diagrams",
+      "digest": "ec098f6c300ad79850f98c62959d9508a948009dee8835524e30244c898304af"
     },
     {
       "kind": "skill",
       "id": "powershell-windows",
       "label": "Skill: powershell-windows",
-      "path": "skills/powershell-windows"
+      "path": "skills/powershell-windows",
+      "digest": "caaf2709457d356187a78f4e972cea8271811c2a67642ee4660b69807aaa152b"
     },
     {
       "kind": "skill",
       "id": "prompt-enhancer",
       "label": "Skill: prompt-enhancer",
-      "path": "skills/prompt-enhancer"
+      "path": "skills/prompt-enhancer",
+      "digest": "b7b5a2d645eae483c55483e002b5e6b0b46e980fc8c5c705d8d3879a9be6db94"
     },
     {
       "kind": "skill",
       "id": "transcribe",
       "label": "Skill: transcribe",
-      "path": "skills/transcribe"
+      "path": "skills/transcribe",
+      "digest": "88157d1b61ad4bc8c429ef50cb7fa1384410d57281a4e99208235d3864491e3e"
     },
     {
       "kind": "skill",
       "id": "v8unpack-cf",
       "label": "Skill: v8unpack-cf",
-      "path": "skills/v8unpack-cf"
+      "path": "skills/v8unpack-cf",
+      "digest": "ea92d173b59600d8b29e1825068131b70fbb325e58512ae8a5d3d1171bd22799"
+    },
+    {
+      "kind": "payload",
+      "id": "1c-rules",
+      "name": "1c-rules",
+      "version": "2026.09.16-488e930",
+      "label": "Payload: 1c-rules",
+      "path": "payload/1c-rules",
+      "digest": "71a20d96abf83dbec1f50ea1a08486147ad1e5d4a01fe78a40adcbe7eea478b0"
     }
   ]
 }

@@ -19,7 +19,7 @@ sources:
   # dshmarket dependency in package.json.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.45.1
+    spec: dshmarket@1.47.0
   - kind: plugin
     from: git
     url: https://github.com/wingsky-1/dsh-plugin-hub.git#main
@@ -29,7 +29,7 @@ sources:
     url: https://github.com/liustack/modsearch.git#main
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.18.1
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.19.1
   - kind: plugin
     from: git
     url: https://github.com/zhu1090093659/dsh-web.git#main
@@ -56,9 +56,32 @@ sources:
   # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.2.14"
+    spec: "@goodandready/dsh-russian-lang@0.2.19"
+  # Univer office documents (spreadsheets, decks, docs) with inline previews and
+  # a floating worktree window. Taken from the market: `dsh-univer-office` is the
+  # npm name its catalog entry carries (owner dream-num), so the offline seed and
+  # the market install the same package.
+  - kind: plugin
+    from: npm
+    spec: dsh-univer-office@0.2.14
   # Agent Skills tree: content/skills/<name>/SKILL.md (comol/ai_rules_1c).
+  # Pinned to a commit, not `#main`: this is what the offline seed installs, and
+  # a floating ref would hand two installs of the same build different rulesets.
   - kind: skill
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#main
+    url: https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b
     path: content/skills
+  # The same ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json +
+  # content/. Skills alone leave every cross-reference in them dangling
+  # (AGENTS.md, content/rules/*, content/agents/*), so the ruleset is delivered
+  # whole and dsh-1c-project-properties unpacks it into a project on demand —
+  # rewriting the source-repository paths to the project-local ones the header
+  # of each file expects. The desktop never reads this payload itself.
+  # `version` feeds the catalog fingerprint: bump it (or let the tree digest
+  # change) or an existing install keeps its old copy.
+  - kind: payload
+    from: git
+    url: https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b
+    id: 1c-rules
+    name: 1c-rules
+    version: 2026.09.16-488e930

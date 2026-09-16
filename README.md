@@ -49,7 +49,10 @@
 - **RLM-инструменты для BSL** ([DSH-runner-rlm-tools-bsl](https://github.com/Mempemp/DSH-runner-rlm-tools-bsl)) —
   быстрый поиск и навигация по коду 1С.
 - **Навыки и правила для 1С** — работа с метаданными, хранилищем, выгрузкой
-  конфигурации в файлы ([ai_rules_1c](https://github.com/comol/ai_rules_1c)).
+  конфигурации в файлы ([ai_rules_1c](https://github.com/comol/ai_rules_1c)):
+  12 навыков доступны сразу, а полный набор (48 правил, 13 ролей субагентов,
+  30 команд, OpenSpec) разворачивается в конкретный проект кнопкой
+  «Развернуть правила в проект» в окне параметров проекта.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
@@ -63,8 +66,9 @@
 Полный список — в `installer-flavor.yml` (источники) и
 `build/installer-catalog/manifest.json` (зафиксированные версии и digest):
 
-- 10 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
-  skill-explorer, archify, dsh-russian-lang + три наших 1С-плагина;
+- 11 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+  skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
+  таблицы Univer) + три наших 1С-плагина;
 - 12+ навыков (skills) для 1С и повседневных задач;
 - правила (AGENTS.md) для работы агента с 1С;
 - рантайм `@deepseek-ai/dsh@0.1.5-rc.2` внутри приложения — ставить Node.js и CLI не нужно.

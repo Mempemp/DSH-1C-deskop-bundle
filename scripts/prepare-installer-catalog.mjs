@@ -84,7 +84,7 @@ function describeItem(item) {
 
 /**
  * @typedef {object} CatalogItem
- * @property {'plugin' | 'mcp' | 'skill' | 'rules'} kind
+ * @property {'plugin' | 'mcp' | 'skill' | 'rules' | 'payload'} kind
  * @property {string} id
  * @property {string} label
  * @property {string} [name]
@@ -118,10 +118,33 @@ export function catalogOutputPaths(root = projectRoot) {
     mcpDir: join(catalogDir, 'mcp'),
     skillsDir: join(catalogDir, 'skills'),
     rulesDir: join(catalogDir, 'rules'),
+    payloadDir: join(catalogDir, 'payload'),
     manifestPath: join(catalogDir, 'manifest.json'),
     labelsPath: join(root, 'build', 'installer-catalog-labels.nsh')
   }
 }
+
+/**
+ * Top-level entries a `kind: payload` tree never ships: source-repository
+ * tooling and host metadata a consumer of the payload does not read. The
+ * content itself (`content/`, `adapters/`, `openspec/`) travels whole — a
+ * payload that quietly dropped a section would reproduce exactly the broken
+ * cross-references this kind exists to prevent.
+ */
+const PAYLOAD_EXCLUDED_ENTRIES = Object.freeze([
+  '.git',
+  '.github',
+  '.claude-plugin',
+  '.cursor-plugin',
+  '.agents',
+  'plugins',
+  'tools',
+  'node_modules',
+  'install.ps1',
+  'AGENT-INSTALL.md',
+  'README.md',
+  'References.md'
+])
 
 /**
  * @param {string} name
@@ -198,6 +221,13 @@ export function productionDependenciesToBundle(manifest) {
  * npm-install non-host production deps and mark them `bundleDependencies` so
  * `npm pack` embeds `node_modules`. First-run catalog seed can then unpack
  * offline. No-op when the plugin only depends on host singletons / peers.
+ *
+ * `devDependencies` are dropped from the manifest for this install only. npm
+ * still resolves the dev half of the tree before it omits it, so a pinned dev
+ * dependency that has since been unpublished (dsh-univer-office pins an
+ * `@univer-cli/api-reference` insider build that is gone from the registry)
+ * fails the whole production install with ETARGET. The repacked manifest keeps
+ * them, and a consumer never installs a dependency's devDependencies.
  * @param {string} directory
  */
 export function ensureBundledProductionDependencies(directory) {
@@ -214,6 +244,7 @@ export function ensureBundledProductionDependencies(directory) {
       Object.entries(manifest.dependencies ?? {}).filter(([name]) => !isHostSingletonDependency(name))
     )
   }
+  delete installManifest.devDependencies
   writeFileSync(manifestPath, `${JSON.stringify(installManifest, undefined, 2)}\n`)
   try {
     const install = npmInstall(directory, [
@@ -351,6 +382,47 @@ export function tarballContainsPath(archive, relativePath) {
  */
 export function fileSha256(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex')
+}
+
+/**
+ * Content digest of a whole tree: every file's relative POSIX path paired with
+ * its own hash, in sorted order. Used for items that ship as a directory
+ * (skills, payloads) — without it the catalog fingerprint could not tell two
+ * different revisions of the same tree apart, so a content update on a fixed
+ * app version would never reach an existing install.
+ * @param {string} directory
+ */
+export function treeSha256(directory) {
+  /** @type {string[]} */
+  const rows = []
+  const walk = (dir) => {
+    const entries = readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.name !== '.git')
+      .sort((a, b) => a.name.localeCompare(b.name))
+    for (const entry of entries) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.isFile()) {
+        rows.push(`${relative(directory, full).replaceAll('\\', '/')}\u0000${fileSha256(full)}`)
+      }
+    }
+  }
+  walk(directory)
+  return createHash('sha256').update(rows.join('\n')).digest('hex')
+}
+
+/**
+ * Copy a payload tree into the catalog, skipping source-repository tooling.
+ * @param {string} source
+ * @param {string} destination
+ */
+export function copyPayloadTree(source, destination) {
+  rmSync(destination, { recursive: true, force: true })
+  mkdirSync(destination, { recursive: true })
+  for (const entry of readdirSync(source, { withFileTypes: true })) {
+    if (PAYLOAD_EXCLUDED_ENTRIES.includes(entry.name)) continue
+    cpSync(join(source, entry.name), join(destination, entry.name), { recursive: true })
+  }
 }
 
 /**
@@ -763,6 +835,7 @@ export async function prepareInstallerCatalog(options = {}) {
   mkdirSync(paths.mcpDir, { recursive: true })
   mkdirSync(paths.skillsDir, { recursive: true })
   mkdirSync(paths.rulesDir, { recursive: true })
+  mkdirSync(paths.payloadDir, { recursive: true })
 
   const snapshotPath = options.registrySnapshotPath
     ?? process.env.DSH_INSTALLER_REGISTRY_SNAPSHOT
@@ -845,8 +918,9 @@ export async function prepareInstallerCatalog(options = {}) {
   const skillCount = items.filter((item) => item.kind === 'skill').length
   const mcpCount = items.filter((item) => item.kind === 'mcp').length
   const rulesCount = items.filter((item) => item.kind === 'rules').length
+  const payloadCount = items.filter((item) => item.kind === 'payload').length
   catalogLog(
-    `done ${items.length} item(s) (plugins=${pluginCount} skills=${skillCount} mcp=${mcpCount} rules=${rulesCount}) -> ${paths.catalogDir}`
+    `done ${items.length} item(s) (plugins=${pluginCount} skills=${skillCount} mcp=${mcpCount} rules=${rulesCount} payloads=${payloadCount}) -> ${paths.catalogDir}`
   )
   return { manifest, paths }
 }
@@ -1023,6 +1097,27 @@ async function vendorResolvedSource(input) {
     return [item]
   }
 
+  if (source.kind === 'payload') {
+    if (!tree) throw new Error(`sources[${index}] payload needs a local or git tree`)
+    const id = source.id ?? `payload-${index}`
+    const version = source.version ?? '0.0.0'
+    const dest = join(paths.payloadDir, safeFileToken(id))
+    catalogLog(`sources[${index}] payload: copying tree ${tree} -> ${dest}`)
+    copyPayloadTree(tree, dest)
+    if (!existsSync(join(dest, 'content'))) {
+      throw new Error(`sources[${index}] payload has no content/ directory: ${tree}`)
+    }
+    return [{
+      kind: 'payload',
+      id,
+      name: source.name ?? id,
+      version,
+      label: catalogListLabel('payload', id),
+      path: relative(paths.catalogDir, dest).replaceAll('\\', '/'),
+      digest: treeSha256(dest)
+    }]
+  }
+
   if (source.kind === 'skill') {
     if (!tree) throw new Error(`sources[${index}] skill needs a local, git, or npm tree`)
     if (statSync(tree).isFile()) {
@@ -1034,7 +1129,8 @@ async function vendorResolvedSource(input) {
         kind: 'skill',
         id,
         label: catalogListLabel('skill', id),
-        path: relative(paths.catalogDir, dest).replaceAll('\\', '/')
+        path: relative(paths.catalogDir, dest).replaceAll('\\', '/'),
+        digest: treeSha256(dest)
       }]
     }
     const roots = collectSkillRoots(tree)
@@ -1050,7 +1146,8 @@ async function vendorResolvedSource(input) {
         kind: 'skill',
         id,
         label: catalogListLabel('skill', id),
-        path: relative(paths.catalogDir, dest).replaceAll('\\', '/')
+        path: relative(paths.catalogDir, dest).replaceAll('\\', '/'),
+        digest: treeSha256(dest)
       }
     })
   }

@@ -17,6 +17,8 @@ import {
   catalogStampPath,
   CATALOG_STAMP_NAME,
   mergeMcpServerIntoPatch,
+  PAYLOAD_HOME_DIR,
+  PAYLOAD_MANIFEST_NAME,
   readCatalogManifest
 } from '../src/main/state/installer-catalog-seed'
 
@@ -47,6 +49,7 @@ describe('first-run installer catalog seed', () => {
     await mkdir(join(root, 'plugins'), { recursive: true })
     await mkdir(join(root, 'skills', 'invoice-review'), { recursive: true })
     await mkdir(join(root, 'rules'), { recursive: true })
+    await mkdir(join(root, 'payload', '1c-rules', 'content', 'rules'), { recursive: true })
     await mkdir(join(root, 'mcp'), { recursive: true })
     await writeFile(join(root, 'plugins', 'fixture-plugin-1.0.0.tgz'), 'tarball')
     await writeFile(
@@ -54,6 +57,11 @@ describe('first-run installer catalog seed', () => {
       '---\nname: invoice-review\n---\nReview invoices.\n'
     )
     await writeFile(join(root, 'rules', 'AGENTS.md'), '# seeded rules\n')
+    await writeFile(join(root, 'payload', '1c-rules', 'AGENTS.md'), '# payload entry\n')
+    await writeFile(
+      join(root, 'payload', '1c-rules', 'content', 'rules', 'demo.md'),
+      'payload rule body\n'
+    )
     await writeFile(
       join(root, 'manifest.json'),
       JSON.stringify({
@@ -88,6 +96,15 @@ describe('first-run installer catalog seed', () => {
             id: 'AGENTS.md',
             label: 'Rules: AGENTS.md',
             path: 'rules/AGENTS.md'
+          },
+          {
+            kind: 'payload',
+            id: '1c-rules',
+            name: '1c-rules',
+            version: '2026.01.01-abc1234',
+            label: 'Payload: 1c-rules',
+            path: 'payload/1c-rules',
+            digest: 'b'.repeat(64)
           }
         ]
       })
@@ -156,6 +173,59 @@ describe('first-run installer catalog seed', () => {
     expect(await readFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), 'utf8')).toContain(
       '@deepseek-ai/dsh-mcp-client'
     )
+    // The payload lands beside the skills, whole, with a manifest naming the
+    // revision a consumer (a project-scoped plugin) deployed.
+    expect(await readFile(join(home, PAYLOAD_HOME_DIR, 'AGENTS.md'), 'utf8')).toContain(
+      'payload entry'
+    )
+    expect(
+      await readFile(join(home, PAYLOAD_HOME_DIR, 'content', 'rules', 'demo.md'), 'utf8')
+    ).toContain('payload rule body')
+    const payloadManifest = JSON.parse(
+      await readFile(join(home, PAYLOAD_HOME_DIR, PAYLOAD_MANIFEST_NAME), 'utf8')
+    )
+    expect(payloadManifest).toMatchObject({
+      format: 'dsh-desktop-payload',
+      formatVersion: 1,
+      id: '1c-rules',
+      name: '1c-rules',
+      version: '2026.01.01-abc1234',
+      digest: 'b'.repeat(64),
+      catalog: { id: 'fixture-desktop', version: '1.0.0' }
+    })
+  })
+
+  it('replaces a seeded payload wholesale when the catalog content changes', async () => {
+    const home = await freshHome()
+    const catalogRoot = await fixtureCatalog()
+    await mkdir(join(home, PAYLOAD_HOME_DIR, 'content', 'rules'), { recursive: true })
+    await writeFile(join(home, PAYLOAD_HOME_DIR, 'content', 'rules', 'stale.md'), 'stale rule\n')
+
+    await applyInstallerCatalogSeed({
+      dshHome: home,
+      catalogRoot,
+      nodeExecutablePath: 'node',
+      pnpmEntryPath: 'pnpm',
+      installPlugin: async () => {
+        await fakeGeneration(home, 'fixture-plugin+1.0.0+seed', 'fixture-plugin')
+        return {
+          ok: true,
+          generation: {
+            id: 'fixture-plugin+1.0.0+seed',
+            pluginName: 'fixture-plugin',
+            version: '1.0.0',
+            directory: join(home, 'profiles', '.generations', 'live', 'fixture-plugin+1.0.0+seed')
+          }
+        }
+      },
+      installSharedTreeMarket: async () => undefined,
+      note: silent
+    })
+
+    expect(existsSync(join(home, PAYLOAD_HOME_DIR, 'content', 'rules', 'stale.md'))).toBe(false)
+    expect(
+      await readFile(join(home, PAYLOAD_HOME_DIR, 'content', 'rules', 'demo.md'), 'utf8')
+    ).toContain('payload rule body')
   })
 
   it('is a no-op when the catalog stamp matches the current fingerprint', async () => {

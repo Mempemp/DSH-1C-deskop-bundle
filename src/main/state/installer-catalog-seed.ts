@@ -17,8 +17,17 @@ import {
 
 export const CATALOG_STAMP_NAME = '.desktop-catalog-applied'
 export const MCP_CLIENT_PACKAGE = '@deepseek-ai/dsh-mcp-client'
+/**
+ * Where a `kind: payload` tree lands. A payload is a content bundle the
+ * desktop delivers but does not consume itself: it is seeded once, beside the
+ * skills, and the component that owns it (a plugin) unpacks it into a project
+ * on demand. The manifest inside names the revision so a consumer can report
+ * and pin the exact ruleset it deployed.
+ */
+export const PAYLOAD_HOME_DIR = '1c-rules'
+export const PAYLOAD_MANIFEST_NAME = 'payload.json'
 
-export type CatalogItemKind = 'plugin' | 'mcp' | 'skill' | 'rules'
+export type CatalogItemKind = 'plugin' | 'mcp' | 'skill' | 'rules' | 'payload'
 
 export interface CatalogItem {
   kind: CatalogItemKind
@@ -382,6 +391,36 @@ export async function applyInstallerCatalogSeed(
           ? `[desktop] catalog updated plugin ${pluginName}`
           : `[desktop] catalog installed plugin ${pluginName}`
       )
+      continue
+    }
+
+    if (item.kind === 'payload') {
+      if (!item.path) throw new Error(`catalog payload ${item.id} is missing a path`)
+      const source = join(options.catalogRoot, item.path)
+      if (!existsSync(source)) throw new Error(`catalog payload tree is missing: ${source}`)
+      const dest = join(options.dshHome, PAYLOAD_HOME_DIR)
+      rmSync(dest, { recursive: true, force: true })
+      cpSync(source, dest, { recursive: true })
+      writeFileSync(
+        join(dest, PAYLOAD_MANIFEST_NAME),
+        `${JSON.stringify(
+          {
+            format: 'dsh-desktop-payload',
+            formatVersion: 1,
+            id: item.id,
+            name: item.name ?? item.id,
+            version: item.version ?? '',
+            digest: item.digest ?? '',
+            catalog: { id: manifest.id, version: manifest.version },
+            appVersion: options.appVersion ?? '',
+            seededAt: new Date().toISOString()
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      )
+      options.note(`[desktop] catalog seeded rules payload ${item.id}@${item.version ?? '0.0.0'}`)
       continue
     }
 

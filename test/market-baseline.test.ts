@@ -152,7 +152,7 @@ describe('market baseline at normal startup', () => {
     expect(upgrade).not.toHaveBeenCalled()
   })
 
-  it.each(['1.45.1', '1.46.0', '2.0.0'])('does not reinstall or downgrade active %s', async (version) => {
+  it.each(['1.47.0', '1.47.1', '2.0.0'])('does not reinstall or downgrade active %s', async (version) => {
     const { options } = await fixture(version)
     const upgrade = vi.fn()
     await ensureMarketBaseline(options, upgrade)
@@ -265,7 +265,7 @@ describe('market baseline at normal startup', () => {
     expect(order).toEqual(['demote', 'market', 'projection'])
   })
 
-  it('preserves an upgraded market version >= 1.45.1 when demoting back to shared tree', async () => {
+  it('preserves an upgraded market version >= 1.47.0 when demoting back to shared tree', async () => {
     const { home, profile, market } = await fixture()
     const generationDir = join(registryLayout(home).generations, 'dshmarket+1.47.0+cafebabe')
     const generationPackage = join(generationDir, 'node_modules', 'dshmarket')
@@ -293,10 +293,10 @@ describe('market baseline at normal startup', () => {
 
   it('upgrades to the newer declared version when declared version exceeds the baseline', async () => {
     const { options, profile, market } = await fixture()
-    // Simulate generation link with broken/missing active version, but declared version is 1.47.0
+    // Simulate generation link with broken/missing active version, but declared version is 1.48.0
     await rm(market, { recursive: true, force: true })
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    manifest.dependencies.dshmarket = '1.47.0'
+    manifest.dependencies.dshmarket = '1.48.0'
     await writeFile(join(profile, 'package.json'), JSON.stringify(manifest, undefined, 2))
 
     const upgrade = vi.fn(async ({ dshHome, targetVersion }: { dshHome: string; targetVersion: string }) => {
@@ -307,8 +307,8 @@ describe('market baseline at normal startup', () => {
     })
 
     await ensureMarketBaseline(options, upgrade)
-    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: '1.47.0' }))
-    expect(await readInstalledPluginVersion(options.dshHome, 'dshmarket')).toBe('1.47.0')
+    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: '1.48.0' }))
+    expect(await readInstalledPluginVersion(options.dshHome, 'dshmarket')).toBe('1.48.0')
   })
 })
 

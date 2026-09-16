@@ -15,3 +15,9 @@ sources:
   - kind: rules
     from: local
     path: ./oem/AGENTS.md
+  - kind: payload
+    from: local
+    path: ./oem/rules-payload
+    id: acme-rules
+    name: acme-rules
+    version: 2026.01.01-abc1234

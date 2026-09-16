@@ -31,6 +31,7 @@ __pycache__/
 /build/installer-catalog/mcp/
 /build/installer-catalog/skills/
 /build/installer-catalog/rules/
+/build/installer-catalog/payload/
 
 # Project vision / planning docs (local-only, not published)
 /docs/vision.md

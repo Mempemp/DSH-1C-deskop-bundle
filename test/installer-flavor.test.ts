@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -59,6 +59,11 @@ sources:
   - kind: rules
     from: local
     path: ./oem/AGENTS.md
+  - kind: payload
+    from: git
+    url: https://github.com/acme/rules.git#v1
+    id: acme-rules
+    version: 1.0.0
 `
 
 describe('installer flavor schema', () => {
@@ -67,7 +72,7 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.45.1' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.47.0' },
       {
         kind: 'plugin',
         from: 'git',
@@ -82,7 +87,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.18.1'
+        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.19.1'
       },
       {
         kind: 'plugin',
@@ -117,15 +122,42 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.2.14'
+        spec: '@goodandready/dsh-russian-lang@0.2.19'
+      },
+      {
+        kind: 'plugin',
+        from: 'npm',
+        spec: 'dsh-univer-office@0.2.14'
       },
       {
         kind: 'skill',
         from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#main',
+        url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',
         path: 'content/skills'
+      },
+      {
+        kind: 'payload',
+        from: 'git',
+        url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',
+        id: '1c-rules',
+        name: '1c-rules',
+        version: '2026.09.16-488e930'
       }
     ])
+  })
+
+  it('requires an id and a pinned version for a payload source', () => {
+    const base = `
+name: Acme Desktop
+version: 1.0.0
+sources:
+  - kind: payload
+    from: git
+    url: https://github.com/acme/rules.git#v1
+`
+    expect(() => parseInstallerFlavor(`${base}    id: acme-rules\n    version: 1.0.0\n`)).not.toThrow()
+    expect(() => parseInstallerFlavor(base)).toThrow(/sources\[0\]\.id/)
+    expect(() => parseInstallerFlavor(`${base}    id: acme-rules\n`)).toThrow(/sources\[0\]\.version/)
   })
 
   it('treats an empty sources list as vanilla DSH Desktop', () => {
@@ -150,7 +182,8 @@ sources: []
       'plugin:market',
       'plugin:market',
       'skill:git',
-      'rules:local'
+      'rules:local',
+      'payload:git'
     ])
     expect(flavor.sources[4]).toMatchObject({ id: 'dsh-mcp-connector' })
     expect(flavor.sources[5]).toMatchObject({
@@ -547,7 +580,8 @@ describe('prepare-installer-catalog', () => {
       'plugin',
       'mcp',
       'skill',
-      'rules'
+      'rules',
+      'payload'
     ])
     expect(prepared.manifest.items[0]).toMatchObject({
       kind: 'plugin',
@@ -565,6 +599,7 @@ describe('prepare-installer-catalog', () => {
     expect(labels).toContain('MCP: intranet')
     expect(labels).toContain('Skill: invoice-review')
     expect(labels).toContain('Rules: AGENTS.md')
+    expect(labels).toContain('Payload: acme-rules')
     expect(labels).toContain('!macro DshFillCatalogList HWND')
 
     const pluginTarball = join(prepared.paths.catalogDir, prepared.manifest.items[0]!.file!)
@@ -575,6 +610,90 @@ describe('prepare-installer-catalog', () => {
     await expect(
       readFile(join(prepared.paths.catalogDir, 'rules', 'AGENTS.md'), 'utf8')
     ).resolves.toContain('OEM rules')
+  })
+
+  it('vendors a payload tree whole, with a content digest that tracks its files', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-prepare-payload-'))
+    roots.push(root)
+    const flavorPath = join(root, 'flavor.yml')
+    await writeFile(
+      flavorPath,
+      [
+        'name: Payload Desktop',
+        'version: 1.0.0',
+        'sources:',
+        '  - kind: payload',
+        '    from: local',
+        '    path: ./tree',
+        '    id: 1c-rules',
+        '    version: 2026.01.01-abc1234',
+        ''
+      ].join('\n')
+    )
+    await mkdir(join(root, 'tree', 'content', 'rules'), { recursive: true })
+    await mkdir(join(root, 'tree', 'content', 'skills', 'demo'), { recursive: true })
+    await mkdir(join(root, 'tree', 'tools'), { recursive: true })
+    await writeFile(join(root, 'tree', 'AGENTS.md'), '# entry\n')
+    await writeFile(join(root, 'tree', 'content', 'rules', 'demo.md'), 'rule body\n')
+    await writeFile(join(root, 'tree', 'content', 'skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\n')
+    await writeFile(join(root, 'tree', 'tools', 'dev-only.ps1'), 'dev tooling\n')
+    await writeFile(join(root, 'tree', 'install.ps1'), 'installer\n')
+
+    const prepared = await prepareInstallerCatalog({ projectRoot: root, flavorPath })
+    const item = prepared.manifest.items[0]!
+    expect(item).toMatchObject({
+      kind: 'payload',
+      id: '1c-rules',
+      name: '1c-rules',
+      version: '2026.01.01-abc1234',
+      label: 'Payload: 1c-rules',
+      path: 'payload/1c-rules'
+    })
+    expect(item.digest).toMatch(/^[0-9a-f]{64}$/u)
+
+    const copied = item.path!
+    await expect(readFile(join(prepared.paths.catalogDir, copied, 'AGENTS.md'), 'utf8')).resolves
+      .toContain('# entry')
+    await expect(
+      readFile(join(prepared.paths.catalogDir, copied, 'content', 'rules', 'demo.md'), 'utf8')
+    ).resolves.toContain('rule body')
+    // Source-repository tooling is not part of the delivered ruleset.
+    expect(existsSync(join(prepared.paths.catalogDir, copied, 'tools'))).toBe(false)
+    expect(existsSync(join(prepared.paths.catalogDir, copied, 'install.ps1'))).toBe(false)
+
+    // A content-only change must move the digest: the catalog fingerprint is
+    // the only thing that decides whether an existing install re-seeds.
+    await writeFile(join(root, 'tree', 'content', 'rules', 'demo.md'), 'changed body\n')
+    const reprepared = await prepareInstallerCatalog({ projectRoot: root, flavorPath })
+    expect(reprepared.manifest.items[0]!.digest).not.toBe(item.digest)
+  })
+
+  it('records a digest for every skill so a content change re-seeds them', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-prepare-skill-digest-'))
+    roots.push(root)
+    const flavorPath = join(root, 'flavor.yml')
+    await writeFile(
+      flavorPath,
+      [
+        'name: Skill Digest Desktop',
+        'version: 1.0.0',
+        'sources:',
+        '  - kind: skill',
+        '    from: local',
+        '    path: ./skills/demo',
+        ''
+      ].join('\n')
+    )
+    await mkdir(join(root, 'skills', 'demo'), { recursive: true })
+    await writeFile(join(root, 'skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\nfirst\n')
+
+    const first = await prepareInstallerCatalog({ projectRoot: root, flavorPath })
+    const skill = first.manifest.items.find((entry) => entry.kind === 'skill')!
+    expect(skill.digest).toMatch(/^[0-9a-f]{64}$/u)
+
+    await writeFile(join(root, 'skills', 'demo', 'SKILL.md'), '---\nname: demo\n---\nsecond\n')
+    const second = await prepareInstallerCatalog({ projectRoot: root, flavorPath })
+    expect(second.manifest.items.find((entry) => entry.kind === 'skill')!.digest).not.toBe(skill.digest)
   })
 
   it('downloads backup plugins and packs them into the installer catalog', async () => {

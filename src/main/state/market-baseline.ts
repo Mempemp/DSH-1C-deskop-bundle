@@ -11,7 +11,7 @@ import {
   type PluginUpgradeResult
 } from './plugin-upgrade'
 
-export const VERIFIED_MARKET_BASELINE = '1.45.1'
+export const VERIFIED_MARKET_BASELINE = '1.47.0'
 
 const MARKET_PACKAGE = 'dshmarket'
 
