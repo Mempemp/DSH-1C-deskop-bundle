@@ -21,9 +21,9 @@
 </p>
 
 **DSH для 1С** — сборка десктопного клиента [DSH Desktop](https://github.com/dataelement/dsh-desktop)
-с офлайн-каталогом плагинов, навыков и MCP-серверов для 1С. Один установщик ставит
+с офлайн-каталогом плагинов и MCP-серверов для 1С. Один установщик ставит
 всё сразу: приложение, редактор BSL, параметры подключения к базам, веб-поиск,
-маркет плагинов и набор 1С-навыков.
+поиск по документации платформы и маркет плагинов.
 
 ## Установка
 
@@ -48,11 +48,14 @@
   данные подключения и авторизации для каждой ИБ, доступные инструментам агента.
 - **RLM-инструменты для BSL** ([DSH-runner-rlm-tools-bsl](https://github.com/Mempemp/DSH-runner-rlm-tools-bsl)) —
   быстрый поиск и навигация по коду 1С.
-- **Навыки и правила для 1С** — работа с метаданными, хранилищем, выгрузкой
-  конфигурации в файлы ([ai_rules_1c](https://github.com/comol/ai_rules_1c)):
-  12 навыков доступны сразу, а полный набор (48 правил, 13 ролей субагентов,
-  30 команд, OpenSpec) разворачивается в конкретный проект кнопкой
-  «Развернуть правила в проект» в окне параметров проекта.
+- **Правила 1С в проекте** — набор [ai_rules_1c](https://github.com/comol/ai_rules_1c):
+  48 правил, 13 ролей субагентов, 30 команд, 12 навыков и OpenSpec разворачиваются
+  в конкретный проект кнопкой «Развернуть правила в проект» в окне параметров
+  проекта — целиком, с путями, переписанными под проект. В другие проекты правила
+  не подмешиваются.
+- **Документация платформы в ответах агента** — публичный MCP-сервер `v8std`
+  (поиск по документации 1С, БСП / SSL и стандартам, разбор диагностик ACC и BSLLS)
+  подключён сразу, без ключа и настройки.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
@@ -69,8 +72,9 @@
 - 11 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
   таблицы Univer) + три наших 1С-плагина;
-- 12+ навыков (skills) для 1С и повседневных задач;
-- правила (AGENTS.md) для работы агента с 1С;
+- MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
+- набор правил 1С ([ai_rules_1c](https://github.com/comol/ai_rules_1c)) как payload:
+  разворачивается в проект по кнопке, глобально ничего не подмешивается;
 - рантайм `@deepseek-ai/dsh@0.1.5-rc.2` внутри приложения — ставить Node.js и CLI не нужно.
 
 ## Сборка из исходников
@@ -93,7 +97,7 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 Проект построен на открытых разработках, и мы благодарны их авторам:
 
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — агентный рантайм;
-- [DSH Desktop](https://github.com/dataelement/dsh-desktop) — десктопная оболочка (MIT), основа нашей сборки: мы развиваем её поверх апстрима, не переписывая рантайм, и добавляем свои плагины, навыки и установщик;
+- [DSH Desktop](https://github.com/dataelement/dsh-desktop) — десктопная оболочка (MIT), основа нашей сборки: мы развиваем её поверх апстрима, не переписывая рантайм, и добавляем свои плагины, каталог компонентов и установщик;
 - [dsh-russian-lang](https://github.com/GooDAnDReaDY/dsh-russian-lang) — русская локализация интерфейса;
 - [dsh-market](https://github.com/dsh-market/dsh-market) — маркет плагинов сообщества;
 - плагины [wingsky-1](https://github.com/wingsky-1/dsh-plugin-hub),
@@ -101,7 +105,7 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
-- навыки [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
+- набор правил [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
 
 ## Лицензия
 

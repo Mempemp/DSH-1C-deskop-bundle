@@ -138,12 +138,6 @@ describe('installer flavor schema', () => {
         url: 'https://ai.v8std.ru/mcp'
       },
       {
-        kind: 'skill',
-        from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',
-        path: 'content/skills'
-      },
-      {
         kind: 'payload',
         from: 'git',
         url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',

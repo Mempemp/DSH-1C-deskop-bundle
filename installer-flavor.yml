@@ -80,21 +80,17 @@ sources:
     serverName: v8std
     transport: streamable-http
     url: https://ai.v8std.ru/mcp
-  # Agent Skills tree: content/skills/<name>/SKILL.md (comol/ai_rules_1c).
-  # Pinned to a commit, not `#main`: this is what the offline seed installs, and
-  # a floating ref would hand two installs of the same build different rulesets.
-  - kind: skill
-    from: git
-    url: https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b
-    path: content/skills
-  # The same ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json +
-  # content/. Skills alone leave every cross-reference in them dangling
-  # (AGENTS.md, content/rules/*, content/agents/*), so the ruleset is delivered
-  # whole and dsh-1c-project-properties unpacks it into a project on demand —
-  # rewriting the source-repository paths to the project-local ones the header
-  # of each file expects. The desktop never reads this payload itself.
-  # `version` feeds the catalog fingerprint: bump it (or let the tree digest
-  # change) or an existing install keeps its old copy.
+  # 1C ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json + content/.
+  # Delivered as a payload and nothing else: the skills inside it cross-reference
+  # AGENTS.md, content/rules/* and content/agents/*, so shipping the skills tree
+  # on its own — the global $DSH_HOME/skills, which every project sees — would
+  # hand the agent pointers into files that are not there. The whole tree is
+  # unpacked into a project on demand by dsh-1c-project-properties, which
+  # rewrites the source-repository paths to the project-local ones the header of
+  # each file expects. The desktop never reads this payload itself.
+  # Pinned to a commit, not `#main`: a floating ref would hand two installs of the
+  # same build different rulesets. `version` feeds the catalog fingerprint: bump
+  # it (or let the tree digest change) or an existing install keeps its old copy.
   - kind: payload
     from: git
     url: https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b
