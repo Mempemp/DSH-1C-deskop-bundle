@@ -120,10 +120,6 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 - [bsl-context](https://github.com/Regsorm/bsl-context) — MCP-сервер справки по
   API платформы 1С (MIT): поставляется в сборке готовым бинарником и работает
   через него;
-- [mcp-bsl-platform-context](https://github.com/alkoleft/mcp-bsl-platform-context) —
-  в сборку не входит: это первый MCP-сервер справки по платформе 1С, с которого
-  началась ниша и чей код (MIT, © 2025 Koryakin Aleksey) частично лёг в основу
-  `bsl-context`, поставленного в сборке;
 - набор правил [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
 
 ## Лицензия
