@@ -17,9 +17,10 @@ import {
   catalogFingerprint,
   catalogStampPath,
   CATALOG_STAMP_NAME,
-  MCP_CLIENT_PACKAGE,
-  mcpClientEntry,
-  mergeMcpServerIntoPatch,
+  MCP_MANAGER_STORE_NAME,
+  mergeMcpServerIntoManagerStore,
+  mcpPatchEntryId,
+  removeMcpRowsFromPatch,
   PAYLOAD_HOME_DIR,
   PAYLOAD_MANIFEST_NAME,
   readCatalogManifest
@@ -172,26 +173,21 @@ describe('first-run installer catalog seed', () => {
       'Review invoices'
     )
     expect(await readFile(join(home, 'AGENTS.md'), 'utf8')).toContain('seeded rules')
-    // The server is a real loader entry: one @deepseek-ai/dsh-mcp-client
-    // instance, inserted into the home layer every profile reads.
-    const homePatch = parse(await readFile(join(home, 'cordis.patch.yml'), 'utf8')) as Array<{
-      insert?: Array<{ id?: string; name?: string; config?: Record<string, unknown> }>
-    }>
-    const seededServer = homePatch
-      .flatMap((row) => row.insert ?? [])
-      .find((entry) => entry.id === 'mcp-intranet')
-    expect(seededServer).toEqual({
-      id: 'mcp-intranet',
-      name: MCP_CLIENT_PACKAGE,
-      config: {
-        serverName: 'intranet',
-        transport: 'stdio',
-        command: 'node',
-        args: ['intranet.js']
-      }
+    // The server lands in the MCP manager's store — the list its panel shows
+    // and its switches act on — and nowhere else: one serverName has one home.
+    expect(JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8'))).toEqual({
+      version: 1,
+      servers: [
+        {
+          name: 'intranet',
+          transport: 'stdio',
+          command: 'node',
+          args: ['intranet.js'],
+          enabled: true
+        }
+      ]
     })
-    // Home layer only: the same serverName mounted twice is a hard mcp-client
-    // boot error, not a harmless duplicate.
+    expect(existsSync(join(home, 'cordis.patch.yml'))).toBe(false)
     expect(await readFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), 'utf8')).toBe('[]\n')
     // The payload lands beside the skills, whole, with a manifest naming the
     // revision a consumer (a project-scoped plugin) deployed.
@@ -491,16 +487,19 @@ describe('first-run installer catalog seed', () => {
     await writeFile(
       join(home, 'cordis.patch.yml'),
       [
+        '# Written by DSH Desktop: the loader patch layer applied to every profile',
+        "# after the profile bundle layers and the profile's own cordis.patch.yml.",
+        '#',
         '# a comment the desktop must not eat',
         '- insert:',
-        "    - id: mcp-intranet",
-        `      name: '${MCP_CLIENT_PACKAGE}'`,
+        `    - id: ${mcpPatchEntryId('intranet')}`,
+        "      name: '@deepseek-ai/dsh-mcp-client'",
         '      config:',
         '        serverName: intranet',
         '        transport: stdio',
         '        command: old-intranet',
-        "    - id: mcp-mine",
-        `      name: '${MCP_CLIENT_PACKAGE}'`,
+        '    - id: mcp-mine',
+        "      name: '@deepseek-ai/dsh-mcp-client'",
         '      config:',
         '        serverName: mine',
         '        transport: stdio',
@@ -538,16 +537,69 @@ describe('first-run installer catalog seed', () => {
     expect(desired).not.toContain('fixture-plugin+0.19.0+market')
     expect(await readFile(join(home, 'skills', 'user-skill', 'SKILL.md'), 'utf8')).toBe('my skill\n')
     const patch = await readFile(join(home, 'cordis.patch.yml'), 'utf8')
-    expect(patch).toContain('intranet')
-    expect(patch).toContain('node')
+    // The catalog's own row is gone — the manager mounts that server now — and
+    // the row the user wrote survives with its comment and its expression.
+    expect(patch).not.toContain(mcpPatchEntryId('intranet'))
     expect(patch).not.toContain('old-intranet')
     expect(patch).toContain('mcp-mine')
-    expect(patch).toContain('serverName: mine')
-    // The user's own row keeps its comment and its !!js expression verbatim.
-    expect(patch).toContain('# a comment the desktop must not eat')
     expect(patch).toContain("!!js dshHomePath('bin/mine')")
+    expect(patch).toContain('# a comment the desktop must not eat')
     const rows = parse(patch) as Array<{ insert?: Array<{ id?: string }> }>
-    expect(rows.flatMap((row) => row.insert ?? []).filter((entry) => entry.id === 'mcp-intranet')).toHaveLength(1)
+    expect(rows.flatMap((row) => row.insert ?? []).map((entry) => entry.id)).toEqual(['mcp-mine'])
+    const store = JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8')) as {
+      servers: unknown[]
+    }
+    expect(store.servers).toEqual([
+      { name: 'intranet', transport: 'stdio', command: 'node', args: ['intranet.js'], enabled: true }
+    ])
+  })
+
+  it('drops the home patch layer once the catalog rows that were its only content are gone', async () => {
+    const home = await freshHome()
+    const catalogRoot = await fixtureCatalog()
+    await writeFile(
+      join(home, 'cordis.patch.yml'),
+      [
+        '# Written by DSH Desktop: the loader patch layer applied to every profile',
+        '# after the profile bundle layers and the profile\'s own cordis.patch.yml.',
+        '',
+        '- insert:',
+        `    - id: ${mcpPatchEntryId('intranet')}`,
+        "      name: '@deepseek-ai/dsh-mcp-client'",
+        '      config:',
+        '        serverName: intranet',
+        '        transport: stdio',
+        '        command: node',
+        '        args: [intranet.js]',
+        ''
+      ].join('\n')
+    )
+
+    const outcome = await applyInstallerCatalogSeed({
+      dshHome: home,
+      catalogRoot,
+      nodeExecutablePath: 'node',
+      pnpmEntryPath: 'pnpm',
+      installPlugin: async () => {
+        await fakeGeneration(home, 'fixture-plugin+1.0.0+seed', 'fixture-plugin', '1.0.0')
+        return {
+          ok: true,
+          generation: {
+            id: 'fixture-plugin+1.0.0+seed',
+            pluginName: 'fixture-plugin',
+            version: '1.0.0',
+            directory: join(home, 'profiles', '.generations', 'live', 'fixture-plugin+1.0.0+seed')
+          }
+        }
+      },
+      note: silent
+    })
+
+    expect(outcome).toBe('applied')
+    expect(existsSync(join(home, 'cordis.patch.yml'))).toBe(false)
+    expect(JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8'))).toMatchObject({
+      servers: [{ name: 'intranet' }]
+    })
   })
 
   it('re-applies the catalog when the desktop app version changes', async () => {
@@ -673,44 +725,118 @@ describe('first-run installer catalog seed', () => {
     )
   })
 
-  it('adds an MCP server as its own loader entry and updates only that entry', () => {
-    const entry = mcpClientEntry('v8std', {
-      serverName: 'v8std',
-      transport: 'streamable-http',
+  it('adds an MCP server to the manager store and then updates only that server', () => {
+    const entry = {
+      name: 'v8std',
+      transport: 'streamable-http' as const,
       url: 'https://ai.v8std.ru/mcp'
-    })
+    }
 
-    const first = mergeMcpServerIntoPatch('[]\n', entry)
+    const first = mergeMcpServerIntoManagerStore(undefined, entry)
     expect(first.added).toBe(true)
     expect(first.changed).toBe(true)
     expect(first.skipped).toBe(false)
-    expect(parse(first.text)).toEqual([
-      { insert: [{ id: 'mcp-v8std', name: MCP_CLIENT_PACKAGE, config: entry.config }] }
-    ])
+    expect(JSON.parse(first.text)).toEqual({
+      version: 1,
+      servers: [
+        { name: 'v8std', transport: 'streamable-http', url: 'https://ai.v8std.ru/mcp', enabled: true }
+      ]
+    })
 
-    // Re-seeding an identical catalog is a no-op, not a second row.
-    const again = mergeMcpServerIntoPatch(first.text, entry)
+    // Re-seeding an identical catalog is a no-op, not a second server.
+    const again = mergeMcpServerIntoManagerStore(first.text, entry)
     expect(again.added).toBe(false)
     expect(again.changed).toBe(false)
     expect(again.text).toBe(first.text)
 
-    // A moved URL rewrites the desktop's own row in place.
-    const moved = mergeMcpServerIntoPatch(
-      first.text,
-      mcpClientEntry('v8std', { ...entry.config, url: 'https://ai.example.test/mcp' })
-    )
+    // A moved URL rewrites our server in place.
+    const moved = mergeMcpServerIntoManagerStore(first.text, {
+      ...entry,
+      url: 'https://ai.example.test/mcp'
+    })
     expect(moved.added).toBe(false)
     expect(moved.changed).toBe(true)
     expect(moved.text).toContain('https://ai.example.test/mcp')
     expect(moved.text).not.toContain('ai.v8std.ru')
-    expect(moved.text.match(/id: mcp-v8std/g)).toHaveLength(1)
+    expect(moved.text.match(/v8std/g)).toHaveLength(1)
   })
 
-  it('leaves a patch file the loader could not read exactly as it was', () => {
+  it('keeps the manager store in shape: other servers, user switches, unreadable file', () => {
+    const store = JSON.stringify({
+      version: 1,
+      servers: [
+        { name: 'rlm', transport: 'streamable-http', url: 'http://127.0.0.1:9330/mcp', enabled: true },
+        {
+          name: 'v8std',
+          transport: 'streamable-http',
+          url: 'https://ai.v8std.ru/mcp',
+          enabled: false,
+          toolCallTimeoutMs: 90000
+        }
+      ]
+    })
+    const entry = {
+      name: 'v8std',
+      transport: 'streamable-http' as const,
+      url: 'https://ai.v8std.ru/mcp'
+    }
+
+    // Identical delivery: nothing to write.
+    expect(mergeMcpServerIntoManagerStore(store, entry).changed).toBe(false)
+
+    // A changed URL is written, but the switch the user flipped and the timeout
+    // they raised are theirs and stay.
+    const updated = mergeMcpServerIntoManagerStore(store, {
+      ...entry,
+      url: 'https://ai.example.test/mcp'
+    })
+    expect(updated.changed).toBe(true)
+    const servers = (JSON.parse(updated.text) as { servers: Array<Record<string, unknown>> })
+      .servers
+    expect(servers).toHaveLength(2)
+    expect(servers[0]).toMatchObject({ name: 'rlm', url: 'http://127.0.0.1:9330/mcp' })
+    expect(servers[1]).toMatchObject({
+      name: 'v8std',
+      url: 'https://ai.example.test/mcp',
+      enabled: false,
+      toolCallTimeoutMs: 90000
+    })
+
+    // A store the manager could not read is left exactly as it was.
+    const broken = '{ "servers": [ }'
+    const untouched = mergeMcpServerIntoManagerStore(broken, entry)
+    expect(untouched.skipped).toBe(true)
+    expect(untouched.changed).toBe(false)
+    expect(untouched.text).toBe(broken)
+  })
+
+  it('removes only the catalog rows from a patch layer the user also writes to', () => {
+    const text = [
+      '# user comment',
+      '- insert:',
+      `    - id: ${mcpPatchEntryId('v8std')}`,
+      "      name: '@deepseek-ai/dsh-mcp-client'",
+      '      config:',
+      '        serverName: v8std',
+      '    - id: mcp-mine',
+      '      name: something-else',
+      ''
+    ].join('\n')
+
+    const cleared = removeMcpRowsFromPatch(text, [mcpPatchEntryId('v8std')])
+    expect(cleared.removed).toBe(1)
+    expect(cleared.skipped).toBe(false)
+    expect(cleared.empty).toBe(false)
+    expect(cleared.text).toContain('mcp-mine')
+    expect(cleared.text).toContain('# user comment')
+    expect(cleared.text).not.toContain('mcp-v8std')
+
+    // A file the desktop cannot parse is not a place to guess.
     const broken = '- insert: [unclosed\n'
-    const merged = mergeMcpServerIntoPatch(broken, mcpClientEntry('v8std', { serverName: 'v8std' }))
-    expect(merged.skipped).toBe(true)
-    expect(merged.changed).toBe(false)
-    expect(merged.text).toBe(broken)
+    expect(removeMcpRowsFromPatch(broken, ['mcp-v8std'])).toMatchObject({
+      text: broken,
+      removed: 0,
+      skipped: true
+    })
   })
 })

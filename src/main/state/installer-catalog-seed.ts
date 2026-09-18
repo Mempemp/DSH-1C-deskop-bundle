@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, cpSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, cpSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { basename, dirname, join } from 'node:path'
 import { isMap, isSeq, parseDocument, type Document } from 'yaml'
@@ -16,21 +16,36 @@ import {
 } from 'dsh-desktop-market-installer/generations/registry'
 
 export const CATALOG_STAMP_NAME = '.desktop-catalog-applied'
-export const MCP_CLIENT_PACKAGE = '@deepseek-ai/dsh-mcp-client'
 /**
- * The patch-file id the catalog owns for one MCP server. Patch entries, not
- * server names, are what the loader indexes, so this is what an update
- * replaces — and what keeps the seeded rows out of a user's own entries.
+ * The MCP manager plugin's global server store, `$DSH_HOME/dsh-mcp.json`.
+ *
+ * Catalog MCP servers are delivered here, not into the loader patch layer:
+ * that layer mounts `@deepseek-ai/dsh-mcp-client` rows, which the manager
+ * neither reads nor lists, and one `serverName` mounted twice is a hard client
+ * load error — so a server has exactly one home. The store is the surface a
+ * user actually works with: the manager's panel lists the server, switches it
+ * on and off, shows its state and its tools.
+ */
+export const MCP_MANAGER_STORE_NAME = 'dsh-mcp.json'
+/** Store format version: the value the manager writes on its own saves. */
+const MCP_MANAGER_STORE_VERSION = 1
+
+/**
+ * The loader-row id catalog MCP servers were mounted under before the manager
+ * took them over. Only the migration reads it now.
  */
 export function mcpPatchEntryId(serverId: string): string {
   return `mcp-${serverId}`
 }
 
-/** One `@deepseek-ai/dsh-mcp-client` instance as the loader configures it. */
-export interface McpServerPatchEntry {
-  id: string
+/** One server as the manager's global store keeps it. */
+export interface McpManagerServerEntry {
   name: string
-  config: Record<string, unknown>
+  transport: 'stdio' | 'streamable-http'
+  url?: string
+  headers?: Record<string, string>
+  command?: string
+  args?: string[]
 }
 /**
  * Where a `kind: payload` tree lands. A payload is a content bundle the
@@ -225,96 +240,141 @@ function homeCordisPatchPath(dshHome: string): string {
   return join(dshHome, 'cordis.patch.yml')
 }
 
-/** Header for the home patch layer when the catalog creates it. */
-const HOME_PATCH_HEADER = [
-  '# Written by DSH Desktop: the loader patch layer applied to every profile',
-  '# after the profile bundle layers and the profile\'s own cordis.patch.yml.',
-  '#',
-  '# Every row this file ships mounts one @deepseek-ai/dsh-mcp-client instance',
-  '# from the desktop installer catalog (installer-flavor.yml, kind: mcp). The',
-  '# desktop replaces its own mcp-<server> rows on update and never touches any',
-  '# other row, so a server you add here yourself survives.',
-  ''
-].join('\n')
-
-/**
- * The loader entry that mounts one MCP server.
- *
- * `@deepseek-ai/dsh-mcp-client` takes ONE server per instance (config is
- * discriminated on `transport`, and `serverName` namespaces its tools as
- * `mcp__<serverName>__<tool>`), so a server is an inserted entry — never a
- * `servers` map inside some other entry's config.
- */
-export function mcpClientEntry(
-  serverId: string,
-  config: Record<string, unknown>
-): McpServerPatchEntry {
-  return { id: mcpPatchEntryId(serverId), name: MCP_CLIENT_PACKAGE, config }
+function mcpManagerStorePath(dshHome: string): string {
+  return join(dshHome, MCP_MANAGER_STORE_NAME)
 }
 
-/** Find the map node of an entry the desktop owns, wherever it sits. */
-function findOwnedEntry(
-  doc: Document,
-  entryId: string
-): { entry: unknown; group: unknown } | undefined {
-  const rows = isSeq(doc.contents) ? doc.contents.items : []
-  const search = (items: unknown[]): { entry: unknown; group: unknown } | undefined => {
-    for (const item of items) {
-      if (!isMap(item)) continue
-      if (item.get('id') === entryId) return { entry: item, group: undefined }
-      const insert = item.get('insert')
-      if (isSeq(insert)) {
-        for (const nested of insert.items) {
-          if (isMap(nested) && nested.get('id') === entryId) {
-            return { entry: nested, group: item }
-          }
-        }
-      }
-    }
-    return undefined
+/**
+ * First line of the header earlier builds wrote when they created the home
+ * patch layer. The migration drops that layer only when the file carries it,
+ * so a layer a user wrote themselves is never removed.
+ */
+const HOME_PATCH_MARKER =
+  '# Written by DSH Desktop: the loader patch layer applied to every profile'
+
+/** Replace a file through a sibling temp file, the way the manager saves its store. */
+function writeAtomically(filePath: string, text: string): void {
+  mkdirSync(dirname(filePath), { recursive: true })
+  const tmp = `${filePath}.${process.pid}.${Date.now().toString(36)}.tmp`
+  writeFileSync(tmp, text, { encoding: 'utf8', mode: 0o600 })
+  renameSync(tmp, filePath)
+}
+
+/** The entry's own keys, without the ones a catalog item left undefined. */
+function definedOnly(entry: McpManagerServerEntry): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(entry)) {
+    if (value !== undefined) out[key] = value
   }
-  return search(rows)
+  return out
 }
 
 /**
- * Merge one desktop-owned MCP server into a loader patch list.
+ * Merge one catalog MCP server into the manager's global store.
  *
- * The patch file is the user's own layer too, so this edits the YAML document
- * in place: comments, `!!js` expressions and every unrelated row survive
- * verbatim, and only the desktop's own `mcp-<server>` row is rewritten. An
- * unparseable file is left exactly as it is — a patch layer the desktop cannot
- * read is not a reason to overwrite what the user wrote.
+ * The store belongs to the plugin, so the edit is surgical: every other server
+ * survives verbatim, and so does every field of ours the user changed — the
+ * manager keeps a server's `enabled` switch, its call timeout and its
+ * description in the same row, and a re-seed must not undo a switch the user
+ * flipped. A file the manager could not read is left exactly as it is.
  */
-export function mergeMcpServerIntoPatch(
-  text: string,
-  entry: McpServerPatchEntry
+export function mergeMcpServerIntoManagerStore(
+  text: string | undefined,
+  entry: McpManagerServerEntry
 ): { text: string; added: boolean; changed: boolean; skipped: boolean } {
-  // Typed as the writable Document: this document is edited, not just read, and
-  // the parsed-node type insists on source ranges a fresh node never has.
-  const doc = parseDocument(text) as Document
-  if (doc.errors.length > 0) return { text, added: false, changed: false, skipped: true }
-
-  const owned = findOwnedEntry(doc, entry.id)
-  if (owned !== undefined) {
-    const node = owned.entry as {
-      set: (key: string, value: unknown) => void
-      get: (key: string) => unknown
+  const current = text ?? ''
+  let store: Record<string, unknown>
+  if (current.trim() === '') {
+    store = { version: MCP_MANAGER_STORE_VERSION, servers: [] }
+  } else {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(current)
+    } catch {
+      return { text: current, added: false, changed: false, skipped: true }
     }
-    const current = JSON.stringify(node.get('config'))
-    if (node.get('name') === entry.name && current === JSON.stringify(entry.config)) {
-      return { text, added: false, changed: false, skipped: false }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { text: current, added: false, changed: false, skipped: true }
     }
-    node.set('name', entry.name)
-    node.set('config', doc.createNode(entry.config))
-    return { text: ensureTrailingNewline(doc.toString()), added: false, changed: true, skipped: false }
+    store = parsed as Record<string, unknown>
+  }
+  if (store.servers !== undefined && !Array.isArray(store.servers)) {
+    return { text: current, added: false, changed: false, skipped: true }
   }
 
-  // A document with no contents is an empty or comment-only layer of our own
-  // making; anything that is a list but not a sequence is not a patch list.
-  if (doc.contents === null) doc.contents = doc.createNode([])
-  if (!isSeq(doc.contents)) return { text, added: false, changed: false, skipped: true }
-  doc.add({ insert: [entry] })
-  return { text: ensureTrailingNewline(doc.toString()), added: true, changed: true, skipped: false }
+  const servers = (store.servers ?? []) as Record<string, unknown>[]
+  const own = definedOnly(entry)
+  const at = servers.findIndex(
+    (server) => server !== null && typeof server === 'object' && server.name === entry.name
+  )
+  if (at < 0) {
+    servers.push({ ...own, enabled: true })
+  } else {
+    const merged = { ...servers[at], ...own }
+    if (JSON.stringify(merged) === JSON.stringify(servers[at])) {
+      return { text: current, added: false, changed: false, skipped: false }
+    }
+    servers[at] = merged
+  }
+
+  // Version first and every unrelated top-level key kept: the manager reads
+  // only `servers`, but the file is not ours to prune.
+  const next: Record<string, unknown> = {
+    version: typeof store.version === 'number' ? store.version : MCP_MANAGER_STORE_VERSION,
+    servers
+  }
+  for (const [key, value] of Object.entries(store)) {
+    if (key !== 'version' && key !== 'servers') next[key] = value
+  }
+  return { text: JSON.stringify(next, null, 2), added: at < 0, changed: true, skipped: false }
+}
+
+/**
+ * Remove the desktop's own MCP rows from the home patch layer.
+ *
+ * Up to 0.9.0-1 the catalog mounted its MCP servers here as `mcp-<id>` rows.
+ * They have to go before the manager mounts the same server: one `serverName`
+ * twice is a hard mcp-client load error, not a duplicate that resolves. The
+ * document is edited in place, so comments, `!!js` expressions and rows the
+ * user wrote survive, and a file the desktop cannot parse is left alone.
+ */
+export function removeMcpRowsFromPatch(
+  text: string,
+  entryIds: readonly string[]
+): { text: string; removed: number; skipped: boolean; empty: boolean } {
+  const doc = parseDocument(text) as Document
+  if (doc.errors.length > 0) return { text, removed: 0, skipped: true, empty: false }
+
+  const rows = isSeq(doc.contents) ? doc.contents.items : []
+  const owned = new Set(entryIds)
+  const isOwned = (node: unknown): boolean =>
+    isMap(node) && typeof node.get('id') === 'string' && owned.has(node.get('id') as string)
+
+  let removed = 0
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index]
+    if (isOwned(row)) {
+      rows.splice(index, 1)
+      removed += 1
+      continue
+    }
+    const insert = isMap(row) ? row.get('insert') : undefined
+    if (!isSeq(insert)) continue
+    for (let nested = insert.items.length - 1; nested >= 0; nested -= 1) {
+      if (!isOwned(insert.items[nested])) continue
+      insert.items.splice(nested, 1)
+      removed += 1
+    }
+    // An insert list left empty is what a row of ours became: it mounts nothing.
+    if (insert.items.length === 0) rows.splice(index, 1)
+  }
+  if (removed === 0) return { text, removed: 0, skipped: false, empty: false }
+  return {
+    text: ensureTrailingNewline(doc.toString()),
+    removed,
+    skipped: false,
+    empty: rows.length === 0
+  }
 }
 
 function ensureTrailingNewline(text: string): string {
@@ -322,40 +382,68 @@ function ensureTrailingNewline(text: string): string {
 }
 
 /**
- * Seed every catalog MCP server into the home patch layer.
- *
- * The home layer (`$DSH_HOME/cordis.patch.yml`) is applied to EVERY profile,
- * which is what "global" means here — and it is also why it is the only place
- * the catalog may write: the same `serverName` in two layers is a hard boot
- * error in `@deepseek-ai/dsh-mcp-client`, not a duplicate that resolves.
+ * Deliver the catalog's MCP servers: into the manager's store, and out of the
+ * patch layer the catalog used before. Both halves are one operation — a
+ * machine upgrading from 0.9.0-1 has the row in the layer and nothing in the
+ * store, and the two together would break the next boot.
  */
-function writeMcpServers(home: string, entries: McpServerPatchEntry[], note: Note): void {
-  if (entries.length === 0) return
-  const filePath = homeCordisPatchPath(home)
-  const existed = existsSync(filePath)
-  let text = existed ? readFileSync(filePath, 'utf8') : HOME_PATCH_HEADER
-  let touched = !existed
+function applyCatalogMcp(
+  home: string,
+  entries: readonly McpManagerServerEntry[],
+  entryIds: readonly string[],
+  note: Note
+): void {
+  const storePath = mcpManagerStorePath(home)
+  let text: string | undefined = existsSync(storePath) ? readFileSync(storePath, 'utf8') : undefined
+  let touched = false
   for (const entry of entries) {
-    const merged = mergeMcpServerIntoPatch(text, entry)
+    const merged = mergeMcpServerIntoManagerStore(text, entry)
     if (merged.skipped) {
-      note(`[desktop] catalog MCP ${entry.id} left alone: ${basename(filePath)} is not a patch list`)
+      note(
+        `[desktop] catalog MCP ${entry.name} left alone: ${MCP_MANAGER_STORE_NAME} is not a manager store`
+      )
       continue
     }
     if (!merged.changed) {
-      note(`[desktop] catalog MCP ${entry.id} already present in ${basename(filePath)}`)
+      note(`[desktop] catalog MCP ${entry.name} already in ${MCP_MANAGER_STORE_NAME}`)
       continue
     }
     text = merged.text
     touched = true
     note(
       merged.added
-        ? `[desktop] catalog seeded MCP ${entry.id} into ${basename(filePath)}`
-        : `[desktop] catalog updated MCP ${entry.id} in ${basename(filePath)}`
+        ? `[desktop] catalog seeded MCP ${entry.name} into ${MCP_MANAGER_STORE_NAME}`
+        : `[desktop] catalog updated MCP ${entry.name} in ${MCP_MANAGER_STORE_NAME}`
     )
   }
-  if (!touched) return
-  mkdirSync(dirname(filePath), { recursive: true })
-  writeFileSync(filePath, text, 'utf8')
+  if (touched) writeAtomically(storePath, text ?? '')
+  removeOwnPatchMcpRows(home, entryIds, note)
+}
+
+/** Drop the catalog's own MCP rows from the home patch layer. */
+function removeOwnPatchMcpRows(home: string, entryIds: readonly string[], note: Note): void {
+  const filePath = homeCordisPatchPath(home)
+  if (entryIds.length === 0 || !existsSync(filePath)) return
+  const text = readFileSync(filePath, 'utf8')
+  const cleared = removeMcpRowsFromPatch(text, entryIds.map(mcpPatchEntryId))
+  if (cleared.skipped) {
+    note(
+      `[desktop] catalog left ${basename(filePath)} alone: it still mounts an MCP server the manager owns now`
+    )
+    return
+  }
+  if (cleared.removed === 0) return
+  if (cleared.empty && text.includes(HOME_PATCH_MARKER)) {
+    // Ours were the only rows in a layer the desktop created: leaving an empty
+    // one behind would be worse than dropping it.
+    rmSync(filePath, { force: true })
+    note(
+      `[desktop] removed the catalog's MCP rows from ${basename(filePath)} and dropped the empty layer`
+    )
+    return
+  }
+  writeFileSync(filePath, cleared.text, 'utf8')
+  note(`[desktop] removed the catalog's MCP rows from ${basename(filePath)}`)
 }
 
 function applyRulesFile(dshHome: string, sourceFile: string, note: Note): void {
@@ -455,8 +543,8 @@ export async function applyInstallerCatalogSeed(
   const upgrading = previous !== undefined
 
   let marketDeferred = false
-  /** Collected so every MCP row lands in one pass over the home patch layer. */
-  const mcpEntries: McpServerPatchEntry[] = []
+  /** Collected so every MCP server lands in one pass over the manager's store. */
+  const mcpEntries: McpManagerServerEntry[] = []
 
   for (const item of manifest.items) {
     if (item.kind === 'plugin') {
@@ -528,28 +616,33 @@ export async function applyInstallerCatalogSeed(
     }
 
     if (item.kind === 'mcp') {
-      const config: Record<string, unknown> = {
-        serverName: item.serverName ?? item.id,
+      const entry: McpManagerServerEntry = {
+        name: item.serverName ?? item.id,
         transport: item.transport ?? 'stdio'
       }
-      if (item.url) config.url = item.url
-      if (item.headers) config.headers = item.headers
-      if (item.command) config.command = item.command
-      if (item.args) config.args = item.args
+      if (item.url) entry.url = item.url
+      if (item.headers) entry.headers = item.headers
+      if (item.command) entry.command = item.command
+      if (item.args) entry.args = item.args
       if (item.file) {
         const mcpDir = join(options.dshHome, 'mcp', item.id)
         rmSync(mcpDir, { recursive: true, force: true })
         const extracted = extractTarball(join(options.catalogRoot, item.file), mcpDir)
-        config.command = item.command ?? options.nodeExecutablePath
-        config.args = item.args ?? (resolveMcpEntry(extracted)
+        entry.command = item.command ?? options.nodeExecutablePath
+        entry.args = item.args ?? (resolveMcpEntry(extracted)
           ? [resolveMcpEntry(extracted)!]
           : undefined)
       }
-      mcpEntries.push(mcpClientEntry(item.id, config))
+      mcpEntries.push(entry)
     }
   }
 
-  writeMcpServers(options.dshHome, mcpEntries, options.note)
+  applyCatalogMcp(
+    options.dshHome,
+    mcpEntries,
+    manifest.items.filter((item) => item.kind === 'mcp').map((item) => item.id),
+    options.note
+  )
 
   if (marketDeferred) {
     // Everything else is seeded; leaving the stamp unwritten makes the next

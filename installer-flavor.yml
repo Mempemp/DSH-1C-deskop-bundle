@@ -70,10 +70,10 @@ sources:
     spec: dsh-univer-office@0.2.14
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
-  # seeds one @deepseek-ai/dsh-mcp-client instance into the home patch layer
-  # ($DSH_HOME/cordis.patch.yml), which every profile reads, so the server is
-  # available in every project without a per-project MCP setup. Its tools appear
-  # as mcp__v8std__<tool>.
+  # seeds the server into the MCP manager's global store ($DSH_HOME/dsh-mcp.json,
+  # the list its panel shows), so it is available in every project without a
+  # per-project setup and can be switched off there like any other server. Its
+  # tools appear to the model as mcp__v8std__<tool>.
   - kind: mcp
     from: remote
     id: v8std
