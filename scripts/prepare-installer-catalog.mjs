@@ -328,28 +328,46 @@ export function packDirectoryAsTgz(directory, destinationDir) {
 }
 
 /**
- * Relative package entry from `exports["."]` or `main`.
+ * Every runtime entry a package declares: what the host may execute (`bin`),
+ * the subpath it publishes at `.` (`exports["."]`), and what it may import
+ * (`main`). All of them have to exist in what we pack: the host does not
+ * necessarily reach for the first one it finds, and a plugin whose `bin` is
+ * missing packs fine and then dies at tool time with MODULE_NOT_FOUND. A
+ * manifest that declares none falls back to `index.js`.
  * @param {Record<string, unknown>} manifest
+ * @returns {string[]}
  */
-export function packageMainRelativePath(manifest) {
+export function packageEntryPaths(manifest) {
+  /** @type {string[]} */
+  const entries = []
+  const push = (value) => {
+    if (typeof value !== 'string') return
+    const entry = value.trim().replace(/^\.\//u, '')
+    if (entry === '' || entries.includes(entry)) return
+    entries.push(entry)
+  }
+
+  const bin = manifest.bin
+  if (typeof bin === 'string') push(bin)
+  else if (bin && typeof bin === 'object' && !Array.isArray(bin)) {
+    for (const value of Object.values(bin)) push(value)
+  }
+
   const exportsField = manifest.exports
   if (exportsField && typeof exportsField === 'object' && !Array.isArray(exportsField)) {
     const dot = /** @type {Record<string, unknown>} */ (exportsField)['.']
-    if (typeof dot === 'string') return dot.replace(/^\.\//u, '')
-    if (dot && typeof dot === 'object' && !Array.isArray(dot)) {
-      const def = /** @type {Record<string, unknown>} */ (dot).default
-      if (typeof def === 'string') return def.replace(/^\.\//u, '')
-    }
+    if (typeof dot === 'string') push(dot)
+    else if (dot && typeof dot === 'object' && !Array.isArray(dot)) push(dot.default)
   }
-  if (typeof manifest.main === 'string' && manifest.main.trim() !== '') {
-    return manifest.main.replace(/^\.\//u, '')
-  }
-  return 'index.js'
+
+  push(manifest.main)
+  if (entries.length === 0) entries.push('index.js')
+  return entries
 }
 
 /**
- * @param {string} archive
- * @param {string} relativePath
+ * @param {string} stdout
+ * @param {string} needle
  */
 function tarListMatchesNeedle(stdout, needle) {
   return (stdout || '')
@@ -427,8 +445,10 @@ export function copyPayloadTree(source, destination) {
 }
 
 /**
- * Git checkouts of TypeScript DSH plugins usually omit `lib/`. Prefer the
- * published npm tarball (it already ran prepublish), then a local build.
+ * Git checkouts of TypeScript DSH plugins usually omit their build output
+ * (`lib/`, `dist/`), so every declared entry is checked, not just the one the
+ * host imports first. Prefer the published npm tarball (it already ran
+ * prepublish), then a local build.
  * @param {string} directory
  * @param {string} destinationDir
  * @param {(spec: string, destinationDir: string) => string} [packSpec]
@@ -437,24 +457,31 @@ export function packPluginDirectory(directory, destinationDir, packSpec) {
   const manifest = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8'))
   const name = typeof manifest.name === 'string' ? manifest.name : ''
   const version = typeof manifest.version === 'string' ? manifest.version : ''
-  const entry = packageMainRelativePath(manifest)
-  const entryPath = join(directory, entry)
+  const entries = packageEntryPaths(manifest)
   const label = name ? `${name}@${version || '?'}` : directory
+  /** Entries the tree still owes us; recomputed after a local build. */
+  const missingInTree = () => entries.filter((entry) => !existsSync(join(directory, entry)))
+  const missing = missingInTree()
 
-  if (!existsSync(entryPath) && name) {
+  if (missing.length > 0 && name) {
     // Exact version only — unversioned `name` would pack latest (e.g. 0.18.0)
     // when the git tag (0.18.1) is unpublished.
-    catalogLog(`plugin pack: ${entry} missing in git tree for ${label}; trying published npm tarball`)
+    catalogLog(
+      `plugin pack: ${missing.join(', ')} missing in git tree for ${label}; trying published npm tarball`
+    )
     const specs = version ? [`${name}@${version}`] : [name]
     for (const spec of new Set(specs)) {
       try {
         catalogLog(`plugin pack: npm fallback start ${spec}`)
         const packed = (packSpec ?? packNpmSpec)(spec, destinationDir)
-        if (tarballContainsPath(packed, entry)) {
+        // The published tarball replaces the checkout entirely, so it has to
+        // carry every declared entry, not only the ones the tree was missing.
+        const absent = entries.filter((entry) => !tarballContainsPath(packed, entry))
+        if (absent.length === 0) {
           catalogLog(`plugin pack: npm fallback packed ${spec} -> ${packed}`)
           return packed
         }
-        catalogLog(`plugin pack: npm fallback ${spec} is missing ${entry}; continuing`)
+        catalogLog(`plugin pack: npm fallback ${spec} is missing ${absent.join(', ')}; continuing`)
       } catch {
         // Unpublished or version-mismatched git tip — try the next spec, then a local build.
         catalogLog(`plugin pack: npm fallback ${spec} failed; will try local build`)
@@ -462,8 +489,8 @@ export function packPluginDirectory(directory, destinationDir, packSpec) {
     }
   }
 
-  if (!existsSync(entryPath)) {
-    catalogLog(`plugin pack: local build start for ${label} (missing ${entry})`)
+  if (missing.length > 0) {
+    catalogLog(`plugin pack: local build start for ${label} (missing ${missing.join(', ')})`)
     const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
     catalogLog(`plugin pack: npm install --ignore-scripts in ${directory}`)
     const install = npmInstall(directory, ['install', '--ignore-scripts'])
@@ -483,7 +510,7 @@ export function packPluginDirectory(directory, destinationDir, packSpec) {
     )
     if (candidates.length === 0) {
       throw new Error(
-        `git plugin ${name || directory} is missing ${entry} and has no build script`
+        `git plugin ${name || directory} is missing ${missing.join(', ')} and has no build script`
       )
     }
     const failures = []
@@ -495,7 +522,7 @@ export function packPluginDirectory(directory, destinationDir, packSpec) {
         encoding: 'utf8',
         shell: process.platform === 'win32'
       })
-      if (existsSync(entryPath)) {
+      if (missingInTree().length === 0) {
         usedScript = script
         break
       }
@@ -503,25 +530,27 @@ export function packPluginDirectory(directory, destinationDir, packSpec) {
         `${script} (exit ${built.status}): ${(built.stderr || '').trim()}\n${(built.stdout || '').trim()}`
       )
     }
-    if (!existsSync(entryPath)) {
+    const stillMissing = missingInTree()
+    if (stillMissing.length > 0) {
       catalogError(`plugin pack: local build failed for ${label}`)
       throw new Error(
-        `git plugin ${name || directory} failed to produce ${entry}: ${failures.join('\n')}`
+        `git plugin ${name || directory} failed to produce ${stillMissing.join(', ')}: ${failures.join('\n')}`
       )
     }
-    catalogLog(`plugin pack: local build produced ${entry} via npm run ${usedScript}`)
+    catalogLog(`plugin pack: local build produced ${missing.join(', ')} via npm run ${usedScript}`)
   } else {
-    catalogLog(`plugin pack: packing git tree ${label} (${entry} present)`)
-  }
-
-  if (!existsSync(entryPath)) {
-    throw new Error(`git plugin ${name || directory} still has no ${entry} after build`)
+    catalogLog(`plugin pack: packing git tree ${label} (${entries.join(', ')} present)`)
   }
 
   ensureBundledProductionDependencies(directory)
   const packed = packDirectoryAsTgz(directory, destinationDir)
-  if (!tarballContainsPath(packed, entry)) {
-    throw new Error(`packed ${name || directory} does not contain ${entry}`)
+  // The tarball is what ships, and a package.json `files` list can drop an
+  // entry the tree has: check the artifact, not the tree.
+  const absentFromTarball = entries.filter((entry) => !tarballContainsPath(packed, entry))
+  if (absentFromTarball.length > 0) {
+    throw new Error(
+      `packed ${name || directory} does not contain ${absentFromTarball.join(', ')} — the packed tree is missing a declared entry`
+    )
   }
   catalogLog(`plugin pack: packed git tree ${label} -> ${packed}`)
   return packed

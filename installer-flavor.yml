@@ -28,9 +28,14 @@ sources:
     from: git
     url: https://github.com/wingsky-1/dsh-plugin-hub.git#main
     path: packages/dsh-mcp-manager
+  # Web search for the model. From npm rather than from the git tree: `./dist` is
+  # a build artifact the repository does not commit, so packing #main produced a
+  # plugin whose `bin` entry (`./dist/main.js`) did not exist — the tool started
+  # and died with MODULE_NOT_FOUND. The published tarball is the built one, and
+  # the exact pin keeps two installs of one build identical.
   - kind: plugin
-    from: git
-    url: https://github.com/liustack/modsearch.git#main
+    from: npm
+    spec: "@liustack/modsearch@5.10.3"
   - kind: plugin
     from: git
     url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.19.1

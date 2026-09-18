@@ -19,7 +19,7 @@ import {
   catalogOutputPaths,
   packDirectoryAsTgz,
   packPluginDirectory,
-  packageMainRelativePath,
+  packageEntryPaths,
   prepareInstallerCatalog,
   productionDependenciesToBundle,
   renderCatalogLabelsNsh,
@@ -81,8 +81,8 @@ describe('installer flavor schema', () => {
       },
       {
         kind: 'plugin',
-        from: 'git',
-        url: 'https://github.com/liustack/modsearch.git#main'
+        from: 'npm',
+        spec: '@liustack/modsearch@5.10.3'
       },
       {
         kind: 'plugin',
@@ -471,14 +471,16 @@ describe('market plugin resolution', () => {
 })
 
 describe('package entry packing', () => {
-  it('reads main and exports default paths', () => {
-    expect(packageMainRelativePath({ main: './lib/index.js' })).toBe('lib/index.js')
+  it('collects every entry a package declares, not just the one it imports first', () => {
+    expect(packageEntryPaths({ main: './lib/index.js' })).toEqual(['lib/index.js'])
+    expect(packageEntryPaths({ exports: { '.': { default: './lib/index.js' } } })).toEqual([
+      'lib/index.js'
+    ])
+    expect(packageEntryPaths({})).toEqual(['index.js'])
+    // The host executes `bin`: a plugin is not packable just because `.` resolves.
     expect(
-      packageMainRelativePath({
-        exports: { '.': { default: './lib/index.js' } }
-      })
-    ).toBe('lib/index.js')
-    expect(packageMainRelativePath({})).toBe('index.js')
+      packageEntryPaths({ bin: { modsearch: './dist/main.js' }, exports: { '.': './dsh/index.js' } })
+    ).toEqual(['dist/main.js', 'dsh/index.js'])
   })
 
   it('does not bundle host singleton production dependencies into catalog tarballs', () => {
@@ -522,6 +524,50 @@ describe('package entry packing', () => {
     })
 
     expect(tarballContainsPath(packed, 'lib/index.js')).toBe(true)
+    await rm(root, { recursive: true, force: true })
+  })
+
+  it('falls back to the published tarball when only the bin entry is missing', async () => {
+    // modsearch 5.10.3: `exports["."]` (`dsh/index.js`) is in the git tree, the
+    // `bin` the host executes (`dist/main.js`) is a build artifact, so packing
+    // the checkout produced a plugin that started and died with MODULE_NOT_FOUND.
+    const root = await mkdtemp(join(tmpdir(), 'dsh-pack-bin-'))
+    const tree = join(root, 'checkout')
+    const dest = join(root, 'out')
+    mkdirSync(join(tree, 'dsh'), { recursive: true })
+    mkdirSync(dest, { recursive: true })
+    writeFileSync(
+      join(tree, 'package.json'),
+      JSON.stringify({
+        name: '@liustack/modsearch',
+        version: '5.10.3',
+        bin: { modsearch: './dist/main.js' },
+        exports: { '.': './dsh/index.js' }
+      })
+    )
+    writeFileSync(join(tree, 'dsh', 'index.js'), 'export {}\n')
+
+    const packed = packPluginDirectory(tree, dest, (spec, destinationDir) => {
+      expect(spec).toBe('@liustack/modsearch@5.10.3')
+      const slot = join(root, 'published')
+      mkdirSync(join(slot, 'dist'), { recursive: true })
+      mkdirSync(join(slot, 'dsh'), { recursive: true })
+      writeFileSync(
+        join(slot, 'package.json'),
+        JSON.stringify({
+          name: '@liustack/modsearch',
+          version: '5.10.3',
+          bin: { modsearch: './dist/main.js' },
+          exports: { '.': './dsh/index.js' }
+        })
+      )
+      writeFileSync(join(slot, 'dist', 'main.js'), '#!/usr/bin/env node\n')
+      writeFileSync(join(slot, 'dsh', 'index.js'), 'export {}\n')
+      return packDirectoryAsTgz(slot, destinationDir)
+    })
+
+    expect(tarballContainsPath(packed, 'dist/main.js')).toBe(true)
+    expect(tarballContainsPath(packed, 'dsh/index.js')).toBe(true)
     await rm(root, { recursive: true, force: true })
   })
 
