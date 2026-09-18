@@ -47,9 +47,12 @@ sources:
     from: git
     url: https://github.com/tt-a1i/archify.git#main
     path: integrations/deepseek-harness
+  # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
+  # тот код, который в неё попал. 0.6.0 — плагин владеет жизненным циклом
+  # MCP-сервера справки по API платформы (vendor/bsl-context-rs внутри пакета).
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#main
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#993d6abd7fa46db8af6cce88d8d2e73ebdbd1169
     path: dsh-1c-project-properties
   - kind: plugin
     from: git

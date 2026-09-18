@@ -57,6 +57,11 @@
   (поиск по документации 1С, БСП / SSL и стандартам, разбор диагностик ACC и BSLLS)
   подключён сразу, без ключа и настройки; в панели MCP-менеджера его видно и можно
   выключить, как любой другой сервер.
+- **Справка по API вашей версии платформы** — второй MCP-сервер,
+  `1c-platform-context`, читает синтакс-помощник установленной 1С: агент видит
+  точные сигнатуры методов, свойства типов, конструкторы и значения системных
+  перечислений и может проверить свой BSL против платформы. Поднимается сам, как
+  только в настройках указан путь к платформе; интернет не нужен.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
@@ -74,6 +79,12 @@
   skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
   таблицы Univer) + три наших 1С-плагина;
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
+- MCP-сервер `1c-platform-context`: справка по объектной модели **установленной**
+  версии платформы — типы, методы, свойства, конструкторы, значения системных
+  перечислений и проверка BSL против платформы. Локальный `bsl-context-rs` из
+  сборки, без Java и Python: сервер поднимает плагин `dsh-1c-project-properties`
+  по пути к платформе из своих настроек, инструменты видны агенту как
+  `mcp__1c-platform-context__*`, сервер виден в панели MCP-менеджера;
 - набор правил 1С ([ai_rules_1c](https://github.com/comol/ai_rules_1c)) как payload:
   разворачивается в проект по кнопке, глобально ничего не подмешивается;
 - рантайм `@deepseek-ai/dsh@0.1.5-rc.2` внутри приложения — ставить Node.js и CLI не нужно.
@@ -106,6 +117,12 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- [bsl-context](https://github.com/Regsorm/bsl-context) — MCP-сервер справки по
+  API платформы 1С (MIT): поставляется в сборке готовым бинарником и работает
+  через него;
+- [mcp-bsl-platform-context](https://github.com/alkoleft/mcp-bsl-platform-context) —
+  первый MCP-сервер справки по платформе 1С (MIT), чьи идеи и код лежат в основе
+  `bsl-context`;
 - набор правил [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
 
 ## Лицензия

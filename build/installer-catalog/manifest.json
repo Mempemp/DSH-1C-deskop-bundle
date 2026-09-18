@@ -28,7 +28,7 @@
       "version": "5.10.3",
       "label": "Plugin: @liustack/modsearch",
       "file": "plugins/liustack-modsearch-5.10.3.tgz",
-      "digest": "2bcd741ddbfa8fd76ab24afa0502a21e75a9d4bdd00dc05a555447d67d18950a"
+      "digest": "2a5adf721daeeb4503a6254fc1ecdb9a928a5b667505c97f07aaaeaa508b2bd3"
     },
     {
       "kind": "plugin",
@@ -37,7 +37,7 @@
       "version": "0.19.1",
       "label": "Plugin: dsh-better-sidebar",
       "file": "plugins/dsh-better-sidebar-0.19.1.tgz",
-      "digest": "68f8a2e28b7929c947716738aa33496c7c9be589f6e3690ee672affe3b3de3dc"
+      "digest": "fb983017fbcdf6686ba94b4bde00c75b3f1e0c0de10badf2b93a69b7544f698a"
     },
     {
       "kind": "plugin",
@@ -61,10 +61,10 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.5.0.tgz",
-      "digest": "775d76259f5f5b06bb02cf5acfff7bc7cae3318fcfb6db259cc26d1603ba372e"
+      "file": "plugins/dsh-1c-project-properties-0.6.0.tgz",
+      "digest": "b6fefaf45a7619e427ad5aa2d54e99596060cd8a52dac6a62f568a246d85a118"
     },
     {
       "kind": "plugin",
@@ -79,10 +79,10 @@
       "kind": "plugin",
       "id": "dsh-bsl-editor",
       "name": "dsh-bsl-editor",
-      "version": "0.4.0",
+      "version": "0.5.1",
       "label": "Plugin: dsh-bsl-editor",
-      "file": "plugins/dsh-bsl-editor-0.4.0.tgz",
-      "digest": "7ca96d3506bb4769380fd4b3de1a087d9e5c5c2c4a1bd88962f31bf3f4d249d6"
+      "file": "plugins/dsh-bsl-editor-0.5.1.tgz",
+      "digest": "f48924d03676cff77efaeb2225dc924c26edf69cec9742073741cefa43d9b4b4"
     },
     {
       "kind": "plugin",
@@ -100,7 +100,7 @@
       "version": "0.2.14",
       "label": "Plugin: dsh-univer-office",
       "file": "plugins/dsh-univer-office-0.2.14.tgz",
-      "digest": "022a1c4983fe7bffb43a459f10b3fdbac795ea1b6b784e675edb178b38e08397"
+      "digest": "206bb0b0f2bede6f3bb96030277574a81c7473e9f5a6f990b6b6eadbbd834cdf"
     },
     {
       "kind": "mcp",
