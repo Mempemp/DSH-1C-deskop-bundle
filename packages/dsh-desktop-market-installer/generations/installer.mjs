@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { cp, lstat, mkdir, readFile, readdir, realpath, rename, rm, unlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative } from 'node:path'
@@ -64,6 +64,24 @@ export function filePluginSpecPath(spec) {
 
 function isTarballPath(path) {
   return /\.(?:tgz|tar\.gz)$/iu.test(path)
+}
+
+/**
+ * Content fingerprint of a vendored tarball, for the generation id.
+ *
+ * The `file:` install writes a lockfile that carries only the spec path and the
+ * version, so two different tarballs with the same file name produce the same
+ * id — and a catalog update that replaced a broken tarball was skipped with
+ * "generation already exists, reusing", leaving the old tree on disk (a plugin
+ * packed from a source tree without its build output stayed broken forever).
+ * The digest is what actually distinguishes the artifact.
+ */
+async function sourceFingerprintSuffix(spec) {
+  if (!isFilePluginSpec(spec)) return ''
+  const sourcePath = filePluginSpecPath(spec)
+  if (!isTarballPath(sourcePath) || !existsSync(sourcePath)) return ''
+  const digest = createHash('sha256').update(await readFile(sourcePath)).digest('hex')
+  return `\nsource-sha256:${digest}`
 }
 
 function packageDirForName(modulesDir, name) {
@@ -507,7 +525,8 @@ export async function installGeneration(options) {
     // reuse an older unbuilt generation after the user approves its scripts.
     const buildIdentity = options.strictDepBuilds === true || approvals.length > 0
       ? `\nbuild-policy-v1:${JSON.stringify([...approvals].sort())}:${process.platform}:${process.arch}` : ''
-    const id = generationId(pluginName, version, lockfileText + buildIdentity)
+    const sourceFingerprint = await sourceFingerprintSuffix(options.pluginSpec)
+    const id = generationId(pluginName, version, lockfileText + buildIdentity + sourceFingerprint)
     const generationDir = join(layout.generations, id)
 
     if (existsSync(generationDir)) {

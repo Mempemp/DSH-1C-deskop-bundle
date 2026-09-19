@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -771,6 +772,61 @@ describe('the generation installer', () => {
       )
     )
     expect(installed.version).toBe('1.0.0')
+  })
+
+  it('replaces a vendored tarball whose content changed at the same path', async () => {
+    const home = await freshHome()
+    const pluginDir = join(home, 'plugin-src')
+    const catalogDir = join(home, 'catalog')
+    await mkdir(pluginDir, { recursive: true })
+    await mkdir(catalogDir, { recursive: true })
+    const writeManifest = () =>
+      writeFile(
+        join(pluginDir, 'package.json'),
+        JSON.stringify({
+          name: 'fixture-update',
+          version: '1.0.0',
+          bin: { 'fixture-update': './dist/main.js' },
+          dsh: { bundle: { patch: 'cordis.patch.yml' } }
+        })
+      )
+    await writeManifest()
+    await writeFile(join(pluginDir, 'cordis.patch.yml'), '[]\n')
+    const packed = packDirectoryAsTgz(pluginDir, catalogDir)
+
+    const install = (archive: string) =>
+      installGeneration({
+        dshHome: home,
+        pluginSpec: `file:${archive}`,
+        expectedPluginName: 'fixture-update',
+        nodeExecutablePath: 'node',
+        pnpmEntryPath: 'pnpm',
+        offline: true,
+        spawnProcess: () => {
+          throw new Error('pnpm must not run for file: specs')
+        }
+      })
+
+    // Первый релиз каталога: дерево без сборки — именно так уехал modsearch.
+    const broken = await install(packed)
+    expect(broken.ok).toBe(true)
+    const brokenEntry = join(broken.generation!.directory, 'node_modules', 'fixture-update', 'dist', 'main.js')
+    expect(existsSync(brokenEntry)).toBe(false)
+    expect((await install(packed)).generation?.id).toBe(broken.generation?.id)
+
+    // Тот же путь, то же имя файла и версия — но содержимое другое.
+    await mkdir(join(pluginDir, 'dist'), { recursive: true })
+    await writeFile(join(pluginDir, 'dist', 'main.js'), 'console.log("fixed")\n')
+    const repacked = packDirectoryAsTgz(pluginDir, catalogDir)
+    expect(repacked).toBe(packed)
+
+    const fixed = await install(packed)
+    expect(fixed.ok).toBe(true)
+    expect(fixed.generation?.id).not.toBe(broken.generation?.id)
+    const fixedEntry = join(fixed.generation!.directory, 'node_modules', 'fixture-update', 'dist', 'main.js')
+    expect(existsSync(fixedEntry)).toBe(true)
+    // Повторный сидинг того же тарбола по-прежнему переиспользует генерацию.
+    expect((await install(packed)).generation?.id).toBe(fixed.generation?.id)
   })
 
   it('copies missing file: production deps from the Desktop host node_modules, not the registry', async () => {
