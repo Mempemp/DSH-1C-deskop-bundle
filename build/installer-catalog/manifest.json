@@ -16,10 +16,10 @@
       "kind": "plugin",
       "id": "@wingsky-1/dsh-mcp-manager",
       "name": "@wingsky-1/dsh-mcp-manager",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "label": "Plugin: @wingsky-1/dsh-mcp-manager",
-      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.4.tgz",
-      "digest": "4e5acdbbbb91d1e9b0643e05220c32860b8b80c60a4c01ee5958e9e9ffd4f768"
+      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.5.tgz",
+      "digest": "1994c2b3ca00b0f1ac7ce72a49810c36c1e8cae9592b19738e21f8c5dcfecfe8"
     },
     {
       "kind": "plugin",
@@ -61,10 +61,10 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.6.0.tgz",
-      "digest": "b6fefaf45a7619e427ad5aa2d54e99596060cd8a52dac6a62f568a246d85a118"
+      "file": "plugins/dsh-1c-project-properties-0.6.1.tgz",
+      "digest": "aeff3793b49f858436a1ef0a93ebecadcc23668b9516c4ddf95b8c7bf31bc556"
     },
     {
       "kind": "plugin",

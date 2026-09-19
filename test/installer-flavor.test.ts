@@ -104,7 +104,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#993d6abd7fa46db8af6cce88d8d2e73ebdbd1169',
+        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#3e82383ef1c49556d5b2a9789d3dd21147beff1e',
         path: 'dsh-1c-project-properties'
       },
       {
