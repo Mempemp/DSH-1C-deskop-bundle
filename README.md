@@ -117,6 +117,10 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- [v8std](https://v8std.ru/) — публичный MCP-сервер стандартов разработки 1С
+  ([исходники](https://github.com/zeegin/v8std)): поиск по стандартам, БСП / SSL и
+  документации платформы, разбор диагностик ACC и BSLLS; подключён в сборке по
+  умолчанию, ключ не нужен;
 - [bsl-context](https://github.com/Regsorm/bsl-context) — MCP-сервер справки по
   API платформы 1С (MIT): поставляется в сборке готовым бинарником и работает
   через него;
