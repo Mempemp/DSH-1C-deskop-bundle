@@ -10,7 +10,7 @@
       "version": "1.47.0",
       "label": "Plugin: dshmarket",
       "file": "plugins/dshmarket-1.47.0.tgz",
-      "digest": "e6efc533113edfb120a3ae26d417ca1e964138ea535ce9fd3a4445822cd0bf83"
+      "digest": "10a23d6058d7006909e16b8ac2404bdb7c49691726b3055079e51f7594842e96"
     },
     {
       "kind": "plugin",
@@ -28,7 +28,7 @@
       "version": "5.10.3",
       "label": "Plugin: @liustack/modsearch",
       "file": "plugins/liustack-modsearch-5.10.3.tgz",
-      "digest": "2a5adf721daeeb4503a6254fc1ecdb9a928a5b667505c97f07aaaeaa508b2bd3"
+      "digest": "91b1d3e596152a62a5d9dcac44e22a6b64694d9c47ae72fe31b6d02ad36cac09"
     },
     {
       "kind": "plugin",
@@ -37,16 +37,16 @@
       "version": "0.19.1",
       "label": "Plugin: dsh-better-sidebar",
       "file": "plugins/dsh-better-sidebar-0.19.1.tgz",
-      "digest": "fb983017fbcdf6686ba94b4bde00c75b3f1e0c0de10badf2b93a69b7544f698a"
+      "digest": "eb4ca521df37e5999dbe20c9238ddb126955f45c43b3ca66e1426390b439b1bc"
     },
     {
       "kind": "plugin",
       "id": "@linxin666/dsh-client-ui-skill-explorer",
       "name": "@linxin666/dsh-client-ui-skill-explorer",
-      "version": "0.3.23",
+      "version": "0.4.2",
       "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
-      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.3.23.tgz",
-      "digest": "4451bd112b5e6e1897ab452516b82802f820fc4e6a36371db64722dbf1e2f7ea"
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.4.2.tgz",
+      "digest": "fd7eb137b0017410bc7d2553adca875d2d82a6c188da3fccc24d59c5ac71199d"
     },
     {
       "kind": "plugin",
@@ -61,19 +61,19 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.6.1.tgz",
-      "digest": "aeff3793b49f858436a1ef0a93ebecadcc23668b9516c4ddf95b8c7bf31bc556"
+      "file": "plugins/dsh-1c-project-properties-0.6.2.tgz",
+      "digest": "cb1c8b3c63d4e66611c7b1d7d74c7abe11ece2c3ccf7f8357f9692fa1547affd"
     },
     {
       "kind": "plugin",
       "id": "dsh-rlm-tools-bsl",
       "name": "dsh-rlm-tools-bsl",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "label": "Plugin: dsh-rlm-tools-bsl",
-      "file": "plugins/dsh-rlm-tools-bsl-0.1.3.tgz",
-      "digest": "5766ba15ee19f2d7e77f1bb5b823a55ae7dd63cf5d9d7558c489ac48a6f58a5f"
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.4.tgz",
+      "digest": "57736fb6f7d7f33505b89728b4d73ef13ea0375b2b501178469c127d8fcc9c70"
     },
     {
       "kind": "plugin",
@@ -100,7 +100,7 @@
       "version": "0.2.14",
       "label": "Plugin: dsh-univer-office",
       "file": "plugins/dsh-univer-office-0.2.14.tgz",
-      "digest": "206bb0b0f2bede6f3bb96030277574a81c7473e9f5a6f990b6b6eadbbd834cdf"
+      "digest": "c1ea489a66a7a4da5c624e4b08268bda1dccaf7cdba3b4c3af5faa80c00b8689"
     },
     {
       "kind": "mcp",
@@ -109,6 +109,15 @@
       "transport": "streamable-http",
       "serverName": "v8std",
       "url": "https://ai.v8std.ru/mcp"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-engram-memory",
+      "name": "dsh-engram-memory",
+      "version": "0.1.1",
+      "label": "Plugin: dsh-engram-memory",
+      "file": "plugins/dsh-engram-memory-0.1.1.tgz",
+      "digest": "b165351ea06386db6ee6a79f4f5dd2b06ed30de0144f31a99051f96cbd9a909e"
     },
     {
       "kind": "payload",
