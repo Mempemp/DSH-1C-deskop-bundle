@@ -62,6 +62,11 @@
   точные сигнатуры методов, свойства типов, конструкторы и значения системных
   перечислений и может проверить свой BSL против платформы. Поднимается сам, как
   только в настройках указан путь к платформе; интернет не нужен.
+- **Память о работе** ([dsh-engram-memory](https://github.com/Mempemp/dsh-engram-memory)) —
+  агент помнит, что делалось в каждом проекте: заметки законченных ходов, выводы
+  модели, подача нужного в разговор и вкладка «Память Engram» в настройках для
+  сведения заметок в карточки-знания. База лежит локально
+  (`%USERPROFILE%\.engram\engram.db`), ключей и интернета не нужно.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
@@ -75,9 +80,10 @@
 Полный список — в `installer-flavor.yml` (источники) и
 `build/installer-catalog/manifest.json` (зафиксированные версии и digest):
 
-- 11 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+- 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
-  таблицы Univer) + три наших 1С-плагина;
+  таблицы Univer) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
+  агента: правила, подача памяти и MCP-сервер `engram` внутри пакета);
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
 - MCP-сервер `1c-platform-context`: справка по объектной модели **установленной**
   версии платформы — типы, методы, свойства, конструкторы, значения системных
@@ -124,6 +130,9 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 - [bsl-context](https://github.com/Regsorm/bsl-context) — MCP-сервер справки по
   API платформы 1С (MIT): поставляется в сборке готовым бинарником и работает
   через него;
+- [engram](https://github.com/Gentleman-Programming/engram) — память агента
+  (MIT, Go, автор Alan Buscaglia): входит в сборку внутри плагина
+  [dsh-engram-memory](https://github.com/Mempemp/dsh-engram-memory);
 - набор правил [comol/ai_rules_1c](https://github.com/comol/ai_rules_1c).
 
 ## Лицензия

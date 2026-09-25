@@ -49,11 +49,11 @@ sources:
     path: integrations/deepseek-harness
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
   # тот код, который в неё попал. 0.6.x — плагин владеет жизненным циклом
-  # MCP-сервера справки по API платформы (vendor/bsl-context-rs внутри пакета)
-  # и не поднимает его, пока не задан путь к платформе.
+  # MCP-сервера справки по API платформы (vendor/bsl-context-rs 0.19.1 внутри
+  # пакета) и не поднимает его, пока не задан путь к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#3e82383ef1c49556d5b2a9789d3dd21147beff1e
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#d91d73a66bb1a49127cc5b98681184f8ce344c1a
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
@@ -89,6 +89,14 @@ sources:
     serverName: v8std
     transport: streamable-http
     url: https://ai.v8std.ru/mcp
+  # Локальная память агента: engram (MIT, Go) приезжает отдельным плагином со
+  # своим репозиторием — в бандле для неё ничего не вендорится. Внутри пакета
+  # и правила, и MCP-половина (бинарник engram + шим); строку сервера в
+  # менеджере ($DSH_HOME/dsh-mcp.json) плагин добавляет себе сам при первом
+  # старте. Пин по коммиту, как у остальных наших.
+  - kind: plugin
+    from: git
+    url: https://github.com/Mempemp/dsh-engram-memory.git#cc5a1e55fc8652d1a493295d04561fb160981eeb
   # 1C ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json + content/.
   # Delivered as a payload and nothing else: the skills inside it cross-reference
   # AGENTS.md, content/rules/* and content/agents/*, so shipping the skills tree

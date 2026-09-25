@@ -104,7 +104,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#3e82383ef1c49556d5b2a9789d3dd21147beff1e',
+        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#d91d73a66bb1a49127cc5b98681184f8ce344c1a',
         path: 'dsh-1c-project-properties'
       },
       {
@@ -136,6 +136,11 @@ describe('installer flavor schema', () => {
         serverName: 'v8std',
         transport: 'streamable-http',
         url: 'https://ai.v8std.ru/mcp'
+      },
+      {
+        kind: 'plugin',
+        from: 'git',
+        url: 'https://github.com/Mempemp/dsh-engram-memory.git#cc5a1e55fc8652d1a493295d04561fb160981eeb'
       },
       {
         kind: 'payload',
