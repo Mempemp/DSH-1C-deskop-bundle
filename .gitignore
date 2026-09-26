@@ -39,3 +39,10 @@ __pycache__/
 /docs/editorial-policy.md
 
 
+# Local-only design docs
+docs/plugin-management.zh.md
+docs/default-capabilities.zh.md
+docs/mobile-connection-latency.zh.md
+
+# Local pnpm content store
+/.pnpm-store/

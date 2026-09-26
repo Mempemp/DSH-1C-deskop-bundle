@@ -72,33 +72,33 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.47.0' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.1' },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#main',
+        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#e2c24f64b1b68d57fcb5a8614a2f09714b80e8bd',
         path: 'packages/dsh-mcp-manager'
       },
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@liustack/modsearch@5.10.3'
+        spec: '@liustack/modsearch@5.10.5'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.19.1'
+        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.21.1'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/zhu1090093659/dsh-web.git#main',
+        url: 'https://github.com/zhu1090093659/dsh-web.git#41974c8cd4857dea20592c0f1fb32f4d5cb17113',
         path: 'packages/dsh-skill-explorer'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/tt-a1i/archify.git#main',
+        url: 'https://github.com/tt-a1i/archify.git#9e35d2b0b39b155553ba9fcfe0b4f2a5198dd993',
         path: 'integrations/deepseek-harness'
       },
       {
@@ -110,24 +110,24 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#main',
+        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d8f7f38a037b0453ed67368b7baefd5e4ef8d42e',
         path: 'dsh-rlm-tools-bsl'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#main',
+        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#1d84a62b38db97943098f6bedb6cf58696451943',
         path: 'dsh-bsl-editor'
       },
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.2.19'
+        spec: '@goodandready/dsh-russian-lang@0.3.11'
       },
       {
         kind: 'plugin',
         from: 'npm',
-        spec: 'dsh-univer-office@0.2.14'
+        spec: 'dsh-univer-office@0.3.5'
       },
       {
         kind: 'mcp',
@@ -145,10 +145,10 @@ describe('installer flavor schema', () => {
       {
         kind: 'payload',
         from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b',
+        url: 'https://github.com/comol/ai_rules_1c.git#f792d45d02080938c7c5fec61bd0846e9c071730',
         id: '1c-rules',
         name: '1c-rules',
-        version: '2026.09.16-488e930'
+        version: '2026.09.26-f792d45'
       }
     ])
   })

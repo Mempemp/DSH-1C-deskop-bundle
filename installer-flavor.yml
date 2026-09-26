@@ -15,18 +15,20 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.9.0-2
+version: 0.9.2-1
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
   # VERIFIED_MARKET_BASELINE (src/main/state/market-baseline.ts) and the app's own
-  # dshmarket dependency in package.json.
+  # dshmarket dependency in package.json. All three carry the same version.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.47.0
+    spec: dshmarket@1.66.1
+  # Pinned by commit, not `#main`: the catalog must carry exactly the code the
+  # release names. This commit is v0.2.6 (`@wingsky-1/dsh-mcp-manager` 0.2.6).
   - kind: plugin
     from: git
-    url: https://github.com/wingsky-1/dsh-plugin-hub.git#main
+    url: https://github.com/wingsky-1/dsh-plugin-hub.git#e2c24f64b1b68d57fcb5a8614a2f09714b80e8bd
     path: packages/dsh-mcp-manager
   # Web search for the model. From npm rather than from the git tree: `./dist` is
   # a build artifact the repository does not commit, so packing #main produced a
@@ -35,17 +37,19 @@ sources:
   # the exact pin keeps two installs of one build identical.
   - kind: plugin
     from: npm
-    spec: "@liustack/modsearch@5.10.3"
+    spec: "@liustack/modsearch@5.10.5"
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.19.1
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.21.1
+  # Pinned by commit (v0.4.2, `@linxin666/dsh-client-ui-skill-explorer` 0.4.2).
   - kind: plugin
     from: git
-    url: https://github.com/zhu1090093659/dsh-web.git#main
+    url: https://github.com/zhu1090093659/dsh-web.git#41974c8cd4857dea20592c0f1fb32f4d5cb17113
     path: packages/dsh-skill-explorer
+  # Pinned by commit: this is where `main` stood for the release, ahead of v2.16.0.
   - kind: plugin
     from: git
-    url: https://github.com/tt-a1i/archify.git#main
+    url: https://github.com/tt-a1i/archify.git#9e35d2b0b39b155553ba9fcfe0b4f2a5198dd993
     path: integrations/deepseek-harness
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
   # тот код, который в неё попал. 0.6.x — плагин владеет жизненным циклом
@@ -57,11 +61,11 @@ sources:
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#main
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d8f7f38a037b0453ed67368b7baefd5e4ef8d42e
     path: dsh-rlm-tools-bsl
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#main
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#1d84a62b38db97943098f6bedb6cf58696451943
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
@@ -69,14 +73,14 @@ sources:
   # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.2.19"
+    spec: "@goodandready/dsh-russian-lang@0.3.11"
   # Univer office documents (spreadsheets, decks, docs) with inline previews and
   # a floating worktree window. Taken from the market: `dsh-univer-office` is the
   # npm name its catalog entry carries (owner dream-num), so the offline seed and
   # the market install the same package.
   - kind: plugin
     from: npm
-    spec: dsh-univer-office@0.2.14
+    spec: dsh-univer-office@0.3.5
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store ($DSH_HOME/dsh-mcp.json,
@@ -110,7 +114,7 @@ sources:
   # it (or let the tree digest change) or an existing install keeps its old copy.
   - kind: payload
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#488e930db61f2fd6e9a3a44f731b8ba2150dd63b
+    url: https://github.com/comol/ai_rules_1c.git#f792d45d02080938c7c5fec61bd0846e9c071730
     id: 1c-rules
     name: 1c-rules
-    version: 2026.09.16-488e930
+    version: 2026.09.26-f792d45

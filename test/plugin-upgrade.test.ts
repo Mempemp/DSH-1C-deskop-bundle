@@ -1,6 +1,6 @@
 import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readDesired, registryLayout, writeDesired, writeGenerationMeta } from 'dsh-desktop-market-installer/generations/registry'
 
@@ -9,7 +9,7 @@ vi.mock('../src/main/runtime/profile-plugin-command', () => ({
   installProfileDependenciesWithDsh: installMock
 }))
 
-const { upgradeMarketInSharedTree } = await import('../src/main/state/plugin-upgrade')
+const { upgradeMarketInSharedTree, marketInstallPendingPath } = await import('../src/main/state/plugin-upgrade')
 
 const homes: string[] = []
 afterEach(async () => {
@@ -34,7 +34,7 @@ async function fixture() {
   const options = {
     dshHome: home,
     dshEntryPath: '/unused/dsh',
-    targetVersion: '1.45.1',
+    targetVersion: '1.66.1',
     nodeExecutablePath: process.execPath,
     pnpmEntryPath: '/unused/pnpm',
     pnpmRunnerPath: '/unused/pnpm-runner.mjs'
@@ -57,7 +57,7 @@ describe('upgradeMarketInSharedTree', () => {
       return { ok: true }
     })
     const { profile, market, options } = await fixture()
-    await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.45.1' }))
+    await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.1' }))
 
     const result = await upgradeMarketInSharedTree(options)
 
@@ -70,7 +70,7 @@ describe('upgradeMarketInSharedTree', () => {
       expect.objectContaining({ pnpmRunnerPath: '/unused/pnpm-runner.mjs' })
     )
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    expect(manifest.dependencies.dshmarket).toBe('1.45.1')
+    expect(manifest.dependencies.dshmarket).toBe('1.66.1')
     expect((await lstat(market)).isSymbolicLink()).toBe(false)
   })
 
@@ -102,7 +102,7 @@ describe('upgradeMarketInSharedTree', () => {
     // After the link is dropped, the shared-tree reinstall lands a real directory.
     installMock.mockImplementation(async () => {
       await mkdir(market, { recursive: true })
-      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.45.1' }))
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.1' }))
       return { ok: true }
     })
 
@@ -114,6 +114,23 @@ describe('upgradeMarketInSharedTree', () => {
     expect(manifest.dsh.desktop.generationProjection.plugins.dshmarket).toBeUndefined()
     expect(manifest.pnpm?.overrides?.dshmarket).toBeUndefined()
     expect(await readDesired(home)).toEqual(['other-plugin+1.0.0+cafebabe'])
+  })
+
+  it('retries a partially installed newer market instead of trusting its version', async () => {
+    const { ensureMarketBaseline } = await import('../src/main/state/market-baseline')
+    const { home, profile, market, options } = await fixture()
+    const before = await readFile(join(profile, 'package.json'), 'utf8')
+    installMock.mockImplementationOnce(async () => {
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.2' }))
+      return { ok: false, detail: 'interrupted after package extraction' }
+    })
+    expect((await upgradeMarketInSharedTree({ ...options, targetVersion: '1.66.2' })).ok).toBe(false)
+    expect(JSON.parse(await readFile(marketInstallPendingPath(home), 'utf8')).previousManifest).toBe(before)
+    installMock.mockResolvedValue({ ok: true })
+    await ensureMarketBaseline({ ...options, dshEntryPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js') })
+    expect(installMock).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(await readFile(join(profile, 'package.json'), 'utf8')).dependencies.dshmarket).toBe('1.66.2')
+    await expect(readFile(marketInstallPendingPath(home))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('restores the manifest and reports failure when the shared-tree install fails', async () => {
@@ -136,11 +153,11 @@ describe('upgradeMarketInSharedTree', () => {
       })
     )
     installMock.mockImplementation(async () => {
-      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.45.1' }))
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.1' }))
       return { ok: true }
     })
 
-    const spec = 'file:/catalog/plugins/dshmarket-1.45.1.tgz'
+    const spec = 'file:/catalog/plugins/dshmarket-1.66.1.tgz'
     const result = await upgradeMarketInSharedTree({ ...options, spec })
 
     expect(result.ok).toBe(true)

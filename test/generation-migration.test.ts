@@ -19,6 +19,7 @@ import {
 
 const installCalls: string[] = []
 const installSources: Array<{ name: string; sourceDirectory?: string }> = []
+let failingInstallOutput: string | undefined
 
 // The installer's pnpm step is stubbed via a module mock so the migration's
 // generation installs run offline.
@@ -45,6 +46,7 @@ vi.mock('dsh-desktop-market-installer/generations/installer', async () => {
       return actual.installGeneration({
         ...options,
         runInstall: async (stagingDir: string) => {
+          if (failingInstallOutput !== undefined) return { code: 1, output: failingInstallOutput }
           const pkg = join(stagingDir, 'node_modules', name)
           await mkdir(pkg, { recursive: true })
           await writeFile(
@@ -127,6 +129,40 @@ describe('one-time profile migration to generations', () => {
     homes.length = 0
     installCalls.length = 0
     installSources.length = 0
+    failingInstallOutput = undefined
+  })
+
+  it('reports the plugins still pending and retries a transient filesystem refusal on the next launch', async () => {
+    const home = await preUpgradeProfile({ 'plugin-one': '1.0.0', 'plugin-two': '2.0.0' })
+    failingInstallOutput = "EPERM: operation not permitted, symlink 'staging' -> 'store'"
+
+    const first = await migrateProfileToGenerations(deps(home))
+    expect(first).toMatchObject({
+      outcome: 'deferred-failure',
+      profileState: 'legacy-intact',
+      pendingPlugins: ['plugin-one', 'plugin-two']
+    })
+    const attempts = installCalls.length
+
+    failingInstallOutput = undefined
+    expect(await migrateProfileToGenerations(deps(home))).toEqual({ outcome: 'migrated' })
+    expect(installCalls.length).toBeGreaterThan(attempts)
+  })
+
+  it('still freezes an identical profile after a non-transient install failure', async () => {
+    const home = await preUpgradeProfile({ 'plugin-one': '1.0.0' })
+    failingInstallOutput = 'ERR_PNPM_NO_MATCHING_VERSION No matching version found'
+
+    const first = await migrateProfileToGenerations(deps(home))
+    expect(first).toMatchObject({ outcome: 'deferred-failure', pendingPlugins: ['plugin-one'] })
+    const attempts = installCalls.length
+
+    failingInstallOutput = undefined
+    expect(await migrateProfileToGenerations(deps(home))).toMatchObject({
+      outcome: 'deferred-failure',
+      pendingPlugins: ['plugin-one']
+    })
+    expect(installCalls).toHaveLength(attempts)
   })
 
   it('moves community plugins to generations and trims the manifest', async () => {
