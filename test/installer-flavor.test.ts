@@ -72,11 +72,11 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.1' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.2' },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#e2c24f64b1b68d57fcb5a8614a2f09714b80e8bd',
+        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#65f7f72c2cb5c68ab7c7066b608dcd99de9c0ec9',
         path: 'packages/dsh-mcp-manager'
       },
       {
@@ -92,7 +92,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/zhu1090093659/dsh-web.git#41974c8cd4857dea20592c0f1fb32f4d5cb17113',
+        url: 'https://github.com/zhu1090093659/dsh-web.git#c989e5a14189211c29d5f6aec30f9136681a31de',
         path: 'packages/dsh-skill-explorer'
       },
       {
@@ -122,7 +122,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.3.11'
+        spec: '@goodandready/dsh-russian-lang@0.3.12'
       },
       {
         kind: 'plugin',
@@ -145,10 +145,10 @@ describe('installer flavor schema', () => {
       {
         kind: 'payload',
         from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#f792d45d02080938c7c5fec61bd0846e9c071730',
+        url: 'https://github.com/comol/ai_rules_1c.git#0406719675eaeaebfa377ecc2ab52952dcdba3c3',
         id: '1c-rules',
         name: '1c-rules',
-        version: '2026.09.26-f792d45'
+        version: '2026.09.27-0406719'
       }
     ])
   })

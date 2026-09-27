@@ -1,25 +1,25 @@
 {
   "name": "DSH Desktop",
-  "version": "0.9.2-1",
+  "version": "0.10.0-1",
   "id": "dsh-desktop",
   "items": [
     {
       "kind": "plugin",
       "id": "dshmarket",
       "name": "dshmarket",
-      "version": "1.66.1",
+      "version": "1.66.2",
       "label": "Plugin: dshmarket",
-      "file": "plugins/dshmarket-1.66.1.tgz",
-      "digest": "f61155557b596b2296c07fd76a173f93aae376b405b92baed065dc3cfc52f5f5"
+      "file": "plugins/dshmarket-1.66.2.tgz",
+      "digest": "ed2224e12ddcef74576222883a38315bdfc60c6afa9184400ec24390ba14e5aa"
     },
     {
       "kind": "plugin",
       "id": "@wingsky-1/dsh-mcp-manager",
       "name": "@wingsky-1/dsh-mcp-manager",
-      "version": "0.2.6",
+      "version": "0.2.7",
       "label": "Plugin: @wingsky-1/dsh-mcp-manager",
-      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.6.tgz",
-      "digest": "c6be84ca25a992818bc61e672d58a4bcc90172671bfa0363e9b6bf2a516d694e"
+      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.7.tgz",
+      "digest": "8f37a220c15090485aef06b287eef78f6d015531f20c6a30730ee73f5fdf62ca"
     },
     {
       "kind": "plugin",
@@ -37,16 +37,16 @@
       "version": "0.21.1",
       "label": "Plugin: dsh-better-sidebar",
       "file": "plugins/dsh-better-sidebar-0.21.1.tgz",
-      "digest": "6ea5cef9f7ed9741dc45c4add699e83dd335b9f21c79bfad8224742e0ded8658"
+      "digest": "c5f2f631ac7c8f0e1e37839e2cf5260075e0a07f491be6f41b6e5a6498172d6d"
     },
     {
       "kind": "plugin",
       "id": "@linxin666/dsh-client-ui-skill-explorer",
       "name": "@linxin666/dsh-client-ui-skill-explorer",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
-      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.4.2.tgz",
-      "digest": "fd7eb137b0017410bc7d2553adca875d2d82a6c188da3fccc24d59c5ac71199d"
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.4.3.tgz",
+      "digest": "1294e7c5b547e196b69434b7381439b27a6b3c3bcf6e660d50be87775d665d17"
     },
     {
       "kind": "plugin",
@@ -88,10 +88,10 @@
       "kind": "plugin",
       "id": "@goodandready/dsh-russian-lang",
       "name": "@goodandready/dsh-russian-lang",
-      "version": "0.3.11",
+      "version": "0.3.12",
       "label": "Plugin: @goodandready/dsh-russian-lang",
-      "file": "plugins/goodandready-dsh-russian-lang-0.3.11.tgz",
-      "digest": "1f38a5245cddaba0f7cea8d7ac736be1d3b2eb0c1367fca79789b838769c1a0a"
+      "file": "plugins/goodandready-dsh-russian-lang-0.3.12.tgz",
+      "digest": "35fab0c15292dd1ae62eee803d4cd6ef26b38d28e2d8b1628dde40d671519aad"
     },
     {
       "kind": "plugin",
@@ -100,7 +100,7 @@
       "version": "0.3.5",
       "label": "Plugin: dsh-univer-office",
       "file": "plugins/dsh-univer-office-0.3.5.tgz",
-      "digest": "1f73f389a5a0c6a78e640f95151761d094dacb3f434682ff563225338579e165"
+      "digest": "226748980bc95e5eb487eb421af7fed292589db28e2cf4960319f2385a5236fd"
     },
     {
       "kind": "mcp",
@@ -123,10 +123,10 @@
       "kind": "payload",
       "id": "1c-rules",
       "name": "1c-rules",
-      "version": "2026.09.26-f792d45",
+      "version": "2026.09.27-0406719",
       "label": "Payload: 1c-rules",
       "path": "payload/1c-rules",
-      "digest": "57035814bc0c794b846a049e07874a238ef5a18797074358009fdab4bd6dd556"
+      "digest": "0486d1554f7e4585815ebd1d42f38faa8ab5b1db9cbdbaacc5aca45b43218eb6"
     }
   ]
 }

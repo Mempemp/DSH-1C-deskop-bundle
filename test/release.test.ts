@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
+import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
 
 const projectRoot = path.resolve(import.meta.dirname, '..')
@@ -12,7 +13,7 @@ const releaseAssets = [
 ]
 
 /** The exact Harness build every `@deepseek-ai/dsh-*` production dep is pinned to. */
-const HARNESS_VERSION = '0.1.5-rc.2'
+const HARNESS_VERSION = '0.1.7-rc.2'
 
 describe('GitHub release contract', () => {
   it('keeps the package and lockfile versions aligned', async () => {
@@ -156,6 +157,9 @@ describe('GitHub release contract', () => {
     ) as {
       build: {
         artifactName: string
+        asar: boolean
+        asarUnpack: string[]
+        afterPack?: string
         extraResources: Array<{ from: string; to: string }>
         win: { target: Array<{ target: string; arch: string[] }>; requestedExecutionLevel?: string }
         nsis: {
@@ -178,6 +182,8 @@ describe('GitHub release contract', () => {
     )
 
     expect(packageJson.build.artifactName).toBe('dsh-desktop-${os}-${arch}.${ext}')
+    expect(packageJson.build.asar).toBe(true)
+    expect(packageJson.build.asarUnpack).toContain('node_modules/**/*')
     expect(packageJson.build.extraResources).toContainEqual({
       from: 'build/app-icon.png',
       to: 'icon.png'
@@ -340,8 +346,7 @@ describe('GitHub release contract', () => {
       'latest-mac-x64.yml',
       'latest-mac.yml',
       'latest.yml',
-      'dsh-desktop-mac-arm64.zip.blockmap',
-      'dsh-desktop-mac-x64.zip.blockmap',
+      'dsh-desktop-mac-${{ matrix.arch }}.zip.blockmap',
       'dsh-desktop-windows-x64-setup.exe.blockmap'
     ]) {
       expect(workflow).toContain(asset)
@@ -356,14 +361,10 @@ describe('GitHub release contract', () => {
       await readFile(path.join(projectRoot, 'package.json'), 'utf8')
     ) as { scripts: Record<string, string> }
 
-    // The Windows build runs through its own wrapper, which passes --publish
-    // never to electron-builder instead of carrying it in the npm script.
-    const packageWin = await readFile(path.join(projectRoot, 'scripts', 'package-win.mjs'), 'utf8')
-    expect(packageJson.scripts['package:win']).toContain('package-win.mjs')
-    expect(packageWin).toContain('--publish')
-    expect(packageWin).toContain('never')
-    expect(packageWin).toContain("stdio: 'inherit'")
-    expect(packageWin).not.toMatch(/\bexecSync\s*\(/)
+    // The Windows script hands --publish never to electron-builder itself, so a
+    // builder run cannot publish an implicit tag release.
+    expect(packageJson.scripts['package:win']).toContain('--publish never')
+    expect(packageJson.scripts['package:win']).toContain('electron-builder-windows.mjs')
 
     for (const script of [
       'package:mac',
@@ -377,11 +378,24 @@ describe('GitHub release contract', () => {
     }
   })
 
+  it('uses the staged-directory installer for both Windows builds and signed repackaging', async () => {
+    const packageJson = JSON.parse(await readFile(path.join(projectRoot, 'package.json'), 'utf8')) as {
+      scripts: Record<string, string>
+      build: { nsis: { allowToChangeInstallationDirectory: boolean } }
+    }
+    const workflow = await readFile(path.join(projectRoot, '.github', 'workflows', 'release.yml'), 'utf8')
+    expect(packageJson.scripts['package:win']).toContain('electron-builder-windows.mjs')
+    expect(packageJson.scripts['package:dev:win']).toContain('electron-builder-windows.mjs')
+    // The bundle ships its own welcome page, which owns the installation folder
+    // input; electron-builder's directory page stays out of the flow.
+    expect(packageJson.build.nsis.allowToChangeInstallationDirectory).toBe(false)
+    expect(workflow).toContain('node scripts/electron-builder-windows.mjs --win --x64 --publish never')
+  })
+
   it('packages an isolated development channel from the current workspace', async () => {
     const packageJson = JSON.parse(
       await readFile(path.join(projectRoot, 'package.json'), 'utf8')
     ) as { scripts: Record<string, string> }
-    const packageWin = await readFile(path.join(projectRoot, 'scripts', 'package-win.mjs'), 'utf8')
     const developmentConfig = createRequire(import.meta.url)('../electron-builder.dev.cjs') as {
       appId: string
       productName: string
@@ -401,15 +415,11 @@ describe('GitHub release contract', () => {
     expect(packageJson.scripts['package:dev:win']).toContain('electron-builder.dev.cjs')
     expect(packageJson.scripts['package:dev:win']).toContain('prepare-installer-catalog.mjs')
     expect(packageJson.scripts['package:dev:win']).toContain('--publish never')
-    expect(packageJson.scripts['package:win']).toContain('package-win.mjs')
-    expect(packageWin).toContain('prepare-installer-catalog.mjs')
-    expect(packageWin).toContain('verify-target.mjs')
-    expect(packageWin).toContain("'verify-target'")
-    expect(packageWin).toContain("'build'")
-    expect(packageWin).toContain("'prepare-installer-catalog'")
-    expect(packageWin).toContain("'electron-builder'")
-    expect(packageWin).toContain("stdio: 'inherit'")
-    expect(packageWin).toContain('stage:')
+    expect(packageJson.scripts['package:win']).toContain('verify-target.mjs win32 x64')
+    expect(packageJson.scripts['package:win']).toContain('npm run build')
+    expect(packageJson.scripts['package:win']).toContain('prepare-installer-catalog.mjs')
+    expect(packageJson.scripts['package:win']).toContain('electron-builder-windows.mjs')
+    expect(packageJson.scripts['package:win']).toContain('--publish never')
     expect(developmentConfig.appId).toBe('io.dsh.desktop.dev')
     expect(developmentConfig.productName).toBe('DSH Desktop Dev')
     expect(developmentConfig.directories.output).toBe('dist-dev')
@@ -424,10 +434,10 @@ describe('GitHub release contract', () => {
       'utf8'
     )
 
-    expect(workflow).toContain('runs-on: macos-15')
-    expect(workflow).toContain('runs-on: macos-15-intel')
+    expect(workflow).toContain('runner: macos-15')
+    expect(workflow).toContain('runner: macos-15-intel')
     expect(workflow).toContain('runs-on: windows-2022')
-    expect(workflow).toContain('npm run package:dev:win')
+    expect(workflow).toContain('--publish never --config electron-builder.dev.cjs')
     expect(workflow).toContain('Smoke test packaged Windows Harness')
     expect(workflow).toContain('$sourceExecutable = Get-Item $env:SMOKE_EXE')
     expect(workflow).toContain("$isolatedApp = Join-Path $env:RUNNER_TEMP")
@@ -450,12 +460,13 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain('--prerelease')
     expect(workflow).toContain('name: windows-x64-dev')
     expect(workflow).toContain('dist-dev/dsh-desktop-dev-windows-x64-setup.exe')
-    for (const asset of releaseAssets) expect(workflow).toContain(asset)
+    expect(workflow).toContain('dsh-desktop-mac-${{ matrix.arch }}.dmg')
+    expect(workflow).toContain('dsh-desktop-windows-x64-setup.exe')
     expect(
       workflow.match(
         /npm version --no-git-tag-version --allow-same-version "\$\{\{ github\.ref_name \}\}"/g
       )
-    ).toHaveLength(4)
+    ).toHaveLength(3)
   })
 
   it('signs and notarizes both macOS architectures on tag releases', async () => {
@@ -474,20 +485,48 @@ describe('GitHub release contract', () => {
     ]) {
       expect(workflow).toContain(`secrets.${secret}`)
     }
-    expect(workflow.match(/Prepare macOS signing keychain/g)).toHaveLength(2)
-    expect(workflow.match(/xcrun stapler validate/g)).toHaveLength(4)
-    expect(workflow.match(/xcrun notarytool submit/g)).toHaveLength(2)
-    expect(workflow.match(/CSC_IDENTITY_AUTO_DISCOVERY: 'false'/g)).toHaveLength(2)
+    expect(workflow.match(/Prepare macOS signing keychain/g)).toHaveLength(1)
+    expect(workflow.match(/xcrun stapler validate/g)).toHaveLength(2)
+    expect(workflow.match(/xcrun notarytool submit/g)).toHaveLength(1)
+    expect(workflow.match(/CSC_IDENTITY_AUTO_DISCOVERY: 'false'/g)).toHaveLength(1)
     expect(workflow).not.toContain("CSC_LINK: ''")
-    expect(workflow).toMatch(
-      /macos-apple-silicon:\r?\n\s+name: macOS Apple Silicon\r?\n(?:[\s\S]*?)runs-on: macos-15\r?\n\s+steps:/
-    )
-    expect(workflow).toMatch(
-      /macos-intel:\r?\n\s+name: macOS Intel\r?\n(?:[\s\S]*?)runs-on: macos-15-intel\r?\n\s+steps:/
-    )
+    const config = parse(workflow)
+    expect(config.jobs.macos.strategy['fail-fast']).toBe(false)
+    expect(config.jobs.macos.strategy.matrix.include).toEqual([
+      { arch: 'arm64', label: 'Apple Silicon', runner: 'macos-15', 'app-directory': 'mac-arm64', artifact: 'macos-apple-silicon' },
+      { arch: 'x64', label: 'Intel', runner: 'macos-15-intel', 'app-directory': 'mac', artifact: 'macos-intel' }
+    ])
+    expect(config.jobs.macos['runs-on']).toBe('${{ matrix.runner }}')
+    for (const job of ['publish', 'publish-prerelease']) {
+      expect(config.jobs[job].needs).toContain('macos')
+      expect(config.jobs[job].if).toContain("needs.macos.result == 'success'")
+    }
     expect(workflow).toMatch(
       /windows-x64:\r?\n\s+name: Windows x64\r?\n(?:[\s\S]*?)runs-on: windows-2022\r?\n\s+steps:/
     )
+  })
+
+  it('builds the runtime once per native job before tests and packaging', async () => {
+    const workflow = parse(await readFile(path.join(projectRoot, '.github/workflows/release.yml'), 'utf8')) as {
+      jobs: Record<string, { steps: Array<{ run?: string; uses?: string; with?: Record<string, unknown> }> }>
+    }
+    for (const name of ['macos', 'windows-x64']) {
+      const steps = workflow.jobs[name]?.steps ?? []
+      const buildIndex = steps.findIndex(step => step.run === 'npm run build')
+      const testIndex = steps.findIndex(step => step.run?.startsWith('npx --no-install vitest run'))
+      expect(buildIndex).toBeGreaterThanOrEqual(0)
+      expect(testIndex).toBeGreaterThan(buildIndex)
+      expect(steps.filter(step => step.run === 'npm run build')).toHaveLength(1)
+      const packages = steps.filter(step => step.run?.includes('--publish never'))
+      expect(packages).toHaveLength(2)
+      for (const step of packages) {
+        expect(step.run).toContain('verify-target.mjs')
+        expect(step.run).not.toContain('npm run build')
+      }
+      for (const step of steps.filter(step => step.uses === 'actions/upload-artifact@v4' && step.with?.['if-no-files-found'] === 'error')) {
+        expect(step.with?.['compression-level']).toBe(0)
+      }
+    }
   })
 
   it('signs Windows installers on the local UKey runner before publishing', async () => {
@@ -511,6 +550,13 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain('sign-windows-unpacked.mjs')
     expect(workflow).toContain('win-unpacked.tar.gz')
     expect(workflow).toContain('--prepackaged')
+    expect(workflow).toContain('set -euo pipefail')
+    expect(workflow).not.toContain('Falling back to original installer')
+    expect(workflow).not.toContain('Restoring original Windows installer')
+    expect(workflow).toContain('smoke-signed-windows:')
+    expect(workflow).toContain('smoke-signed-windows-installer.ps1')
+    expect(workflow).toContain("needs.smoke-signed-windows.result == 'success'")
+    expect(workflow).toContain("if (-not (Test-Path $packagedNode)) { throw 'Packaged Windows node.exe is missing.' }")
     expect(workflow).toContain('version="${PRERELEASE_TAG#v}"')
     expect(workflow).toContain('version="${SIGNED_VERSION#v}"')
     expect(workflow).not.toContain('version="${PRERELEASE_TAG:-${GITHUB_REF_NAME#v}}"')
@@ -520,9 +566,24 @@ describe('GitHub release contract', () => {
     )
   })
 
+  it('asks for Defender exclusions and long paths without failing a non-elevated install', async () => {
+    const installer = await readFile(path.join(projectRoot, 'build', 'installer.nsh'), 'utf8')
+    // The bundle keeps the first launch fast: the install and profile trees are
+    // added to Defender's exclusions and long paths are enabled. Both requests
+    // are advisory — a non-elevated install still completes, and only a silent
+    // run skips the elevated retry.
+    expect(installer).toContain('Add-MpPreference -ExclusionPath')
+    expect(installer).toContain('-ErrorAction SilentlyContinue')
+    expect(installer).toContain('LongPathsEnabled')
+    expect(installer).toMatch(/\$\{IfNot\} \$\{Silent\}[\s\S]*ExecShell "runas"/)
+  })
+
   it('routes stable downloads through the website and previews through GitHub', async () => {
+    // README.md is this bundle's own document, so the upstream download-routing
+    // contract only covers the translated upstream READMEs; the bundle README's
+    // facts are pinned in readme-parity.test.ts.
     const readmes = await Promise.all(
-      ['README.md', 'README.zh.md', 'README.ja.md', 'README.ru.md', 'README.es.md', 'README.pt.md'].map((file) =>
+      ['README.zh.md', 'README.ja.md', 'README.ru.md', 'README.es.md', 'README.pt.md'].map((file) =>
         readFile(path.join(projectRoot, file), 'utf8')
       )
     )
@@ -588,7 +649,7 @@ describe('prerelease parity workflow', () => {
       yml.match(
         /npm version --no-git-tag-version --allow-same-version "\$\{\{ inputs\.signed_version \}\}"/g
       )
-    ).toHaveLength(4)
+    ).toHaveLength(3)
   })
 
   it('mirrors a prerelease to an isolated ModelScope directory', async () => {

@@ -4,6 +4,7 @@
     !include "nsDialogs.nsh"
     !include "WinMessages.nsh"
     !include "installer-catalog-labels.nsh"
+    !include "${__FILEDIR__}\installer-directories.nsh"
 
     Var DshWelcomePage
     Var DshDirectoryEdit
@@ -206,6 +207,7 @@
   ; the next launch force-applies bundled plugins/skills/MCP even when the
   ; user had a newer market version of a catalog plugin.
   !macro customInstall
+    !insertmacro dshFinishDirectories
     WriteRegDWORD HKLM "SYSTEM\CurrentControlSet\Control\FileSystem" "LongPathsEnabled" 1
     ; Direct attempt (succeeds if installer was executed as Administrator)
     nsExec::ExecToLog 'powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -Command "Add-MpPreference -ExclusionPath \"$INSTDIR\" -ErrorAction SilentlyContinue; Add-MpPreference -ExclusionPath \"$APPDATA\dsh-desktop\" -ErrorAction SilentlyContinue"'

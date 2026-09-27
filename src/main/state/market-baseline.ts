@@ -1,6 +1,6 @@
 import { copyFile, lstat, mkdir, readFile, readlink, realpath, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
-import { healProfilesModuleFallback, resolveBundleDir } from '@deepseek-ai/dsh-app-boot'
+import { resolveBundleDir } from '@deepseek-ai/dsh-app-boot'
 import { listGenerations, readDesired, writeDesired } from 'dsh-desktop-market-installer/generations/registry'
 import { compareSemver, parseSemver, readInstalledPluginVersion } from './plugin-market-check'
 import { profilePackageJsonPath } from './plugin-recovery'
@@ -12,7 +12,7 @@ import {
   type PluginUpgradeResult
 } from './plugin-upgrade'
 
-export const VERIFIED_MARKET_BASELINE = '1.66.1'
+export const VERIFIED_MARKET_BASELINE = '1.66.2'
 
 const MARKET_PACKAGE = 'dshmarket'
 
@@ -274,7 +274,7 @@ export async function ensureMarketBaseline(
   const dshmarketPath = join(dirname(profilePackageJsonPath(options.dshHome)), 'node_modules', 'dshmarket')
   const isGenerationLink = await lstat(dshmarketPath)
     .then(async (info) => {
-      if (!info.isSymbolicLink) return false
+      if (!info.isSymbolicLink()) return false
       const target = await readlink(dshmarketPath)
       return target.includes('.generations')
     })
@@ -322,12 +322,6 @@ export async function ensureMarketBaseline(
     await writeFile(workspaceYamlPath, 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n', 'utf8')
   }
 
-  // This normally happens inside Harness boot, which has not run yet. Ensure
-  // generation peer validation sees this installation's host packages first.
-  await healProfilesModuleFallback({
-    installAnchor,
-    home: options.dshHome
-  })
   await clearProfileInstallMarker(options.dshHome)
   // Only the catalog's own version can come from its tarball: a partial install
   // that reached something newer must be finished from the registry rather than
