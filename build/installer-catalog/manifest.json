@@ -70,10 +70,10 @@
       "kind": "plugin",
       "id": "dsh-rlm-tools-bsl",
       "name": "dsh-rlm-tools-bsl",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "label": "Plugin: dsh-rlm-tools-bsl",
-      "file": "plugins/dsh-rlm-tools-bsl-0.1.4.tgz",
-      "digest": "57736fb6f7d7f33505b89728b4d73ef13ea0375b2b501178469c127d8fcc9c70"
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.5.tgz",
+      "digest": "cc0654a6dc6ef459cb1cd35645b23a66bd0150b21648e72173eab3505ae6e59f"
     },
     {
       "kind": "plugin",
@@ -114,10 +114,10 @@
       "kind": "plugin",
       "id": "dsh-engram-memory",
       "name": "dsh-engram-memory",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "label": "Plugin: dsh-engram-memory",
-      "file": "plugins/dsh-engram-memory-0.1.1.tgz",
-      "digest": "b165351ea06386db6ee6a79f4f5dd2b06ed30de0144f31a99051f96cbd9a909e"
+      "file": "plugins/dsh-engram-memory-0.1.2.tgz",
+      "digest": "f81c582b2fb65fdd014cef217fe377d77acff366d9b0b81a5fb464e841686297"
     },
     {
       "kind": "payload",
