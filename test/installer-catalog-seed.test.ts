@@ -683,7 +683,7 @@ describe('first-run installer catalog seed', () => {
     expect(main).toContain("desktopResourcePath('installer-catalog')")
     expect(main).toContain('prepareGenerationsForLaunch(dshHome, (line) => runtime.note(line), {')
     expect(main).toContain('appVersion: app.getVersion()')
-    expect(main).toContain("hostNodeModulesPath: join(app.getAppPath(), 'node_modules')")
+    expect(main).toContain('hostNodeModulesPath: hostNodeModulesRoot(app.getAppPath(), app.isPackaged)')
   })
 
   it('installs catalog file: plugins with offline generation install', async () => {

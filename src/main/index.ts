@@ -1,6 +1,6 @@
 import { initializeDesktopService, desktopDiagnostics } from './desktop-service'
 import { applyMacosWindowBackdrop } from './macos-window-backdrop'
-import { runtimePackageRoot } from './runtime-package-root'
+import { hostNodeModulesRoot, runtimePackageRoot } from './runtime-package-root'
 import { checkBlockingPluginUpdates, selectPluginRecoveryTarget, PluginRecoveryEvidence, planPluginRecovery, runPluginRecoveryPlan, type PluginRecoveryCheck } from './plugin-recovery-market'
 import { RepairAgentService, type CrashEvidence } from './repair-agent'
 import { spawn } from 'node:child_process'
@@ -1472,7 +1472,7 @@ function launchHarness(): Promise<void> {
           appVersion: app.getVersion(),
           nodeExecutablePath: bundledNodePath(),
           pnpmEntryPath: bundledPnpmEntryPath(),
-          hostNodeModulesPath: join(app.getAppPath(), 'node_modules'),
+          hostNodeModulesPath: hostNodeModulesRoot(app.getAppPath(), app.isPackaged),
           // The market is a shared-tree package: a generation for it is inert, so
           // it is installed into the Profile from the same vendored tarball.
           installSharedTreeMarket: async ({ tarball, version }) => {
