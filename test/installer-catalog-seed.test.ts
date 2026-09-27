@@ -17,7 +17,8 @@ import {
   catalogFingerprint,
   catalogStampPath,
   CATALOG_STAMP_NAME,
-  MCP_MANAGER_STORE_NAME,
+  mcpManagerLegacyStorePath,
+  mcpManagerStorePath,
   mergeMcpServerIntoManagerStore,
   mcpPatchEntryId,
   removeMcpRowsFromPatch,
@@ -175,7 +176,7 @@ describe('first-run installer catalog seed', () => {
     expect(await readFile(join(home, 'AGENTS.md'), 'utf8')).toContain('seeded rules')
     // The server lands in the MCP manager's store — the list its panel shows
     // and its switches act on — and nowhere else: one serverName has one home.
-    expect(JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8'))).toEqual({
+    expect(JSON.parse(await readFile(mcpManagerStorePath(home), 'utf8'))).toEqual({
       version: 1,
       servers: [
         {
@@ -546,12 +547,103 @@ describe('first-run installer catalog seed', () => {
     expect(patch).toContain('# a comment the desktop must not eat')
     const rows = parse(patch) as Array<{ insert?: Array<{ id?: string }> }>
     expect(rows.flatMap((row) => row.insert ?? []).map((entry) => entry.id)).toEqual(['mcp-mine'])
-    const store = JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8')) as {
+    const store = JSON.parse(await readFile(mcpManagerStorePath(home), 'utf8')) as {
       servers: unknown[]
     }
     expect(store.servers).toEqual([
       { name: 'intranet', transport: 'stdio', command: 'node', args: ['intranet.js'], enabled: true }
     ])
+  })
+
+  it('merges into the store the manager moves, keeping what an old file already held', async () => {
+    const home = await freshHome()
+    const catalogRoot = await fixtureCatalog()
+    const legacy = mcpManagerLegacyStorePath(home)
+    await writeFile(
+      legacy,
+      `${JSON.stringify(
+        {
+          version: 1,
+          servers: [
+            { name: 'mine', transport: 'stdio', command: 'node', args: ['mine.js'], enabled: true }
+          ]
+        },
+        null,
+        2
+      )}\n`
+    )
+
+    const outcome = await applyInstallerCatalogSeed({
+      dshHome: home,
+      catalogRoot,
+      nodeExecutablePath: 'node',
+      pnpmEntryPath: 'pnpm',
+      installPlugin: async () => {
+        await fakeGeneration(home, 'fixture-plugin+1.0.0+seed', 'fixture-plugin', '1.0.0')
+        return {
+          ok: true,
+          generation: {
+            id: 'fixture-plugin+1.0.0+seed',
+            pluginName: 'fixture-plugin',
+            version: '1.0.0',
+            directory: join(home, 'profiles', '.generations', 'live', 'fixture-plugin+1.0.0+seed')
+          }
+        }
+      },
+      note: silent
+    })
+
+    expect(outcome).toBe('applied')
+    // The manager reads only the file in its own home and moves the old one
+    // there itself; a seed against the old path alone would leave the panel
+    // without the catalog server and drop whatever the user had put in it.
+    const store = JSON.parse(await readFile(mcpManagerStorePath(home), 'utf8')) as {
+      servers: Array<{ name: string }>
+    }
+    expect(store.servers.map((server) => server.name)).toEqual(['mine', 'intranet'])
+    // Archiving the old file is the manager's step, not the seed's.
+    expect(existsSync(legacy)).toBe(true)
+  })
+
+  it('keeps the store the manager already moved while the old file stays behind', async () => {
+    const home = await freshHome()
+    const catalogRoot = await fixtureCatalog()
+    const storePath = mcpManagerStorePath(home)
+    await mkdir(join(home, '@wingsky-1', 'dsh-mcp-manager'), { recursive: true })
+    await writeFile(
+      storePath,
+      `${JSON.stringify({ version: 1, servers: [{ name: 'mine', transport: 'streamable-http', url: 'https://example.test/mcp' }] }, null, 2)}\n`
+    )
+    // Left over from the release whose manager wrote it, and written by the
+    // plugins that still declared their servers there.
+    await writeFile(
+      mcpManagerLegacyStorePath(home),
+      `${JSON.stringify({ version: 1, servers: [{ name: 'stale', transport: 'stdio', command: 'stale' }] }, null, 2)}\n`
+    )
+
+    const outcome = await applyInstallerCatalogSeed({
+      dshHome: home,
+      catalogRoot,
+      nodeExecutablePath: 'node',
+      pnpmEntryPath: 'pnpm',
+      installPlugin: async () => {
+        await fakeGeneration(home, 'fixture-plugin+1.0.0+seed', 'fixture-plugin', '1.0.0')
+        return {
+          ok: true,
+          generation: {
+            id: 'fixture-plugin+1.0.0+seed',
+            pluginName: 'fixture-plugin',
+            version: '1.0.0',
+            directory: join(home, 'profiles', '.generations', 'live', 'fixture-plugin+1.0.0+seed')
+          }
+        }
+      },
+      note: silent
+    })
+
+    expect(outcome).toBe('applied')
+    const store = JSON.parse(await readFile(storePath, 'utf8')) as { servers: Array<{ name: string }> }
+    expect(store.servers.map((server) => server.name)).toEqual(['mine', 'intranet'])
   })
 
   it('drops the home patch layer once the catalog rows that were its only content are gone', async () => {
@@ -597,7 +689,7 @@ describe('first-run installer catalog seed', () => {
 
     expect(outcome).toBe('applied')
     expect(existsSync(join(home, 'cordis.patch.yml'))).toBe(false)
-    expect(JSON.parse(await readFile(join(home, MCP_MANAGER_STORE_NAME), 'utf8'))).toMatchObject({
+    expect(JSON.parse(await readFile(mcpManagerStorePath(home), 'utf8'))).toMatchObject({
       servers: [{ name: 'intranet' }]
     })
   })

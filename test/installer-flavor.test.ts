@@ -110,7 +110,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d8f7f38a037b0453ed67368b7baefd5e4ef8d42e',
+        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d305973030529cae79a865091dcf086a60c0f6c2',
         path: 'dsh-rlm-tools-bsl'
       },
       {
@@ -140,7 +140,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/dsh-engram-memory.git#cc5a1e55fc8652d1a493295d04561fb160981eeb'
+        url: 'https://github.com/Mempemp/dsh-engram-memory.git#0ed6b3bf7642d77f64a5af9d6c66cef8596cb294'
       },
       {
         kind: 'payload',

@@ -17,7 +17,8 @@ import {
 
 export const CATALOG_STAMP_NAME = '.desktop-catalog-applied'
 /**
- * The MCP manager plugin's global server store, `$DSH_HOME/dsh-mcp.json`.
+ * The MCP manager plugin's global server store:
+ * `$DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json`.
  *
  * Catalog MCP servers are delivered here, not into the loader patch layer:
  * that layer mounts `@deepseek-ai/dsh-mcp-client` rows, which the manager
@@ -26,7 +27,17 @@ export const CATALOG_STAMP_NAME = '.desktop-catalog-applied'
  * user actually works with: the manager's panel lists the server, switches it
  * on and off, shows its state and its tools.
  */
-export const MCP_MANAGER_STORE_NAME = 'dsh-mcp.json'
+/** The manager's own home under `$DSH_HOME`; it holds the store the panel reads. */
+export const MCP_MANAGER_STORE_DIR = '@wingsky-1/dsh-mcp-manager'
+/** Live store file name. The manager moved the file here in 0.2.5. */
+export const MCP_MANAGER_STORE_NAME = 'mcp.json'
+/**
+ * Where the store lived before 0.2.5, `$DSH_HOME/dsh-mcp.json`. The manager
+ * still reads that file once — it takes it over on its first 0.2.5+ start and
+ * archives it — so a seed meeting an old file merges into its document rather
+ * than starting empty, and a server the user added there survives the move.
+ */
+export const MCP_MANAGER_LEGACY_STORE_NAME = 'dsh-mcp.json'
 /** Store format version: the value the manager writes on its own saves. */
 const MCP_MANAGER_STORE_VERSION = 1
 
@@ -240,8 +251,14 @@ function homeCordisPatchPath(dshHome: string): string {
   return join(dshHome, 'cordis.patch.yml')
 }
 
-function mcpManagerStorePath(dshHome: string): string {
-  return join(dshHome, MCP_MANAGER_STORE_NAME)
+/** Path of the store the manager reads today. */
+export function mcpManagerStorePath(dshHome: string): string {
+  return join(dshHome, MCP_MANAGER_STORE_DIR, MCP_MANAGER_STORE_NAME)
+}
+
+/** Path of the pre-0.2.5 store the manager takes over once. */
+export function mcpManagerLegacyStorePath(dshHome: string): string {
+  return join(dshHome, MCP_MANAGER_LEGACY_STORE_NAME)
 }
 
 /**
@@ -394,26 +411,31 @@ function applyCatalogMcp(
   note: Note
 ): void {
   const storePath = mcpManagerStorePath(home)
-  let text: string | undefined = existsSync(storePath) ? readFileSync(storePath, 'utf8') : undefined
+  const legacyPath = mcpManagerLegacyStorePath(home)
+  const label = `${MCP_MANAGER_STORE_DIR}/${MCP_MANAGER_STORE_NAME}`
+  // The legacy file is the manager's own starting point for the takeover it
+  // performs on its first 0.2.5+ start; reading it here keeps the servers a
+  // user added to the old path instead of seeding a store that would replace
+  // a document the manager has not migrated yet.
+  const source = existsSync(storePath) ? storePath : legacyPath
+  let text: string | undefined = existsSync(source) ? readFileSync(source, 'utf8') : undefined
   let touched = false
   for (const entry of entries) {
     const merged = mergeMcpServerIntoManagerStore(text, entry)
     if (merged.skipped) {
-      note(
-        `[desktop] catalog MCP ${entry.name} left alone: ${MCP_MANAGER_STORE_NAME} is not a manager store`
-      )
+      note(`[desktop] catalog MCP ${entry.name} left alone: ${label} is not a manager store`)
       continue
     }
     if (!merged.changed) {
-      note(`[desktop] catalog MCP ${entry.name} already in ${MCP_MANAGER_STORE_NAME}`)
+      note(`[desktop] catalog MCP ${entry.name} already in ${label}`)
       continue
     }
     text = merged.text
     touched = true
     note(
       merged.added
-        ? `[desktop] catalog seeded MCP ${entry.name} into ${MCP_MANAGER_STORE_NAME}`
-        : `[desktop] catalog updated MCP ${entry.name} in ${MCP_MANAGER_STORE_NAME}`
+        ? `[desktop] catalog seeded MCP ${entry.name} into ${label}`
+        : `[desktop] catalog updated MCP ${entry.name} in ${label}`
     )
   }
   if (touched) writeAtomically(storePath, text ?? '')
