@@ -566,16 +566,9 @@ describe('GitHub release contract', () => {
     )
   })
 
-  it('asks for Defender exclusions and long paths without failing a non-elevated install', async () => {
+  it('does not change Windows security settings during installation', async () => {
     const installer = await readFile(path.join(projectRoot, 'build', 'installer.nsh'), 'utf8')
-    // The bundle keeps the first launch fast: the install and profile trees are
-    // added to Defender's exclusions and long paths are enabled. Both requests
-    // are advisory — a non-elevated install still completes, and only a silent
-    // run skips the elevated retry.
-    expect(installer).toContain('Add-MpPreference -ExclusionPath')
-    expect(installer).toContain('-ErrorAction SilentlyContinue')
-    expect(installer).toContain('LongPathsEnabled')
-    expect(installer).toMatch(/\$\{IfNot\} \$\{Silent\}[\s\S]*ExecShell "runas"/)
+    expect(installer).not.toMatch(/Add-MpPreference|HKLM|ExecShell\s+"runas"/)
   })
 
   it('routes stable downloads through the website and previews through GitHub', async () => {
