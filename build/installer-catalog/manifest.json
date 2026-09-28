@@ -114,10 +114,10 @@
       "kind": "plugin",
       "id": "dsh-engram-memory",
       "name": "dsh-engram-memory",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "label": "Plugin: dsh-engram-memory",
-      "file": "plugins/dsh-engram-memory-0.1.2.tgz",
-      "digest": "f81c582b2fb65fdd014cef217fe377d77acff366d9b0b81a5fb464e841686297"
+      "file": "plugins/dsh-engram-memory-0.1.3.tgz",
+      "digest": "e24ba4da74f1d419e7a522ceb03ad2070af181fe1f4dc3864069eba00b80e672"
     },
     {
       "kind": "payload",
