@@ -123,6 +123,8 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- [Univer](https://github.com/dream-num/dsh-univer-office) (DreamNum Co., Ltd.) —
+  документы, таблицы и презентации прямо в интерфейсе;
 - [v8std](https://v8std.ru/) — публичный MCP-сервер стандартов разработки 1С
   ([исходники](https://github.com/zeegin/v8std)): поиск по стандартам, БСП / SSL и
   документации платформы, разбор диагностик ACC и BSLLS; подключён в сборке по
