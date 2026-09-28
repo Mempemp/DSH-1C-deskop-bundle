@@ -140,7 +140,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/dsh-engram-memory.git#0ed6b3bf7642d77f64a5af9d6c66cef8596cb294'
+        url: 'https://github.com/Mempemp/dsh-engram-memory.git#a71e20fa6568af45543deae5f1453585691f2ae1'
       },
       {
         kind: 'payload',
