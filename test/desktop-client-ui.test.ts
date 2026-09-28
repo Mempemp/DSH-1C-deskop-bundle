@@ -24,15 +24,21 @@ describe('DSH Desktop client slot occupants', () => {
     } | undefined
     const appended: Array<{ textContent?: string }> = []
     const removeStyle = vi.fn()
-    let disposeStyle: (() => void) | undefined
+    const disposers: Array<(() => void) | undefined> = []
     const document = {
       getElementById: vi.fn(() => null),
       createElement: vi.fn(() => ({ id: '', dataset: {}, textContent: '', remove: removeStyle })),
-      head: { appendChild: (node: { textContent?: string }) => appended.push(node) }
+      head: { appendChild: (node: { textContent?: string }) => appended.push(node) },
+      documentElement: { classList: { toggle: vi.fn(), remove: vi.fn() } },
+      body: { hasAttribute: () => false }
     }
     vm.runInNewContext(source, {
       document,
       navigator: { language: 'en-US' },
+      MutationObserver: class {
+        observe(): void {}
+        disconnect(): void {}
+      },
       window: {
         __ModuleLoader__: {
           load: (value: typeof definition) => {
@@ -84,7 +90,7 @@ describe('DSH Desktop client slot occupants', () => {
         return () => undefined
       }
     }
-    plugin.apply({ slots, effect: (setup: () => (() => void) | undefined) => { disposeStyle = setup() } })
+    plugin.apply({ slots, effect: (setup: () => (() => void) | undefined) => { disposers.push(setup()) } })
 
     expect(plugin.inject).toEqual(['slots', 'remote.session', 'sessions', 'uiWorkspace'])
     expect(registrations.map(({ config }) => config.name)).toEqual([
@@ -99,7 +105,8 @@ describe('DSH Desktop client slot occupants', () => {
     // Desktop toolbar styles have an owned lifetime; branding stays in currentColor.
     expect(appended).toHaveLength(1)
     expect(appended[0]?.textContent).toContain("[data-dsh-preset-search]")
-    disposeStyle?.()
+    // Стилевой эффект объявлен первым.
+    disposers[0]?.()
     expect(removeStyle).toHaveBeenCalledOnce()
 
     const sidebarName = registrations.find(
@@ -123,5 +130,96 @@ describe('DSH Desktop client slot occupants', () => {
     )!.component({ size: 48 }) as { type: unknown; props: Record<string, unknown> }
     expect(heroMark.type).toBe(FishLogo)
     expect(heroMark.props.size).toBe(48)
+  })
+
+  // Тёмная тема хоста помечается атрибутом `body[data-ds-dark-theme]`, а
+  // сторонние плагины (менеджер MCP) ищут привычные маркеры — `html.dark` и
+  // прочие. Без дублирующего класса их панели остаются светлыми при тёмной
+  // теме: тёмные переменные плагина не включаются, а текст берётся из токенов
+  // хоста. Тест держит шов: класс следует за атрибутом и снимается при выгрузке.
+  it('mirrors the host dark marker into the conventional class third-party plugins read', async () => {
+    const source = await readFile(
+      path.join(projectRoot, 'packages', 'dsh-desktop-client-ui', 'client.js'),
+      'utf8'
+    )
+    let definition: {
+      factory: (require: (id: string) => unknown) => { apply: (ctx: unknown) => void }
+    } | undefined
+
+    const classes = new Set<string>()
+    const attributes = new Set<string>()
+    let fireMutation: (() => void) | undefined
+    let disconnected = false
+    const document = {
+      getElementById: () => null,
+      createElement: () => ({ id: '', dataset: {}, textContent: '', remove: () => undefined }),
+      head: { appendChild: () => undefined },
+      documentElement: {
+        classList: {
+          toggle: (name: string, on?: boolean) => {
+            if (on) classes.add(name)
+            else classes.delete(name)
+          },
+          remove: (name: string) => classes.delete(name)
+        }
+      },
+      body: {
+        hasAttribute: (name: string) => attributes.has(name)
+      }
+    }
+    vm.runInNewContext(source, {
+      document,
+      navigator: { language: 'en-US' },
+      MutationObserver: class {
+        constructor(callback: () => void) {
+          fireMutation = callback
+        }
+        observe(): void {}
+        disconnect(): void {
+          disconnected = true
+        }
+      },
+      window: { __ModuleLoader__: { load: (value: typeof definition) => { definition = value } } }
+    })
+
+    const cleanups: Array<(() => void) | undefined> = []
+    const plugin = definition!.factory((id) => {
+      if (id === 'react') {
+        return {
+          createElement: () => null,
+          useEffect: () => undefined,
+          useState: (initial: unknown) => [initial, () => undefined]
+        }
+      }
+      if (id === '@deepseek-ai/dsh-client-ui-primitives') {
+        return { BrandWordmark: () => null, FishLogo: () => null }
+      }
+      throw new Error(`Unexpected client dependency: ${id}`)
+    })
+    plugin.apply({
+      slots: { inject: (_name: string, callback: () => unknown) => callback(), register: () => () => undefined },
+      effect: (setup: () => (() => void) | undefined) => cleanups.push(setup())
+    })
+
+    // Светлая тема хоста: маркера нет — класса быть не должно.
+    expect([...classes]).toEqual([])
+
+    // Хост переключился в тёмную тему: атрибут появился, класс догнал.
+    attributes.add('data-ds-dark-theme')
+    fireMutation?.()
+    expect([...classes]).toEqual(['dark'])
+
+    // Возврат в светлую тему снимает класс.
+    attributes.delete('data-ds-dark-theme')
+    fireMutation?.()
+    expect([...classes]).toEqual([])
+
+    // Выгрузка плагина отписывает наблюдателя и снимает класс.
+    attributes.add('data-ds-dark-theme')
+    fireMutation?.()
+    expect([...classes]).toEqual(['dark'])
+    for (const cleanup of cleanups) cleanup?.()
+    expect(disconnected).toBe(true)
+    expect([...classes]).toEqual([])
   })
 })

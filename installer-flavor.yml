@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.10.0-1
+version: 0.10.0-2
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
@@ -65,7 +65,7 @@ sources:
     path: dsh-rlm-tools-bsl
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#1d84a62b38db97943098f6bedb6cf58696451943
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#fcb0357cf612db265114c95bd5f8304bad1fceeb
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
@@ -101,7 +101,7 @@ sources:
   # старте. Пин по коммиту, как у остальных наших.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/dsh-engram-memory.git#a71e20fa6568af45543deae5f1453585691f2ae1
+    url: https://github.com/Mempemp/dsh-engram-memory.git#9d3fb8d1d60139ed4f7bf65ed2448a88e7dfaecc
   # 1C ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json + content/.
   # Delivered as a payload and nothing else: the skills inside it cross-reference
   # AGENTS.md, content/rules/* and content/agents/*, so shipping the skills tree

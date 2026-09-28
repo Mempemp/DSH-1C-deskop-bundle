@@ -132,6 +132,29 @@ window.__ModuleLoader__.load({
         document.head.appendChild(style)
         return () => style.remove()
       })
+      // Сторонние плагины (менеджер MCP и подобные) определяют тёмную тему по
+      // привычным маркерам — `html.dark`, `[data-theme="dark"]`,
+      // `[data-color-mode="dark"]`. Хост помечает её только атрибутом
+      // `body[data-ds-dark-theme]`, поэтому у таких плагинов остаются светлыми
+      // панели: их тёмные переменные не включаются, а текст берётся из токенов
+      // хоста и становится светлым на светлом фоне. Дублируем маркер хоста в
+      // привычный класс; убрать, когда плагины начнут читать
+      // `data-ds-dark-theme` (или хост выставит привычные маркеры сам).
+      ctx.effect(() => {
+        const root = document.documentElement
+        const body = document.body
+        if (!root || !body) return
+        const sync = () => {
+          root.classList.toggle('dark', body.hasAttribute('data-ds-dark-theme'))
+        }
+        sync()
+        const observer = new MutationObserver(sync)
+        observer.observe(body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
+        return () => {
+          observer.disconnect()
+          root.classList.remove('dark')
+        }
+      })
       ctx.slots.inject('sidebar.brand.mark', () =>
         ctx.slots.inject('sidebar.brand.name', () =>
           ctx.slots.inject('conversation.hero.brand.mark', function* () {

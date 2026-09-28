@@ -1,6 +1,6 @@
 {
   "name": "dsh-desktop",
-  "version": "0.10.0-1",
+  "version": "0.10.0-2",
   "description": "A cross-platform desktop shell for DeepSeek Harness.",
   "private": true,
   "type": "module",
@@ -450,7 +450,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "https://dshdesktop.com/updates/latest/"
+        "url": "https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest/download/"
       }
     ],
     "detectUpdateChannel": false,
