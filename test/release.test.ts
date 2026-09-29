@@ -333,8 +333,14 @@ describe('GitHub release contract', () => {
     )
 
     expect(packageJson.dependencies['electron-updater']).toBeTruthy()
+    // This bundle ships its own feed, not the upstream one: the `bundle` channel
+    // marker asserted below is what keeps a packaged build off dshdesktop.com,
+    // and `build.publish` names the feed a future release would publish to.
     expect(packageJson.build.publish).toEqual([
-      { provider: 'generic', url: 'https://dshdesktop.com/updates/latest/' }
+      {
+        provider: 'generic',
+        url: 'https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest/download/'
+      }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
     // The channel marker is what keeps this bundle off the upstream update
