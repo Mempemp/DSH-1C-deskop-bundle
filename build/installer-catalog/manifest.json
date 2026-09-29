@@ -1,6 +1,6 @@
 {
   "name": "DSH Desktop",
-  "version": "0.10.0-2",
+  "version": "0.10.0-3",
   "id": "dsh-desktop",
   "items": [
     {
@@ -100,7 +100,7 @@
       "version": "0.2.7",
       "label": "Plugin: dsh-notifier-ru",
       "file": "plugins/dsh-notifier-ru-0.2.7.tgz",
-      "digest": "c6deeb7c5e7443f64e8ca0fcd5eda95083c8a8e528aa4df144785733365f3293"
+      "digest": "0a8b76b6608be96650820e8abd8f79db0ca4cf0d4e32727d23d53bc3b9d3f736"
     },
     {
       "kind": "plugin",
