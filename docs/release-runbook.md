@@ -53,3 +53,11 @@ publish anything here yet. Releases are published by hand:
    feed builds each archive URL from it. Publish the newest version last or not at all: GitHub's
    "latest" release is the most recent by date, not by number, and a lower version published after
    a higher one would not be offered to anyone.
+4. Verify the published feed: `node scripts/verify-update-feed.mjs <tag> <previous-version>`.
+
+**Reading the gate's result.** The `<previous-version> blockmap` line is about the machine that
+already runs the previous release: the updater fetches that version's blockmap to download a delta,
+so a red line here means a full 415 MB download — not a broken release. Releases published before the
+feed existed (0.10.0-2 and older) carry neither `latest.yml` nor a blockmap, so the first release
+that follows them reports this line red once. From 0.10.0-3 on, every release carries its own
+blockmap and the line stays green. Every other line has to be green before the release is announced.
