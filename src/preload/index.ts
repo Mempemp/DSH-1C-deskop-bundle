@@ -4,6 +4,7 @@ import { setupDesktopStoragePersistence } from './desktop-storage'
 import {
   isUpdateDismissed,
   shouldShowUpdate,
+  updateCardLabels,
   updateHeadline,
   type UpdateLocale
 } from './update-view'
@@ -29,7 +30,10 @@ setupDesktopStoragePersistence()
 const ROOT_ID = 'dsh-desktop-update-root'
 const MOBILE_BUTTON_ID = 'dsh-desktop-mobile-button'
 const SAFE_MODE_BANNER_ID = 'dsh-desktop-safe-mode-banner'
-const locale: UpdateLocale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
+const language = navigator.language.toLowerCase()
+const locale: UpdateLocale = language.startsWith('zh') ? 'zh' : language.startsWith('ru') ? 'ru' : 'en'
+/** Resolved once: the page's language does not change while the card is up. */
+const cardLabels = updateCardLabels(locale)
 
 let host: HTMLDivElement | undefined
 let content: HTMLDivElement | undefined
@@ -639,7 +643,7 @@ function render(): void {
   const status = currentStatus
   const card = element('aside', 'card')
   card.setAttribute('aria-live', 'polite')
-  card.setAttribute('aria-label', locale === 'zh' ? 'DSH Desktop 更新' : 'DSH Desktop update')
+  card.setAttribute('aria-label', cardLabels.card)
 
   const row = element('div', 'row')
   const badge = element('span', status.phase === 'error' ? 'badge warning' : 'badge')
@@ -674,7 +678,7 @@ function render(): void {
 
   if (status.phase === 'available') {
     const actions = element('div', 'actions')
-    const accept = button(locale === 'zh' ? '同意更新' : 'Update now', 'primary')
+    const accept = button(cardLabels.updateNow, 'primary')
     accept.disabled = accepting
     accept.addEventListener('click', () => {
       accepting = true
@@ -698,13 +702,7 @@ function render(): void {
   if (status.phase === 'downloaded') {
     const actions = element('div', 'actions')
     const install = button(
-      installing
-        ? locale === 'zh'
-          ? '正在重启…'
-          : 'Restarting…'
-        : locale === 'zh'
-          ? '重新启动并安装'
-          : 'Restart and install',
+      installing ? cardLabels.restarting : cardLabels.restartAndInstall,
       'primary'
     )
     install.disabled = installing
@@ -724,7 +722,7 @@ function render(): void {
   row.appendChild(body)
 
   const close = button('×', 'close')
-  close.setAttribute('aria-label', locale === 'zh' ? '关闭' : 'Close')
+  close.setAttribute('aria-label', cardLabels.close)
   close.addEventListener('click', dismissCurrent)
   row.appendChild(close)
 
@@ -739,7 +737,7 @@ function render(): void {
  * and a manual check offers the skipped one again.
  */
 function skipButton(status: UpdateStatus): HTMLButtonElement {
-  const skip = button(locale === 'zh' ? '跳过此版本' : 'Skip this version', 'secondary')
+  const skip = button(cardLabels.skip, 'secondary')
   skip.addEventListener('click', () => {
     const version = status.availableVersion
     if (!version) return

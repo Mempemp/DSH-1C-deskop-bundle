@@ -3,6 +3,7 @@ import type { UpdateStatus } from '../src/shared/contracts'
 import {
   isUpdateDismissed,
   shouldShowUpdate,
+  updateCardLabels,
   updateHeadline,
   updateMessage
 } from '../src/preload/update-view'
@@ -79,6 +80,36 @@ describe('accepting an update is what starts the download', () => {
     }
     expect(updateMessage(available, 'zh')).toBe('发现新版本 0.4.4，是否更新？')
     expect(updateMessage(available, 'en')).toBe('DSH Desktop 0.4.4 is available. Update now?')
+  })
+})
+
+describe('Russian copy', () => {
+  const available: UpdateStatus = {
+    phase: 'available',
+    currentVersion: '0.4.3',
+    availableVersion: '0.4.4',
+    manual: false
+  }
+
+  it('answers in Russian without touching the other two locales', () => {
+    expect(updateHeadline(available, 'ru').title).toBe('Доступно обновление')
+    expect(updateHeadline(available, 'ru').description).toBe('v0.4.4 готово к загрузке.')
+    expect(updateMessage(available, 'ru')).toBe('Доступна версия DSH Desktop 0.4.4. Обновить?')
+    expect(updateMessage(available, 'en')).toBe('DSH Desktop 0.4.4 is available. Update now?')
+    expect(updateMessage(available, 'zh')).toBe('发现新版本 0.4.4，是否更新？')
+  })
+
+  it('labels the card, including what a screen reader reads', () => {
+    expect(updateCardLabels('ru')).toEqual({
+      card: 'Обновление DSH Desktop',
+      close: 'Закрыть',
+      updateNow: 'Обновить',
+      restarting: 'Перезапуск…',
+      restartAndInstall: 'Перезапустить и установить',
+      skip: 'Пропустить эту версию'
+    })
+    expect(updateCardLabels('en').updateNow).toBe('Update now')
+    expect(updateCardLabels('zh').skip).toBe('跳过此版本')
   })
 })
 
