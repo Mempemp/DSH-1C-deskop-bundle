@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { BUNDLE_FEED_URL } from '../src/main/update/version-catalog'
 
 const projectRoot = path.resolve(import.meta.dirname, '..')
 
@@ -343,10 +344,13 @@ describe('GitHub release contract', () => {
       }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
-    // The channel marker is what keeps this bundle off the upstream update
-    // feed: without it a packaged build would offer to replace itself with
+    // The channel marker is what keeps this bundle off the upstream rollout
+    // service: without it a packaged build would offer to replace itself with
     // plain DSH Desktop.
     expect(packageJson.build.extraMetadata?.dshDesktopChannel).toBe('bundle')
+    // The publish URL and the feed the update check reads have to be one
+    // address: the app asks for the file the installer writes next to itself.
+    expect(BUNDLE_FEED_URL).toBe(packageJson.build.publish[0]?.url)
     for (const asset of [
       'latest-mac-arm64.yml',
       'latest-mac-x64.yml',

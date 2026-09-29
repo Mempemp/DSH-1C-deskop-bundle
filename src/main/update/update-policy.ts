@@ -1,3 +1,5 @@
+import { BUNDLE_CHANNEL } from '../app-channel'
+
 export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000
 export const UPDATE_STARTUP_DELAY_MS = 15_000
 export const UPDATE_STARTUP_JITTER_MS = 15_000
@@ -8,12 +10,12 @@ export function supportsAutoUpdates(isPackaged: boolean, platform: NodeJS.Platfo
 }
 
 /**
- * Channels that take updates from the feed this build points at. A bundle that
- * ships its own feed names that channel here; a bundle that ships none must not
- * follow the upstream feed, because those builds carry no 1C layer and taking
- * one would replace this product with plain DSH Desktop.
+ * Channels that take updates at all. Upstream builds (`production`) read the
+ * feed their publish config names; this bundle (`bundle`) reads the releases of
+ * its own repository. A build with no marker keeps upstream behavior, and a
+ * development build ships no feed, so it must follow neither.
  */
-const UPDATE_CHANNELS = new Set(['production'])
+const UPDATE_CHANNELS = new Set(['production', BUNDLE_CHANNEL])
 
 /**
  * Whether a build on `channel` may take updates at all. Upstream builds and
@@ -22,6 +24,17 @@ const UPDATE_CHANNELS = new Set(['production'])
  */
 export function updateChannelEnabled(channel: string | undefined): boolean {
   return channel === undefined || UPDATE_CHANNELS.has(channel)
+}
+
+/**
+ * Whether a build reads this project's release feed rather than the upstream
+ * rollout service. The service offers upstream builds only, and installing one
+ * would replace this product — the bundled catalog included — with plain DSH
+ * Desktop.
+ * @param channel - marker recorded in the app manifest, if any.
+ */
+export function usesBundleFeed(channel: string | undefined): boolean {
+  return channel === BUNDLE_CHANNEL
 }
 
 export function shouldCheckAfterResume(lastCheckedAt: number, now = Date.now()): boolean {

@@ -7,11 +7,11 @@ export const DEVELOPMENT_CHANNEL = 'development'
 /**
  * Channel this bundle records in the app manifest.
  *
- * A build on this channel ships without an update feed of its own, and the
- * upstream policy server only ever offers upstream builds: accepting one would
- * replace this bundle with plain DSH Desktop and drop the prepared catalog, the
- * installer patches and every desktop patch this repository carries. Update
- * checks are therefore off until the channel is named after our own feed.
+ * The marker keeps a packaged build off the upstream rollout service, which
+ * only ever offers upstream builds: accepting one would replace this bundle
+ * with plain DSH Desktop and drop the prepared catalog, the installer patches
+ * and every desktop patch this repository carries. On this channel the update
+ * manager reads this repository's own releases instead.
  */
 export const BUNDLE_CHANNEL = 'bundle'
 

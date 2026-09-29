@@ -8,6 +8,8 @@ Packaged Desktop initializes this service after acquiring the single-instance lo
 
 Automatic checks and the normal manual check obey the same decision. No matching rule means **no update**, not full rollout. An unavailable/malformed policy fails the check without falling back to the public latest feed. A selected version pins the generic provider to `/updates/archive/<version>/`; mismatched metadata cannot enter the available/download UI. Downloads still require user acceptance. Explicit version-history installs retain their existing bypass and downgrade behavior.
 
+That service is what upstream builds read. A bundle build (channel marker `bundle`) answers the same question from its own release feed instead: the version comes from the channel file published with the newest release, and the download comes from that version's release directory. It does not call this service, and it does not read the upstream version index, whose entries would offer an upstream build.
+
 ## Diagnostic contract
 
 `POST https://dshdesktop.com/crash` sends an event UUID, installation UUID, version, combined platform, failure kind/time/message and at most the last 100 log lines. No administrator credential or Harness session token is included intentionally. Common credential patterns and user home paths are redacted before local persistence; arbitrary secrets/business text cannot be exhaustively identified by pattern matching.

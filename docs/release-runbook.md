@@ -36,8 +36,20 @@ publish anything here yet. Releases are published by hand:
 2. Commit, push `main`, then tag that commit **without the `v` prefix** (`0.9.0-1`, not
    `v0.9.0-1`). The `v*` trigger above would otherwise start the upstream pipeline, whose
    macOS jobs and UKey signing step are not available here.
-3. `gh release create <tag> --title "DSH Desktop v<tag>" --latest --notes-file - dist/dsh-desktop-windows-x64-setup.exe`
-
-Attach the installer alone. The `.blockmap` and `latest.yml` belong to the updater set, and the
-bundled app carries a channel of its own that points at no feed — a differential update has
-nothing to read until this product has an update feed of its own.
+3. Build the version index and publish the release with every file the updater reads:
+   ```
+   node scripts/build-bundle-version-index.mjs dist/versions.json
+   gh release create <tag> --title "DSH Desktop v<tag>" --latest --notes-file - \
+     dist/dsh-desktop-windows-x64-setup.exe \
+     dist/dsh-desktop-windows-x64-setup.exe.blockmap \
+     dist/latest.yml \
+     dist/versions.json
+   ```
+   The installer alone is not enough: an installed build learns about a release from `latest.yml`,
+   so a release published without it is read as "no update" by every machine that checks before it
+   is repaired. The blockmap turns the next update into a differential download instead of a
+   415 MB one, and `versions.json` fills the in-app version list (a release without it leaves the
+   list empty, which is honest but useless). The tag is the version — it has no `v` prefix, and the
+   feed builds each archive URL from it. Publish the newest version last or not at all: GitHub's
+   "latest" release is the most recent by date, not by number, and a lower version published after
+   a higher one would not be offered to anyone.

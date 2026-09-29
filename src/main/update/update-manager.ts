@@ -1,14 +1,16 @@
 import { readAppChannel } from '../app-channel'
 import { checkDesktopUpdate } from '../desktop-service'
 import { isPrereleaseVersion, isVersion } from '../desktop-service/service'
+import type { UpdateDecision } from '../desktop-service/service'
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import electronUpdater from 'electron-updater'
-import type { UpdateStatus } from '../../shared/contracts'
+import type { AvailableRelease, UpdateStatus } from '../../shared/contracts'
 import {
   AUTO_INSTALL_ON_APP_QUIT,
   shouldCheckAfterResume,
   supportsAutoUpdates,
   updateChannelEnabled,
+  usesBundleFeed,
   UPDATE_CHECK_INTERVAL_MS,
   UPDATE_STARTUP_DELAY_MS,
   UPDATE_STARTUP_JITTER_MS
@@ -26,8 +28,12 @@ import {
 } from './skipped-version'
 import {
   archiveFeedUrl,
+  bundleArchiveFeedUrl,
+  BUNDLE_FEED_URL,
   compareVersions,
   fetchAvailableReleases,
+  fetchBundleReleases,
+  fetchBundleVersion,
   STABLE_FEED_URL
 } from './version-catalog'
 
@@ -63,7 +69,7 @@ export function registerUpdateHandlers(): void {
   ipcMain.handle('updates:install', () => installDownloadedUpdate())
   ipcMain.handle('updates:skip', (_event, version: unknown) => skipUpdate(version))
   ipcMain.handle('updates:download', () => downloadAvailableUpdate())
-  ipcMain.handle('updates:list-versions', () => fetchAvailableReleases(app.getVersion()))
+  ipcMain.handle('updates:list-versions', () => listAvailableReleases())
   ipcMain.handle('updates:install-version', (_event, version: unknown) =>
     installSpecificVersion(version)
   )
@@ -140,7 +146,7 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
   lastCheckedAt = Date.now()
   selectedUpdateVersion = undefined
   checkPromise = (async () => {
-    const policy = await checkDesktopUpdate()
+    const policy = usesOwnFeed() ? await bundleUpdate() : await checkDesktopUpdate()
     if (!policy.updateAvailable) {
       transition({ type: 'not-available' })
       scheduleReset()
@@ -201,7 +207,7 @@ export async function installSpecificVersion(version: unknown): Promise<UpdateSt
 
   selectedUpdateVersion = version
   pendingDowngrade = compareVersions(version, app.getVersion()) < 0
-  autoUpdater.setFeedURL({ provider: 'generic', url: archiveFeedUrl(version) })
+  autoUpdater.setFeedURL({ provider: 'generic', url: archiveUrlFor(version) })
   autoUpdater.allowDowngrade = true
   autoUpdater.allowPrerelease = isPrereleaseVersion(version)
   manualCheck = true
@@ -222,7 +228,7 @@ export async function installSpecificVersion(version: unknown): Promise<UpdateSt
     scheduleReset()
   } finally {
     checkPromise = undefined
-    autoUpdater.setFeedURL({ provider: 'generic', url: STABLE_FEED_URL })
+    autoUpdater.setFeedURL({ provider: 'generic', url: latestFeedUrl() })
     autoUpdater.allowDowngrade = false
     pendingDowngrade = false
     autoUpdater.allowPrerelease = false
@@ -337,6 +343,49 @@ function appChannel(): string | undefined {
     // A host without app paths carries no marker: keep upstream behavior.
     return undefined
   }
+}
+
+function usesOwnFeed(): boolean {
+  return usesBundleFeed(appChannel())
+}
+
+/** Feed directory of the newest release this build is allowed to read. */
+function latestFeedUrl(): string {
+  return usesOwnFeed() ? BUNDLE_FEED_URL : STABLE_FEED_URL
+}
+
+/** Feed directory holding one version's assets on this build's channel. */
+function archiveUrlFor(version: string): string {
+  return usesOwnFeed() ? bundleArchiveFeedUrl(version) : archiveFeedUrl(version)
+}
+
+/**
+ * The version this bundle's feed offers, read from the feed's own channel file:
+ * a release is offerable exactly when that file is published with it, and the
+ * download then comes from the same release's directory, where the blockmap of
+ * the running version sits for the differential download.
+ */
+async function bundleUpdate(): Promise<UpdateDecision> {
+  const version = await fetchBundleVersion()
+  if (
+    version === undefined ||
+    !isVersion(version) ||
+    compareVersions(version, app.getVersion()) <= 0
+  ) {
+    return { updateAvailable: false }
+  }
+  return { updateAvailable: true, version, feedUrl: bundleArchiveFeedUrl(version) }
+}
+
+/**
+ * The version picker reads the same channel the updater does. Upstream's index
+ * lists upstream archives, and one of those would replace this product, so a
+ * bundle build never reads it.
+ */
+function listAvailableReleases(): Promise<AvailableRelease[]> {
+  return usesOwnFeed()
+    ? fetchBundleReleases(app.getVersion())
+    : fetchAvailableReleases(app.getVersion())
 }
 
 function supportsUpdates(): boolean {

@@ -102,6 +102,8 @@ The public tunnel is optional and forwards only the paired mobile surface; it do
 
 Installed macOS and Windows builds use `electron-updater`. The app checks shortly after startup, every six hours, and after a long system resume. A newly available version is offered before download. Download begins only after user consent, and installation begins only when the user chooses to restart and install. Users can skip one version without suppressing later releases.
 
+A bundle build (channel marker `bundle`) takes its version from the channel file published with its own newest release and downloads from that version's release directory, so the blockmap of the running version is reachable for a differential download. It never asks the upstream rollout service, which answers for upstream builds only. Upstream builds and checkouts without the marker keep reading that service.
+
 Update metadata and artifacts are produced by the native release workflow. macOS arm64 and x64 metadata is merged for the generic provider; the signed Windows installer has its blockmap and metadata regenerated after signing.
 
 ## Desktop customization boundary

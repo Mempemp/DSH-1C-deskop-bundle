@@ -5,10 +5,29 @@ export type { AvailableRelease }
 export const STABLE_FEED_URL = 'https://dshdesktop.com/updates/latest/'
 export const VERSION_INDEX_URL = 'https://dshdesktop.com/updates/versions.json'
 
+/**
+ * This bundle's own feed — the release assets of its repository. The update
+ * check reads the channel file of the newest release from `BUNDLE_FEED_URL` to
+ * learn the version, then points electron-updater at that release's directory
+ * so the differential download can also fetch the blockmap of the version the
+ * user runs now.
+ */
+export const BUNDLE_REPOSITORY_URL = 'https://github.com/Mempemp/DSH-1C-deskop-bundle'
+export const BUNDLE_FEED_URL = `${BUNDLE_REPOSITORY_URL}/releases/latest/download/`
+export const BUNDLE_INDEX_URL = `${BUNDLE_FEED_URL}versions.json`
+/** electron-updater's channel file for the default `latest` channel. */
+export const CHANNEL_FILE = 'latest.yml'
+/** Release assets every published version carries. */
+export const BUNDLE_ARCHIVE_PREFIX = `${BUNDLE_REPOSITORY_URL}/releases/download/`
+
 const INDEX_TIMEOUT_MS = 8_000
 
 export function archiveFeedUrl(version: string): string {
   return `https://dshdesktop.com/updates/archive/${version}/`
+}
+
+export function bundleArchiveFeedUrl(version: string): string {
+  return `${BUNDLE_ARCHIVE_PREFIX}${version}/`
 }
 
 /** Split "1.2.3-rc.1" into ([1,2,3], "rc.1"). Non-numeric segments read as 0. */
@@ -108,6 +127,72 @@ export async function fetchAvailableReleases(
     return releases
       .filter((release) => compareVersions(release.version, currentVersion) !== 0)
       .sort((a, b) => compareVersions(b.version, a.version))
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * The `version` field of an electron-updater channel file (`latest.yml`). The
+ * feed's own metadata is what makes a release offerable: the version is read
+ * from the file the updater itself will read, never guessed from a tag or a URL.
+ */
+export function parseChannelFileVersion(raw: unknown): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  const value = /^version:[ \t]*(.+?)[ \t]*$/m.exec(raw)?.[1]
+  if (value === undefined) return undefined
+  return value.replace(/^['"]|['"]$/g, '')
+}
+
+/**
+ * Version of the newest release on this bundle's feed. The channel file is read
+ * through the `latest` release alias, which GitHub keeps pointed at the newest
+ * published release — no API call and no rate limit.
+ */
+export async function fetchBundleVersion(
+  fetchImpl: typeof fetch = globalThis.fetch
+): Promise<string | undefined> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), INDEX_TIMEOUT_MS)
+  try {
+    const response = await fetchImpl(`${BUNDLE_FEED_URL}${CHANNEL_FILE}`, {
+      signal: controller.signal
+    })
+    if (!response.ok) throw new Error(`Update feed request failed: ${response.status}`)
+    return parseChannelFileVersion(await response.text())
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Releases this build may switch to, newest first. An entry counts only when its
+ * archive is exactly the directory of the version it names inside this
+ * repository: upstream's index lists upstream archives, and installing one would
+ * replace this product with plain DSH Desktop.
+ */
+export function selectOwnReleases(
+  releases: AvailableRelease[],
+  currentVersion: string
+): AvailableRelease[] {
+  return releases
+    .filter((release) => release.archiveUrl === bundleArchiveFeedUrl(release.version))
+    .filter((release) => compareVersions(release.version, currentVersion) !== 0)
+    .sort((a, b) => compareVersions(b.version, a.version))
+}
+
+/** Index of this bundle's own releases. A missing index offers nothing to pick. */
+export async function fetchBundleReleases(
+  currentVersion: string,
+  fetchImpl: typeof fetch = globalThis.fetch
+): Promise<AvailableRelease[]> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), INDEX_TIMEOUT_MS)
+  try {
+    const response = await fetchImpl(BUNDLE_INDEX_URL, { signal: controller.signal })
+    if (response.status === 404) return []
+    if (!response.ok) throw new Error(`Version index request failed: ${response.status}`)
+    return selectOwnReleases(parseVersionIndex(await response.json()), currentVersion)
   } finally {
     clearTimeout(timer)
   }
