@@ -1,0 +1,27 @@
+THIRD-PARTY LICENSES
+===================
+
+本发布物遵循「运行时依赖 = 构建期内联」模型，将下列第三方库打包进产物
+（随包分发的 vendored 裸二进制单列一段并标出来源）；
+依其许可证条款随附许可文本与版权声明。
+生成：scripts/collect-licenses.ts（issue #13）。本仓库自身以 MIT 许可发布。
+
+
+=====================================================================
+yaml@2.9.0 — ISC
+来源：https://www.npmjs.com/package/yaml
+=====================================================================
+
+Copyright Eemeli Aro <eemeli@gmail.com>
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.

@@ -74,15 +74,20 @@
 - **Русский интерфейс** ([dsh-russian-lang](https://github.com/GooDAnDReaDY/dsh-russian-lang)) —
   предвыбран; умные функции ввода (Smart UX) по умолчанию выключены и включаются
   галочками в настройках плагина.
+- **Уведомления на русском** ([dsh-notifier-ru](packages/dsh-notifier-ru)) —
+  системный тост Windows, когда агенту нужен ответ, требуется разрешение или
+  задача закончилась (в том числе с ошибкой); звук, каналы ntfy / Gotify / Bark /
+  webhook и страница настроек плагина на русском.
 
 ## Состав сборки
 
 Полный список — в `installer-flavor.yml` (источники) и
 `build/installer-catalog/manifest.json` (зафиксированные версии и digest):
 
-- 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+- 13 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
-  таблицы Univer) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
+  таблицы Univer), `dsh-notifier-ru` (русские уведомления: системный тост Windows,
+  звук и каналы push) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
   агента: правила, подача памяти и MCP-сервер `engram` внутри пакета);
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
 - MCP-сервер `1c-platform-context`: справка по объектной модели **установленной**
@@ -123,6 +128,9 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- [dsh-notifier](https://github.com/wingsky-1/dsh-plugin-hub) — уведомления о ходе
+  работы агента: системный тост Windows, звук и каналы ntfy / Gotify / Bark /
+  webhook. В сборке едет русская редакция `dsh-notifier-ru` (MIT, © wingsky-1);
 - [Univer](https://github.com/dream-num/dsh-univer-office) (DreamNum Co., Ltd.) —
   документы, таблицы и презентации прямо в интерфейсе;
 - [v8std](https://v8std.ru/) — публичный MCP-сервер стандартов разработки 1С
