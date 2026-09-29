@@ -181,6 +181,45 @@ export function selectOwnReleases(
     .sort((a, b) => compareVersions(b.version, a.version))
 }
 
+/**
+ * Whether a release archive carries the updater's channel file. An archive that
+ * never had one cannot be installed by the app: the updater would have no version
+ * and no checksum to point at it — the case for every release published before
+ * this bundle had a feed. Any other failure counts as "unknown" and keeps the
+ * release listed, so a network hiccup cannot silently empty the picker.
+ */
+async function channelFileState(
+  archiveUrl: string,
+  fetchImpl: typeof fetch
+): Promise<'present' | 'absent' | 'unknown'> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), INDEX_TIMEOUT_MS)
+  try {
+    const response = await fetchImpl(`${archiveUrl}${CHANNEL_FILE}`, {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: controller.signal
+    })
+    if (response.status === 404) return 'absent'
+    return response.ok ? 'present' : 'unknown'
+  } catch {
+    return 'unknown'
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Drops the releases whose own archive says the app cannot install them. */
+export async function dropUninstallableReleases(
+  releases: AvailableRelease[],
+  fetchImpl: typeof fetch = globalThis.fetch
+): Promise<AvailableRelease[]> {
+  const states = await Promise.all(
+    releases.map((release) => channelFileState(release.archiveUrl, fetchImpl))
+  )
+  return releases.filter((_, index) => states[index] !== 'absent')
+}
+
 /** Index of this bundle's own releases. A missing index offers nothing to pick. */
 export async function fetchBundleReleases(
   currentVersion: string,
@@ -192,7 +231,8 @@ export async function fetchBundleReleases(
     const response = await fetchImpl(BUNDLE_INDEX_URL, { signal: controller.signal })
     if (response.status === 404) return []
     if (!response.ok) throw new Error(`Version index request failed: ${response.status}`)
-    return selectOwnReleases(parseVersionIndex(await response.json()), currentVersion)
+    const releases = selectOwnReleases(parseVersionIndex(await response.json()), currentVersion)
+    return dropUninstallableReleases(releases, fetchImpl)
   } finally {
     clearTimeout(timer)
   }

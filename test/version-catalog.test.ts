@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   archiveFeedUrl,
+  bundleArchiveFeedUrl,
   compareVersions,
+  dropUninstallableReleases,
   fetchAvailableReleases,
   parseVersionIndex,
   STABLE_FEED_URL,
@@ -69,6 +71,49 @@ describe('parseVersionIndex', () => {
     expect(parseVersionIndex(null)).toEqual([])
     expect(parseVersionIndex({})).toEqual([])
     expect(parseVersionIndex('nope')).toEqual([])
+  })
+})
+
+describe('releases the app cannot install', () => {
+  const releases = [
+    { version: '0.10.0-3', tag: '0.10.0-3', archiveUrl: bundleArchiveFeedUrl('0.10.0-3') },
+    { version: '0.10.0-2', tag: '0.10.0-2', archiveUrl: bundleArchiveFeedUrl('0.10.0-2') }
+  ]
+
+  it('drops a release whose archive carries no channel file', async () => {
+    const fetchImpl = (async (input: RequestInfo | URL) =>
+      new Response('version: 0.10.0-3\n', {
+        status: String(input).includes('0.10.0-3') ? 200 : 404
+      })) as unknown as typeof fetch
+
+    expect((await dropUninstallableReleases(releases, fetchImpl)).map((r) => r.version)).toEqual([
+      '0.10.0-3'
+    ])
+  })
+
+  it('keeps releases whose probe failed for another reason, so offline does not empty the list', async () => {
+    const offline = (async () => {
+      throw new Error('offline')
+    }) as unknown as typeof fetch
+
+    expect((await dropUninstallableReleases(releases, offline)).map((r) => r.version)).toEqual([
+      '0.10.0-3',
+      '0.10.0-2'
+    ])
+  })
+
+  it('asks each archive for its own channel file', async () => {
+    const asked: string[] = []
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      asked.push(String(input))
+      return new Response('', { status: 200 })
+    }) as unknown as typeof fetch
+
+    await dropUninstallableReleases(releases, fetchImpl)
+    expect(asked).toEqual([
+      `${bundleArchiveFeedUrl('0.10.0-3')}latest.yml`,
+      `${bundleArchiveFeedUrl('0.10.0-2')}latest.yml`
+    ])
   })
 })
 
