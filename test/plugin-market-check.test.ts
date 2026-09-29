@@ -266,4 +266,45 @@ describe('plugin-market-check', () => {
     expect(await check(fetchFn, { hasLocalIssue: true })).toMatchObject({ upgradeReady: true, upgradeVersion: '1.1.0' })
     expect(fetchFn).toHaveBeenCalledTimes(3)
   })
+
+  it.each(['zh', 'en'] as const)('reads a package no registry has as not in the market, not as a market outage (%s)', async (locale) => {
+    const notFound = vi.fn<typeof fetch>(async () => new Response('{"error":"Not found"}', { status: 404 }))
+    const report = await check(notFound, { hasLocalIssue: true, locale })
+
+    expect(report).toMatchObject({ healthStatus: 'not-in-market', upgradeReady: false })
+    expect(report.healthLabel).toContain(locale === 'zh' ? '市场未收录' : 'Not in the market')
+    // Ничего не «повторяем»: пакета в реестрах нет, обновление приходит не из рынка.
+    expect(report.detail).not.toContain('retry the update check')
+    expect(report.upgradeVersion).toBeUndefined()
+    // Спрошены оба реестра: «нет в рынке» — вывод только по единогласию.
+    expect(notFound).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps a mixed answer as an unavailable market rather than an unpublished plugin', async () => {
+    const fetchFn = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('', { status: 404 }))
+      .mockResolvedValueOnce(new Response('', { status: 503 }))
+    const report = await check(fetchFn, { hasLocalIssue: true })
+
+    expect(report).toMatchObject({ healthStatus: 'check-failed', upgradeReady: false })
+    expect(report.detail).toContain('HTTP 404')
+    expect(report.detail).toContain('HTTP 503')
+  })
+
+  it('remembers an unpublished package within the window the caller asks for', async () => {
+    const notFound = vi.fn<typeof fetch>(async () => new Response('', { status: 404 }))
+    const once = () => evaluatePluginMarketCompatibility({
+      packageName: 'bundle-only-plugin',
+      installedVersion: '1.0.0',
+      currentRuntimeVersion: '0.1.2',
+      hasLocalIssue: true,
+      fetchFn: notFound,
+      failureTtlMs: 60_000
+    })
+
+    expect((await once()).healthStatus).toBe('not-in-market')
+    // Кэш помнит именно «нет в рынке»: повтор в окне не превращается в аварию маркета.
+    expect((await once()).healthStatus).toBe('not-in-market')
+    expect(notFound).toHaveBeenCalledTimes(2)
+  })
 })

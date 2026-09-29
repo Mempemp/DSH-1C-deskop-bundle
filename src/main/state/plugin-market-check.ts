@@ -30,6 +30,12 @@ export type PluginHealthStatus =
   | 'incompatible-no-fix'
   | 'checking'
   | 'check-failed'
+  /**
+   * Every registry answered "no such package". The plugin is delivered outside
+   * the market (shipped with the desktop, installed from a file), so there is
+   * nothing to retry and nothing to fetch: a market outage it is not.
+   */
+  | 'not-in-market'
 
 export interface PluginHealthReport {
   packageName: string
@@ -222,7 +228,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000
  * timeouts again within that window; a deliberate user retry passes nothing
  * and always makes a new request.
  */
-const failureCache = new Map<string, { reason: string; timestamp: number }>()
+const failureCache = new Map<string, { reason: string; timestamp: number; notFound?: boolean }>()
 
 export async function fetchPluginVersionsFromRegistry(
   packageName: string,
@@ -232,6 +238,12 @@ export async function fetchPluginVersionsFromRegistry(
     failureTtlMs?: number
     fetchFn?: typeof fetch
     onFailure?: (reason: string) => void
+    /**
+     * Called when every registry answered HTTP 404: the package is not
+     * published. Lets the caller tell that apart from an unreachable market
+     * without parsing the failure strings.
+     */
+    onNotFound?: () => void
   }
 ): Promise<NpmPackageVersions | null> {
   const primaryRegistry = (options?.registry || DEFAULT_NPM_REGISTRY).replace(/\/$/, '')
@@ -242,6 +254,7 @@ export async function fetchPluginVersionsFromRegistry(
   const failed = failureCache.get(cacheKey)
   if (failureTtlMs > 0 && failed && Date.now() - failed.timestamp < failureTtlMs) {
     options?.onFailure?.(failed.reason)
+    if (failed.notFound) options?.onNotFound?.()
     return null
   }
   const failures: string[] = []
@@ -249,12 +262,16 @@ export async function fetchPluginVersionsFromRegistry(
     failures.push(reason)
     options?.onFailure?.(reason)
   }
+  /** Registries actually asked, and how many of them answered "no such package". */
+  let attempted = 0
+  let missing = 0
 
   const registries = [...new Set([primaryRegistry, FALLBACK_NPM_REGISTRY])]
   const timeoutMs = options?.timeoutMs ?? DEFAULT_MARKET_CHECK_TIMEOUT_MS
   const fetchImpl = options?.fetchFn ?? fetch
 
   for (const registry of registries) {
+    attempted += 1
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
@@ -265,6 +282,7 @@ export async function fetchPluginVersionsFromRegistry(
         headers: { accept: 'application/json', 'user-agent': 'dsh-desktop' }
       })
       if (!res.ok) {
+        if (res.status === 404) missing += 1
         reportFailure(`${registry}: HTTP ${res.status}`)
         continue
       }
@@ -288,7 +306,18 @@ export async function fetchPluginVersionsFromRegistry(
       clearTimeout(timer)
     }
   }
-  if (failureTtlMs > 0) failureCache.set(cacheKey, { reason: failures.join('; '), timestamp: Date.now() })
+  // Every registry that answered said "no such package". That is a fact about
+  // the package — it is delivered outside the market — not a market outage, and
+  // both registries agreeing is the only case that counts as one.
+  const unpublished = attempted > 0 && missing === attempted
+  if (failureTtlMs > 0) {
+    failureCache.set(cacheKey, {
+      reason: failures.join('; '),
+      timestamp: Date.now(),
+      ...(unpublished ? { notFound: true } : {})
+    })
+  }
+  if (unpublished) options?.onNotFound?.()
   // A user retry must make a new request after a transient network failure.
   return null
 }
@@ -413,15 +442,33 @@ export async function evaluatePluginMarketCompatibility(options: {
   const isZh = locale === 'zh'
 
   const failures: string[] = []
+  /** Set when every registry answered 404 — the package is simply not published. */
+  let unpublished = false
   const metadata = await fetchPluginVersionsFromRegistry(packageName, {
     registry: options.registry,
     timeoutMs: options.timeoutMs,
     failureTtlMs: options.failureTtlMs,
     fetchFn: options.fetchFn,
-    onFailure: reason => failures.push(reason)
+    onFailure: reason => failures.push(reason),
+    onNotFound: () => { unpublished = true }
   })
 
   if (!metadata) {
+    // A plugin the market never had is not a failed check: its updates come from
+    // wherever it was installed from (the desktop's own catalog, a local file),
+    // and "retry the update check" would send the user after nothing.
+    if (unpublished) {
+      return {
+        packageName,
+        installedVersion,
+        healthStatus: 'not-in-market',
+        healthLabel: isZh ? '市场未收录该插件' : 'Not in the market',
+        upgradeReady: false,
+        detail: isZh
+          ? '该插件不发布到市场（随桌面版分发或由文件安装），更新来自那里，而不是市场检查。'
+          : 'This plugin is not published to the market (it ships with the desktop or was installed from a file); its updates come from there, not from the market check.'
+      }
+    }
     return {
       packageName,
       installedVersion,
