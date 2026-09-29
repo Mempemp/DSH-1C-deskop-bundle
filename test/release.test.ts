@@ -334,9 +334,9 @@ describe('GitHub release contract', () => {
     )
 
     expect(packageJson.dependencies['electron-updater']).toBeTruthy()
-    // This bundle ships its own feed, not the upstream one: the `bundle` channel
-    // marker asserted below is what keeps a packaged build off dshdesktop.com,
-    // and `build.publish` names the feed a future release would publish to.
+    // This bundle ships its own feed, not the upstream one: `build.publish`
+    // names it, and the `bundle` channel marker asserted below is what keeps a
+    // packaged build off dshdesktop.com.
     expect(packageJson.build.publish).toEqual([
       {
         provider: 'generic',
@@ -344,9 +344,6 @@ describe('GitHub release contract', () => {
       }
     ])
     expect(packageJson.build.win.verifyUpdateCodeSignature).toBe(false)
-    // The channel marker is what keeps this bundle off the upstream rollout
-    // service: without it a packaged build would offer to replace itself with
-    // plain DSH Desktop.
     expect(packageJson.build.extraMetadata?.dshDesktopChannel).toBe('bundle')
     // The publish URL and the feed the update check reads have to be one
     // address: the app asks for the file the installer writes next to itself.
