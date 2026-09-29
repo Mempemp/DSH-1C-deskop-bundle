@@ -6,7 +6,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
+  closeSync,
   readFileSync,
+  readSync,
   readdirSync,
   rmSync,
   statSync,
@@ -379,6 +382,20 @@ function tarListMatchesNeedle(stdout, needle) {
 }
 
 /**
+ * In git-bash / MSYS the PATH starts with MSYS tar, which reads `C:\...` as a
+ * remote host ("tar: Cannot connect to C: resolve failed"). Windows ships bsdtar
+ * in System32 and it handles both tar and zip, so resolve the binary explicitly
+ * instead of trusting PATH.
+ */
+export function tarBinary() {
+  if (process.platform === 'win32') {
+    const systemTar = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe')
+    if (existsSync(systemTar)) return systemTar
+  }
+  return 'tar'
+}
+
+/**
  * @param {string} archive
  * @param {string} relativePath
  */
@@ -388,10 +405,10 @@ export function tarballContainsPath(archive, relativePath) {
   // Prefer a targeted member list so bundled node_modules cannot blow the
   // default 1 MiB spawn buffer (false "packed plugin does not contain main").
   for (const member of [`package/${needle}`, needle]) {
-    const targeted = spawnSync('tar', ['-tzf', archive, member], listOptions)
+    const targeted = spawnSync(tarBinary(), ['-tzf', archive, member], listOptions)
     if (targeted.status === 0 && tarListMatchesNeedle(targeted.stdout, needle)) return true
   }
-  const result = spawnSync('tar', ['-tzf', archive], listOptions)
+  const result = spawnSync(tarBinary(), ['-tzf', archive], listOptions)
   if (result.status !== 0) return false
   return tarListMatchesNeedle(result.stdout, needle)
 }
@@ -614,10 +631,49 @@ export function parseGitSourceUrl(url) {
   return { ownerRepo, ref, subpath, archiveUrl: `https://codeload.github.com/${ownerRepo}/zip/${ref}` }
 }
 
+const ZIP_EOCD_SIGNATURE = 0x06054b50
+const ZIP_EOCD_SIZE = 22
+const ZIP_MAX_COMMENT = 0xffff
+
 /**
- * @param {string} url
- * @param {string} destination
+ * A download can end early without an error: codeload sends the archive
+ * chunked, so there is no content-length to compare against, and an interrupted
+ * stream still closes cleanly. The truncated file only shows up later, when tar
+ * fails halfway through extraction ("ZIP decompression failed"), which aborts
+ * the whole catalog run after its downloads. Checking the End of central
+ * directory record tells a complete archive from a cut one right away, so
+ * downloadFile can retry instead.
+ *
+ * @param {string} archive
  */
+export function assertArchiveComplete(archive) {
+  if (!archive.endsWith('.zip')) return
+  const size = statSync(archive).size
+  const window = Math.min(size, ZIP_EOCD_SIZE + ZIP_MAX_COMMENT)
+  if (window < ZIP_EOCD_SIZE) throw new Error(`incomplete zip archive: ${size} bytes`)
+  const handle = openSync(archive, 'r')
+  try {
+    const tail = Buffer.alloc(window)
+    readSync(handle, tail, 0, window, size - window)
+    let at = -1
+    for (let offset = tail.length - ZIP_EOCD_SIZE; offset >= 0; offset -= 1) {
+      if (tail.readUInt32LE(offset) === ZIP_EOCD_SIGNATURE) {
+        at = offset
+        break
+      }
+    }
+    if (at < 0) throw new Error('incomplete zip archive: no end of central directory record')
+    const directorySize = tail.readUInt32LE(at + 12)
+    const directoryOffset = tail.readUInt32LE(at + 16)
+    const declared = directoryOffset + directorySize
+    if (declared > size) {
+      throw new Error(`incomplete zip archive: ${declared} bytes declared, ${size} downloaded`)
+    }
+  } finally {
+    closeSync(handle)
+  }
+}
+
 /**
  * @param {string} url
  * @param {string} destination
@@ -635,6 +691,7 @@ export async function downloadFile(url, destination) {
       }
       mkdirSync(dirname(destination), { recursive: true })
       await pipeline(response.body, createWriteStream(destination))
+      assertArchiveComplete(destination)
       catalogLog(`download wrote ${destination}`)
       return
     } catch (error) {
@@ -654,7 +711,7 @@ export async function downloadFile(url, destination) {
  */
 export function extractArchive(archive, destination) {
   mkdirSync(destination, { recursive: true })
-  const result = spawnSync('tar', ['-xf', archive, '-C', destination], { encoding: 'utf8' })
+  const result = spawnSync(tarBinary(), ['-xf', archive, '-C', destination], { encoding: 'utf8' })
   if (result.status !== 0) {
     throw new Error(`tar extract failed: ${(result.stderr || result.stdout || '').trim()}`)
   }
