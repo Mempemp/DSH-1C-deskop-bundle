@@ -110,13 +110,13 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d305973030529cae79a865091dcf086a60c0f6c2',
+        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43941199a2d251506eafbe0b5273d8191fb9460d',
         path: 'dsh-rlm-tools-bsl'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#1d84a62b38db97943098f6bedb6cf58696451943',
+        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#fcb0357cf612db265114c95bd5f8304bad1fceeb',
         path: 'dsh-bsl-editor'
       },
       {
@@ -124,6 +124,7 @@ describe('installer flavor schema', () => {
         from: 'npm',
         spec: '@goodandready/dsh-russian-lang@0.3.12'
       },
+      { kind: 'plugin', from: 'local', path: './packages/dsh-notifier-ru' },
       {
         kind: 'plugin',
         from: 'npm',
@@ -140,7 +141,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/dsh-engram-memory.git#a71e20fa6568af45543deae5f1453585691f2ae1'
+        url: 'https://github.com/Mempemp/dsh-engram-memory.git#9d3fb8d1d60139ed4f7bf65ed2448a88e7dfaecc'
       },
       {
         kind: 'payload',

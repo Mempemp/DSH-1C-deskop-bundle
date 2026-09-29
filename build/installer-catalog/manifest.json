@@ -1,6 +1,6 @@
 {
   "name": "DSH Desktop",
-  "version": "0.10.0-1",
+  "version": "0.10.0-2",
   "id": "dsh-desktop",
   "items": [
     {
@@ -37,7 +37,7 @@
       "version": "0.21.1",
       "label": "Plugin: dsh-better-sidebar",
       "file": "plugins/dsh-better-sidebar-0.21.1.tgz",
-      "digest": "c5f2f631ac7c8f0e1e37839e2cf5260075e0a07f491be6f41b6e5a6498172d6d"
+      "digest": "6c36953b3ee0f9cabf06a6cac4c17132659c43ee24a57a4b289b147b380af90c"
     },
     {
       "kind": "plugin",
@@ -70,19 +70,19 @@
       "kind": "plugin",
       "id": "dsh-rlm-tools-bsl",
       "name": "dsh-rlm-tools-bsl",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "label": "Plugin: dsh-rlm-tools-bsl",
-      "file": "plugins/dsh-rlm-tools-bsl-0.1.5.tgz",
-      "digest": "cc0654a6dc6ef459cb1cd35645b23a66bd0150b21648e72173eab3505ae6e59f"
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.6.tgz",
+      "digest": "1b9b9762c8ce7a8fdad17789b656be0119f5830b3eaca4e686c199d0194a53a3"
     },
     {
       "kind": "plugin",
       "id": "dsh-bsl-editor",
       "name": "dsh-bsl-editor",
-      "version": "0.5.1",
+      "version": "0.5.2",
       "label": "Plugin: dsh-bsl-editor",
-      "file": "plugins/dsh-bsl-editor-0.5.1.tgz",
-      "digest": "f48924d03676cff77efaeb2225dc924c26edf69cec9742073741cefa43d9b4b4"
+      "file": "plugins/dsh-bsl-editor-0.5.2.tgz",
+      "digest": "41e38ad89df2149b33817b5a91f3b7650e77c16bc07319ade51df62fe25505f2"
     },
     {
       "kind": "plugin",
@@ -95,12 +95,21 @@
     },
     {
       "kind": "plugin",
+      "id": "dsh-notifier-ru",
+      "name": "dsh-notifier-ru",
+      "version": "0.2.7",
+      "label": "Plugin: dsh-notifier-ru",
+      "file": "plugins/dsh-notifier-ru-0.2.7.tgz",
+      "digest": "c6deeb7c5e7443f64e8ca0fcd5eda95083c8a8e528aa4df144785733365f3293"
+    },
+    {
+      "kind": "plugin",
       "id": "dsh-univer-office",
       "name": "dsh-univer-office",
       "version": "0.3.5",
       "label": "Plugin: dsh-univer-office",
       "file": "plugins/dsh-univer-office-0.3.5.tgz",
-      "digest": "226748980bc95e5eb487eb421af7fed292589db28e2cf4960319f2385a5236fd"
+      "digest": "61da1810bda7d04fd232fa22955574f178a7d4de5a6863114f9bc070b6c3a31e"
     },
     {
       "kind": "mcp",
@@ -114,10 +123,10 @@
       "kind": "plugin",
       "id": "dsh-engram-memory",
       "name": "dsh-engram-memory",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "label": "Plugin: dsh-engram-memory",
-      "file": "plugins/dsh-engram-memory-0.1.3.tgz",
-      "digest": "e24ba4da74f1d419e7a522ceb03ad2070af181fe1f4dc3864069eba00b80e672"
+      "file": "plugins/dsh-engram-memory-0.1.4.tgz",
+      "digest": "03faff75765d7ada4e3bbf1f420026941cb68710914f4e64add1a965d8abecad"
     },
     {
       "kind": "payload",

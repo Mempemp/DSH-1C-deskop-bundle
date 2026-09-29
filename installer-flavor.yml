@@ -61,7 +61,7 @@ sources:
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d305973030529cae79a865091dcf086a60c0f6c2
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43941199a2d251506eafbe0b5273d8191fb9460d
     path: dsh-rlm-tools-bsl
   - kind: plugin
     from: git
@@ -74,6 +74,16 @@ sources:
   - kind: plugin
     from: npm
     spec: "@goodandready/dsh-russian-lang@0.3.12"
+  # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
+  # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
+  # текст уведомлений и страницу настроек только на китайском и английском, выбора
+  # языка у него нет. Здесь лежит его сборка с русским текстом: дельта — данные в
+  # packages/dsh-notifier-ru/tools/, манифест и LICENSE (MIT, © wingsky-1),
+  # пересборка — `node tools/localize.mjs`. `from: local`, потому что апстрим
+  # публикуется уже собранным и правится именно сборка.
+  - kind: plugin
+    from: local
+    path: ./packages/dsh-notifier-ru
   # Univer office documents (spreadsheets, decks, docs) with inline previews and
   # a floating worktree window. Taken from the market: `dsh-univer-office` is the
   # npm name its catalog entry carries (owner dream-num), so the offline seed and
