@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { desktopLocaleText, type DesktopLocale } from './application-locale'
 
 interface PackageMetadata {
   version?: unknown
@@ -32,11 +33,15 @@ export function bundledHarnessVersion(appPath: string): string | undefined {
 export function aboutDetail(
   desktopVersion: string,
   harnessVersion: string | undefined,
-  locale: 'en' | 'zh'
+  locale: DesktopLocale
 ): string {
-  const harness = harnessVersion ?? (locale === 'zh' ? '未知' : 'Unknown')
+  const harness =
+    harnessVersion ?? desktopLocaleText(locale, { en: 'Unknown', zh: '未知', ru: 'неизвестно' })
   if (locale === 'zh') {
     return `DSH Desktop 版本：${desktopVersion}\n内置 Harness 版本：${harness}\n\nHarness 随 DSH Desktop 更新。`
+  }
+  if (locale === 'ru') {
+    return `Версия DSH Desktop: ${desktopVersion}\nВерсия встроенного Harness: ${harness}\n\nHarness обновляется вместе с DSH Desktop.`
   }
   return `DSH Desktop version: ${desktopVersion}\nBundled Harness version: ${harness}\n\nHarness is updated with DSH Desktop.`
 }

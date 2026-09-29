@@ -158,7 +158,14 @@ import {
   stopUpdateManager
 } from './update/update-manager'
 import type { RuntimeSnapshot } from '../shared/contracts'
-import { resolveHarnessLocale } from './application-locale'
+import {
+  desktopLocaleText,
+  resolveDesktopLocale,
+  resolveHarnessLocale,
+  type DesktopLocale,
+  type HarnessLocale
+} from './application-locale'
+import { readLocalePreference } from './locale-preference'
 import { installContextMenu } from './context-menu'
 import {
   WINDOWS_TITLEBAR_HEIGHT,
@@ -700,18 +707,17 @@ function dshBrandLogoPath(variant: 'light' | 'dark'): string {
   )
 }
 
-function harnessLocale(): 'en' | 'zh' {
-  try {
-    const settings = parse(
-      readFileSync(join(app.getPath('userData'), 'harness', 'settings.yaml'), 'utf8')
-    ) as { locale?: { preference?: unknown } }
-    return resolveHarnessLocale(
-      settings.locale?.preference,
-      app.getPreferredSystemLanguages()
-    )
-  } catch {
-    return resolveHarnessLocale(undefined, app.getPreferredSystemLanguages())
-  }
+/** The harness subprocess speaks English and Chinese only. */
+function harnessLocale(): HarnessLocale {
+  return resolveHarnessLocale(readLocalePreference(), app.getPreferredSystemLanguages())
+}
+
+/**
+ * The shell's own surfaces (About window, tray, native dialogs) resolve apart
+ * from the harness: a Russian system must not inherit the harness's English.
+ */
+function desktopLocale(): DesktopLocale {
+  return resolveDesktopLocale(readLocalePreference(), app.getPreferredSystemLanguages())
 }
 
 function gpuFallbackStatePath(): string {
@@ -908,8 +914,12 @@ function respondToGpuFallbackSignal(
   return true
 }
 
+// Chromium's language is what `navigator.language` reports to the update card,
+// so a hardcoded English default would keep the card English on a Russian system.
 function configureApplicationLocale(): void {
-  app.commandLine.appendSwitch('lang', harnessLocale() === 'zh' ? 'zh-CN' : 'en-US')
+  const locale = desktopLocale()
+  const chromium = locale === 'zh' ? 'zh-CN' : locale === 'ru' ? 'ru-RU' : 'en-US'
+  app.commandLine.appendSwitch('lang', chromium)
 }
 
 function harnessThemePreference(): 'light' | 'dark' | 'system' {
@@ -1006,14 +1016,24 @@ function restoreMainWindow(): void {
 function ensureTray(): void {
   if (process.platform !== 'win32' || tray) return
 
-  const locale = harnessLocale()
+  const locale = desktopLocale()
   tray = new Tray(desktopIconPath())
   tray.setToolTip('DSH Desktop')
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: locale === 'zh' ? '显示 DSH Desktop' : 'Show DSH Desktop', click: restoreMainWindow },
+      {
+        label: desktopLocaleText(locale, {
+          en: 'Show DSH Desktop',
+          zh: '显示 DSH Desktop',
+          ru: 'Открыть DSH Desktop'
+        }),
+        click: restoreMainWindow
+      },
       { type: 'separator' },
-      { label: locale === 'zh' ? '退出' : 'Exit', click: () => app.quit() }
+      {
+        label: desktopLocaleText(locale, { en: 'Exit', zh: '退出', ru: 'Выход' }),
+        click: () => app.quit()
+      }
     ])
   )
   tray.on('click', restoreMainWindow)
@@ -1895,11 +1915,12 @@ function registerHarnessHandlers(): void {
   ipcMain.removeHandler('desktop:about-info')
   ipcMain.handle('desktop:about-info', (event) => {
     assertTrustedMainWindowEvent(event)
-    const locale = harnessLocale()
+    const locale = desktopLocale()
     return {
       desktopVersion: app.getVersion(),
       harnessVersion:
-        bundledHarnessVersion(bundledRuntimeRoot()) ?? (locale === 'zh' ? '未知' : 'Unknown'),
+        bundledHarnessVersion(bundledRuntimeRoot()) ??
+        desktopLocaleText(locale, { en: 'Unknown', zh: '未知', ru: 'неизвестно' }),
       locale
     }
   })
@@ -1957,11 +1978,12 @@ function assertTrustedSafeModeManagerEvent(event: IpcMainInvokeEvent): void {
 }
 
 async function showAbout(window: BrowserWindow): Promise<void> {
-  const locale = harnessLocale()
+  const locale = desktopLocale()
   const info = {
     desktopVersion: app.getVersion(),
     harnessVersion:
-      bundledHarnessVersion(bundledRuntimeRoot()) ?? (locale === 'zh' ? '未知' : 'Unknown'),
+      bundledHarnessVersion(bundledRuntimeRoot()) ??
+      desktopLocaleText(locale, { en: 'Unknown', zh: '未知', ru: 'неизвестно' }),
     locale
   }
   if (window && !window.isDestroyed() && window.webContents && !window.webContents.isDestroyed()) {
@@ -1973,17 +1995,28 @@ async function showAbout(window: BrowserWindow): Promise<void> {
     }
   }
 
-  const checkForUpdatesLabel = locale === 'zh' ? '检查更新' : 'Check for Updates'
+  const checkForUpdatesLabel = desktopLocaleText(locale, {
+    en: 'Check for Updates',
+    zh: '检查更新',
+    ru: 'Проверить обновления'
+  })
   const result = await dialog.showMessageBox(window, {
     type: 'info',
     title: 'DSH Desktop',
-    message: locale === 'zh' ? '关于 DSH Desktop' : 'About DSH Desktop',
+    message: desktopLocaleText(locale, {
+      en: 'About DSH Desktop',
+      zh: '关于 DSH Desktop',
+      ru: 'О программе DSH Desktop'
+    }),
     detail: aboutDetail(
       app.getVersion(),
       bundledHarnessVersion(bundledRuntimeRoot()),
       locale
     ),
-    buttons: [checkForUpdatesLabel, locale === 'zh' ? '关闭' : 'Close'],
+    buttons: [
+      checkForUpdatesLabel,
+      desktopLocaleText(locale, { en: 'Close', zh: '关闭', ru: 'Закрыть' })
+    ],
     defaultId: 1,
     cancelId: 1,
     noLink: true
@@ -3222,10 +3255,13 @@ async function showSafeModeManager(initial?: {
 }
 
 function installMenu(): void {
-  const isChinese = harnessLocale() === 'zh'
-  const checkForUpdatesLabel = isChinese
-    ? '检查更新…'
-    : 'Check for Updates…'
+  const locale = desktopLocale()
+  const isChinese = locale === 'zh'
+  const checkForUpdatesLabel = desktopLocaleText(locale, {
+    en: 'Check for Updates…',
+    zh: '检查更新…',
+    ru: 'Проверить обновления…'
+  })
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(process.platform === 'darwin'
       ? [
@@ -3233,7 +3269,11 @@ function installMenu(): void {
           label: app.name,
           submenu: [
             {
-              label: isChinese ? '关于 DSH Desktop' : 'About DSH Desktop',
+              label: desktopLocaleText(locale, {
+                en: 'About DSH Desktop',
+                zh: '关于 DSH Desktop',
+                ru: 'О программе DSH Desktop'
+              }),
               click: () => {
                 if (mainWindow && !mainWindow.isDestroyed()) {
                   void showAbout(mainWindow).catch(showUnexpectedError)

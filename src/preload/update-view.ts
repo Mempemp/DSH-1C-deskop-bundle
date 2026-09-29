@@ -243,3 +243,76 @@ export function updateCardLabels(locale: UpdateLocale): UpdateCardLabels {
     skip: text(locale, { en: 'Skip this version', zh: '跳过此版本', ru: 'Пропустить эту версию' })
   }
 }
+
+/** The About window: where a manual check and a rollback start. */
+export interface AboutLabels {
+  windowTitle: string
+  close: string
+  versionLine: string
+  harnessLine: string
+  harnessHint: string
+  selectVersion: string
+  checkUpdates: string
+  loadingVersions: string
+  versionListError: string
+  newerGroup: string
+  olderGroup: string
+  noVersions: string
+  confirmInstall: (version: string) => string
+  confirmDowngrade: (version: string, current: string) => string
+}
+
+export function aboutLabels(locale: UpdateLocale): AboutLabels {
+  const zh = {
+    windowTitle: '关于 DSH Desktop',
+    close: '关闭',
+    versionLine: 'DSH Desktop 版本： ',
+    harnessLine: '内置 Harness 版本： ',
+    harnessHint: 'Harness 随 DSH Desktop 更新。',
+    selectVersion: '选择版本',
+    checkUpdates: '检查更新',
+    loadingVersions: '正在获取版本列表…',
+    versionListError: '暂时无法获取版本列表',
+    newerGroup: '较新版本',
+    olderGroup: '历史版本（回退）',
+    noVersions: '没有可选的其它版本',
+    confirmInstall: (version: string) => `将安装 ${version}，确定继续？`,
+    confirmDowngrade: (version: string, current: string) =>
+      `将降级到 ${version}（当前 ${current}）。降级不会迁移新版本写入的数据，可能导致配置不兼容。确定继续？`
+  }
+  const en = {
+    windowTitle: 'About DSH Desktop',
+    close: 'Close',
+    versionLine: 'DSH Desktop version: ',
+    harnessLine: 'Bundled Harness version: ',
+    harnessHint: 'Harness is updated with DSH Desktop.',
+    selectVersion: 'Select version',
+    checkUpdates: 'Check for updates',
+    loadingVersions: 'Loading versions…',
+    versionListError: 'Unable to load version list',
+    newerGroup: 'Newer versions',
+    olderGroup: 'Roll back',
+    noVersions: 'No other versions available',
+    confirmInstall: (version: string) => `Install ${version}?`,
+    confirmDowngrade: (version: string, current: string) =>
+      `This downgrades to ${version} (currently ${current}). A downgrade does not migrate data written by newer versions and may be config-incompatible. Continue?`
+  }
+  const ru = {
+    windowTitle: 'О программе DSH Desktop',
+    close: 'Закрыть',
+    versionLine: 'Версия DSH Desktop: ',
+    harnessLine: 'Версия встроенного Harness: ',
+    harnessHint: 'Harness обновляется вместе с DSH Desktop.',
+    selectVersion: 'Выбрать версию',
+    checkUpdates: 'Проверить обновления',
+    loadingVersions: 'Загружаем список версий…',
+    versionListError: 'Не удалось получить список версий',
+    newerGroup: 'Более новые версии',
+    olderGroup: 'Откат к прежней версии',
+    noVersions: 'Других версий нет',
+    confirmInstall: (version: string) => `Установить ${version}?`,
+    confirmDowngrade: (version: string, current: string) =>
+      `Это откат к ${version} (сейчас ${current}). Данные, записанные новой версией, при откате не переносятся — настройки могут не подойти. Продолжить?`
+  }
+  return { en, zh, ru }[locale]
+}

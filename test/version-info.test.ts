@@ -38,6 +38,8 @@ describe('desktop version information', () => {
 
   it('explains that Harness updates arrive with Desktop', () => {
     expect(aboutDetail('0.8.0-rc.4', '0.1.0-rc.8', 'zh')).toContain('内置 Harness 版本：0.1.0-rc.8')
+    expect(aboutDetail('0.8.0-rc.4', '0.1.0-rc.8', 'ru')).toContain('Версия встроенного Harness: 0.1.0-rc.8')
+    expect(aboutDetail('0.8.0-rc.4', undefined, 'ru')).toContain('Версия встроенного Harness: неизвестно')
     expect(aboutDetail('0.8.0-rc.4', '0.1.0-rc.8', 'en')).toContain(
       'Harness is updated with DSH Desktop.'
     )

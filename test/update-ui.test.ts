@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/shared/contracts'
 import {
+  aboutLabels,
   isUpdateDismissed,
   shouldShowUpdate,
   updateCardLabels,
@@ -110,6 +111,33 @@ describe('Russian copy', () => {
     })
     expect(updateCardLabels('en').updateNow).toBe('Update now')
     expect(updateCardLabels('zh').skip).toBe('跳过此版本')
+  })
+})
+
+describe('about window labels', () => {
+  it('names the version picker, the check button and the rollback group in Russian', () => {
+    const labels = aboutLabels('ru')
+    expect(labels.windowTitle).toBe('О программе DSH Desktop')
+    expect(labels.selectVersion).toBe('Выбрать версию')
+    expect(labels.checkUpdates).toBe('Проверить обновления')
+    expect(labels.olderGroup).toBe('Откат к прежней версии')
+    expect(labels.versionListError).toBe('Не удалось получить список версий')
+  })
+
+  it('keeps the confirmation of a downgrade apart from that of a plain install', () => {
+    const ru = aboutLabels('ru')
+    expect(ru.confirmInstall('0.10.0-4')).toBe('Установить 0.10.0-4?')
+    expect(ru.confirmDowngrade('0.10.0-2', '0.10.0-3')).toContain('не переносятся')
+    expect(aboutLabels('en').confirmDowngrade('0.10.0-2', '0.10.0-3')).toContain('0.10.0-2')
+  })
+
+  it('fills every language, so a new one cannot ship half translated', () => {
+    for (const locale of ['en', 'zh', 'ru'] as const) {
+      const labels = aboutLabels(locale)
+      expect(labels.windowTitle.trim().length).toBeGreaterThan(0)
+      expect(labels.harnessHint.trim().length).toBeGreaterThan(0)
+      expect(labels.confirmInstall('1.0.0')).toContain('1.0.0')
+    }
   })
 })
 

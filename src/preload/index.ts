@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { AvailableRelease, UpdateStatus } from '../shared/contracts'
 import { setupDesktopStoragePersistence } from './desktop-storage'
 import {
+  aboutLabels,
   isUpdateDismissed,
   shouldShowUpdate,
   updateCardLabels,
@@ -52,7 +53,7 @@ const ABOUT_ROOT_ID = 'dsh-desktop-about-root'
 interface AboutInfo {
   desktopVersion: string
   harnessVersion: string
-  locale: 'en' | 'zh'
+  locale: UpdateLocale
 }
 let aboutHost: HTMLElement | null = null
 let aboutShadow: ShadowRoot | null = null
@@ -853,7 +854,7 @@ function renderAbout(): void {
 
   aboutHost.style.display = 'flex'
   const info = aboutInfo
-  const zh = info.locale === 'zh'
+  const labels = aboutLabels(info.locale)
   const currentVer = info.desktopVersion
 
   let overlay = aboutShadow.querySelector('.about-overlay') as HTMLElement | null
@@ -872,16 +873,16 @@ function renderAbout(): void {
   const card = element('div', 'about-card')
   card.setAttribute('role', 'dialog')
   card.setAttribute('aria-modal', 'true')
-  card.setAttribute('aria-label', zh ? '关于 DSH Desktop' : 'About DSH Desktop')
+  card.setAttribute('aria-label', labels.windowTitle)
 
   // Header row with Title and Close '×'
   const header = element('div', 'about-header')
   const title = element('h2', 'about-title')
-  title.textContent = zh ? '关于 DSH Desktop' : 'About DSH Desktop'
+  title.textContent = labels.windowTitle
   header.appendChild(title)
 
   const closeBtn = button('×', 'about-close')
-  closeBtn.setAttribute('aria-label', zh ? '关闭' : 'Close')
+  closeBtn.setAttribute('aria-label', labels.close)
   closeBtn.addEventListener('click', () => {
     aboutOpen = false
     versionPickerOpen = false
@@ -893,15 +894,15 @@ function renderAbout(): void {
   // Body content matching user's screenshot
   const body = element('div', 'about-body')
   const line1 = element('p', 'about-line')
-  line1.textContent = `${zh ? 'DSH Desktop 版本： ' : 'DSH Desktop version: '}${info.desktopVersion}`
+  line1.textContent = `${labels.versionLine}${info.desktopVersion}`
   body.appendChild(line1)
 
   const line2 = element('p', 'about-line')
-  line2.textContent = `${zh ? '内置 Harness 版本： ' : 'Bundled Harness version: '}${info.harnessVersion}`
+  line2.textContent = `${labels.harnessLine}${info.harnessVersion}`
   body.appendChild(line2)
 
   const hint = element('p', 'about-hint')
-  hint.textContent = zh ? 'Harness 随 DSH Desktop 更新。' : 'Harness is updated with DSH Desktop.'
+  hint.textContent = labels.harnessHint
   body.appendChild(hint)
   card.appendChild(body)
 
@@ -909,7 +910,7 @@ function renderAbout(): void {
   const actions = element('div', 'about-actions')
 
   const selectVersionBtn = button(
-    zh ? '选择版本' : 'Select version',
+    labels.selectVersion,
     versionPickerOpen ? 'btn-action active' : 'btn-action'
   )
   selectVersionBtn.addEventListener('click', () => {
@@ -921,7 +922,7 @@ function renderAbout(): void {
   })
   actions.appendChild(selectVersionBtn)
 
-  const checkUpdatesBtn = button(zh ? '检查更新' : 'Check for updates', 'btn-action')
+  const checkUpdatesBtn = button(labels.checkUpdates, 'btn-action')
   checkUpdatesBtn.addEventListener('click', () => {
     aboutOpen = false
     versionPickerOpen = false
@@ -938,11 +939,11 @@ function renderAbout(): void {
     const pickerContainer = element('div', 'version-picker-container')
     if (versionPickerLoading) {
       const line = element('p', 'version-status-text')
-      line.textContent = zh ? '正在获取版本列表…' : 'Loading versions…'
+      line.textContent = labels.loadingVersions
       pickerContainer.appendChild(line)
     } else if (versionPickerError) {
       const line = element('p', 'version-status-text')
-      line.textContent = zh ? '暂时无法获取版本列表' : 'Unable to load version list'
+      line.textContent = labels.versionListError
       pickerContainer.appendChild(line)
     } else if (versionPickerList && versionPickerList.length > 0) {
       const newer = versionPickerList.filter(
@@ -951,11 +952,11 @@ function renderAbout(): void {
       const older = versionPickerList.filter(
         (release) => comparePreloadVersions(release.version, currentVer) < 0
       )
-      appendAboutVersionGroup(pickerContainer, zh ? '较新版本' : 'Newer versions', newer, currentVer, zh)
-      appendAboutVersionGroup(pickerContainer, zh ? '历史版本（回退）' : 'Roll back', older, currentVer, zh)
+      appendAboutVersionGroup(pickerContainer, labels.newerGroup, newer, currentVer, info.locale)
+      appendAboutVersionGroup(pickerContainer, labels.olderGroup, older, currentVer, info.locale)
     } else {
       const line = element('p', 'version-status-text')
-      line.textContent = zh ? '没有可选的其它版本' : 'No other versions available'
+      line.textContent = labels.noVersions
       pickerContainer.appendChild(line)
     }
     card.appendChild(pickerContainer)
@@ -969,7 +970,7 @@ function appendAboutVersionGroup(
   heading: string,
   releases: AvailableRelease[],
   currentVersion: string,
-  zh: boolean
+  locale: UpdateLocale
 ): void {
   if (releases.length === 0) return
   const group = element('div', 'version-group')
@@ -982,7 +983,7 @@ function appendAboutVersionGroup(
     const pick = button(`v${release.version}`, 'version-tag-btn')
     pick.disabled = installingVersion !== null
     pick.addEventListener('click', () => {
-      selectVersionFromAbout(release, currentVersion, zh)
+      selectVersionFromAbout(release, currentVersion, locale)
     })
     buttonsRow.appendChild(pick)
   }
@@ -990,15 +991,16 @@ function appendAboutVersionGroup(
   container.appendChild(group)
 }
 
-function selectVersionFromAbout(release: AvailableRelease, currentVersion: string, zh: boolean): void {
+function selectVersionFromAbout(
+  release: AvailableRelease,
+  currentVersion: string,
+  locale: UpdateLocale
+): void {
+  const labels = aboutLabels(locale)
   const downgrade = comparePreloadVersions(release.version, currentVersion) < 0
   const message = downgrade
-    ? zh
-      ? `将降级到 ${release.version}（当前 ${currentVersion}）。降级不会迁移新版本写入的数据，可能导致配置不兼容。确定继续？`
-      : `This downgrades to ${release.version} (currently ${currentVersion}). A downgrade does not migrate data written by newer versions and may be config-incompatible. Continue?`
-    : zh
-      ? `将安装 ${release.version}，确定继续？`
-      : `Install ${release.version}?`
+    ? labels.confirmDowngrade(release.version, currentVersion)
+    : labels.confirmInstall(release.version)
   if (!window.confirm(message)) return
 
   installingVersion = release.version

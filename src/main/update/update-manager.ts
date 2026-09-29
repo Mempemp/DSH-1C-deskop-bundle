@@ -1,7 +1,9 @@
 import { readAppChannel } from '../app-channel'
+import { desktopLocaleText, resolveDesktopLocale } from '../application-locale'
 import { checkDesktopUpdate } from '../desktop-service'
 import { isPrereleaseVersion, isVersion } from '../desktop-service/service'
 import type { UpdateDecision } from '../desktop-service/service'
+import { readLocalePreference } from '../locale-preference'
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import electronUpdater from 'electron-updater'
 import type { AvailableRelease, UpdateStatus } from '../../shared/contracts'
@@ -220,7 +222,7 @@ export async function installSpecificVersion(version: unknown): Promise<UpdateSt
     if (status.phase === 'available' && status.availableVersion === version) {
       await downloadAvailableUpdate()
     } else if (status.phase !== 'downloading' && status.phase !== 'downloaded') {
-      transition({ type: 'error', message: '在更新源未找到该版本' })
+      transition({ type: 'error', message: versionNotFoundMessage() })
       scheduleReset()
     }
   } catch (error) {
@@ -355,6 +357,19 @@ function latestFeedUrl(): string {
 }
 
 /** Feed directory holding one version's assets on this build's channel. */
+/**
+ * Rollback target missing from its own archive directory — the release carries no
+ * channel file, which is the case for everything published before the feed existed.
+ */
+function versionNotFoundMessage(): string {
+  const locale = resolveDesktopLocale(readLocalePreference(), app.getPreferredSystemLanguages())
+  return desktopLocaleText(locale, {
+    en: 'This version is not in the update feed',
+    zh: '在更新源未找到该版本',
+    ru: 'Этой версии нет в источнике обновлений'
+  })
+}
+
 function archiveUrlFor(version: string): string {
   return usesOwnFeed() ? bundleArchiveFeedUrl(version) : archiveFeedUrl(version)
 }
