@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveDesktopLocale, resolveHarnessLocale } from '../src/main/application-locale'
+import { desktopLocaleText, isDesktopLocale } from '../src/shared/desktop-locale'
 
 describe('application locale', () => {
   it('uses the saved DSH preference when one exists', () => {
@@ -40,5 +41,23 @@ describe('shell locale', () => {
     expect(resolveDesktopLocale(undefined, ['de-DE'])).toBe('en')
     expect(resolveDesktopLocale(undefined, [])).toBe('en')
     expect(resolveDesktopLocale({ value: 'ru' }, ['en-US'])).toBe('en')
+  })
+})
+
+describe('shell locale contract', () => {
+  it('accepts only the languages the shell ships', () => {
+    expect(isDesktopLocale('en')).toBe(true)
+    expect(isDesktopLocale('zh')).toBe(true)
+    expect(isDesktopLocale('ru')).toBe(true)
+    expect(isDesktopLocale('de')).toBe(false)
+    expect(isDesktopLocale(undefined)).toBe(false)
+    expect(isDesktopLocale({ locale: 'ru' })).toBe(false)
+  })
+
+  it('takes the label of the language it was asked for, with no silent fallback', () => {
+    const labels = { en: 'About', zh: '关于', ru: 'О программе' }
+    expect(desktopLocaleText('ru', labels)).toBe('О программе')
+    expect(desktopLocaleText('zh', labels)).toBe('关于')
+    expect(desktopLocaleText('en', labels)).toBe('About')
   })
 })

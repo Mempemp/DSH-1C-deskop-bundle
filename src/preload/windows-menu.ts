@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { desktopLocaleText, isDesktopLocale, type DesktopLocale } from '../shared/desktop-locale'
 import { formatZoomPercentage, type DesktopMenuCommand } from '../shared/desktop-menu'
 
 type MenuEntry =
@@ -10,7 +11,8 @@ type MenuEntry =
 function mountWindowsMenu(): void {
   if (!document.body || document.getElementById('application-menu-button')) return
   const params = new URLSearchParams(location.search)
-  const locale = params.get('locale') === 'zh' ? 'zh' : 'en'
+  const requestedLocale = params.get('locale')
+  const locale: DesktopLocale = isDesktopLocale(requestedLocale) ? requestedLocale : 'en'
   applyTheme(params.get('theme') === 'dark')
 
   const bar = document.createElement('div')
@@ -21,15 +23,21 @@ function mountWindowsMenu(): void {
   menuButton.type = 'button'
   menuButton.setAttribute('aria-haspopup', 'menu')
   menuButton.setAttribute('aria-expanded', 'false')
-  menuButton.setAttribute('aria-label', locale === 'zh' ? '打开应用菜单' : 'Open application menu')
-  menuButton.title = locale === 'zh' ? '应用菜单' : 'Application menu'
+  menuButton.setAttribute('aria-label', desktopLocaleText(locale, {
+    en: 'Open application menu', zh: '打开应用菜单', ru: 'Открыть меню приложения'
+  }))
+  menuButton.title = desktopLocaleText(locale, {
+    en: 'Application menu', zh: '应用菜单', ru: 'Меню приложения'
+  })
   menuButton.innerHTML = chevronIcon
 
   const menu = document.createElement('div')
   menu.className = 'menu'
   menu.hidden = true
   menu.setAttribute('role', 'menu')
-  menu.setAttribute('aria-label', locale === 'zh' ? '应用菜单' : 'Application menu')
+  menu.setAttribute('aria-label', desktopLocaleText(locale, {
+    en: 'Application menu', zh: '应用菜单', ru: 'Меню приложения'
+  }))
   let zoomDisplay: HTMLButtonElement | null = null
 
   const applyZoomState = (result: unknown): void => {
@@ -180,33 +188,130 @@ function applyTheme(isDark: boolean): void {
   document.documentElement.dataset.theme = isDark ? 'dark' : 'light'
 }
 
-function menuEntries(locale: 'en' | 'zh'): MenuEntry[] {
-  const zh = locale === 'zh'
+type MenuLabels = {
+  harness: string
+  connectPhone: string
+  restartHarness: string
+  safeMode: string
+  showLog: string
+  checkForUpdates: string
+  exportSession: string
+  edit: string
+  undo: string
+  redo: string
+  cut: string
+  copy: string
+  paste: string
+  selectAll: string
+  view: string
+  reload: string
+  developerTools: string
+  interfaceScale: string
+  toggleFullScreen: string
+  about: string
+  quit: string
+}
+
+/** The titlebar menu belongs to the shell, so it follows the shell's language, not the page's. */
+const MENU_LABELS: Record<DesktopLocale, MenuLabels> = {
+  en: {
+    harness: 'HARNESS',
+    connectPhone: 'Connect Phone…',
+    restartHarness: 'Restart Harness',
+    safeMode: 'Restart as Safe Mode…',
+    showLog: 'Show Harness Log',
+    checkForUpdates: 'Check for Updates…',
+    exportSession: 'Export Session Log…',
+    edit: 'EDIT',
+    undo: 'Undo',
+    redo: 'Redo',
+    cut: 'Cut',
+    copy: 'Copy',
+    paste: 'Paste',
+    selectAll: 'Select All',
+    view: 'VIEW',
+    reload: 'Reload',
+    developerTools: 'Developer Tools',
+    interfaceScale: 'Interface scale',
+    toggleFullScreen: 'Toggle Full Screen',
+    about: 'About DSH Desktop',
+    quit: 'Exit'
+  },
+  zh: {
+    harness: 'HARNESS',
+    connectPhone: '连接手机…',
+    restartHarness: '重启 Harness',
+    safeMode: '以安全模式重启…',
+    showLog: '显示 Harness 日志',
+    checkForUpdates: '检查更新…',
+    exportSession: '导出 Session 日志…',
+    edit: '编辑',
+    undo: '撤销',
+    redo: '重做',
+    cut: '剪切',
+    copy: '复制',
+    paste: '粘贴',
+    selectAll: '全选',
+    view: '视图',
+    reload: '重新加载',
+    developerTools: '开发者工具',
+    interfaceScale: '界面缩放',
+    toggleFullScreen: '切换全屏',
+    about: '关于 DSH Desktop',
+    quit: '退出'
+  },
+  ru: {
+    harness: 'ЯДРО',
+    connectPhone: 'Подключить телефон…',
+    restartHarness: 'Перезапустить ядро',
+    safeMode: 'Перезапустить в безопасном режиме…',
+    showLog: 'Показать журнал',
+    checkForUpdates: 'Проверить обновления…',
+    exportSession: 'Выгрузить журнал сеанса…',
+    edit: 'ПРАВКА',
+    undo: 'Отменить',
+    redo: 'Повторить',
+    cut: 'Вырезать',
+    copy: 'Копировать',
+    paste: 'Вставить',
+    selectAll: 'Выделить всё',
+    view: 'ВИД',
+    reload: 'Перезагрузить страницу',
+    developerTools: 'Инструменты разработчика',
+    interfaceScale: 'Масштаб интерфейса',
+    toggleFullScreen: 'Полноэкранный режим',
+    about: 'О программе DSH Desktop',
+    quit: 'Выход'
+  }
+}
+
+function menuEntries(locale: DesktopLocale): MenuEntry[] {
+  const t = MENU_LABELS[locale]
   return [
-    { kind: 'label', label: 'HARNESS' },
-    { kind: 'command', command: 'connect-phone', label: zh ? '连接手机…' : 'Connect Phone…', shortcut: 'Ctrl+Shift+M' },
-    { kind: 'command', command: 'restart-harness', label: zh ? '重启 Harness' : 'Restart Harness', shortcut: 'Ctrl+Shift+R' },
-    { kind: 'command', command: 'safe-mode', label: zh ? '以安全模式重启…' : 'Restart as Safe Mode…' },
-    { kind: 'command', command: 'show-harness-log', label: zh ? '显示 Harness 日志' : 'Show Harness Log' },
-    { kind: 'command', command: 'check-for-updates', label: zh ? '检查更新…' : 'Check for Updates…', shortcut: 'Ctrl+U' },
-    { kind: 'command', command: 'export-session', label: zh ? '导出 Session 日志…' : 'Export Session Log…' },
+    { kind: 'label', label: t.harness },
+    { kind: 'command', command: 'connect-phone', label: t.connectPhone, shortcut: 'Ctrl+Shift+M' },
+    { kind: 'command', command: 'restart-harness', label: t.restartHarness, shortcut: 'Ctrl+Shift+R' },
+    { kind: 'command', command: 'safe-mode', label: t.safeMode },
+    { kind: 'command', command: 'show-harness-log', label: t.showLog },
+    { kind: 'command', command: 'check-for-updates', label: t.checkForUpdates, shortcut: 'Ctrl+U' },
+    { kind: 'command', command: 'export-session', label: t.exportSession },
     { kind: 'separator' },
-    { kind: 'label', label: zh ? '编辑' : 'EDIT' },
-    { kind: 'command', command: 'undo', label: zh ? '撤销' : 'Undo', shortcut: 'Ctrl+Z' },
-    { kind: 'command', command: 'redo', label: zh ? '重做' : 'Redo', shortcut: 'Ctrl+Y' },
-    { kind: 'command', command: 'cut', label: zh ? '剪切' : 'Cut', shortcut: 'Ctrl+X' },
-    { kind: 'command', command: 'copy', label: zh ? '复制' : 'Copy', shortcut: 'Ctrl+C' },
-    { kind: 'command', command: 'paste', label: zh ? '粘贴' : 'Paste', shortcut: 'Ctrl+V' },
-    { kind: 'command', command: 'select-all', label: zh ? '全选' : 'Select All', shortcut: 'Ctrl+A' },
+    { kind: 'label', label: t.edit },
+    { kind: 'command', command: 'undo', label: t.undo, shortcut: 'Ctrl+Z' },
+    { kind: 'command', command: 'redo', label: t.redo, shortcut: 'Ctrl+Y' },
+    { kind: 'command', command: 'cut', label: t.cut, shortcut: 'Ctrl+X' },
+    { kind: 'command', command: 'copy', label: t.copy, shortcut: 'Ctrl+C' },
+    { kind: 'command', command: 'paste', label: t.paste, shortcut: 'Ctrl+V' },
+    { kind: 'command', command: 'select-all', label: t.selectAll, shortcut: 'Ctrl+A' },
     { kind: 'separator' },
-    { kind: 'label', label: zh ? '视图' : 'VIEW' },
-    { kind: 'command', command: 'reload', label: zh ? '重新加载' : 'Reload', shortcut: 'Ctrl+R' },
-    { kind: 'command', command: 'toggle-devtools', label: zh ? '开发者工具' : 'Developer Tools', shortcut: 'Ctrl+Shift+I' },
-    { kind: 'zoom', label: zh ? '界面缩放' : 'Interface scale' },
-    { kind: 'command', command: 'toggle-fullscreen', label: zh ? '切换全屏' : 'Toggle Full Screen', shortcut: 'F11' },
+    { kind: 'label', label: t.view },
+    { kind: 'command', command: 'reload', label: t.reload, shortcut: 'Ctrl+R' },
+    { kind: 'command', command: 'toggle-devtools', label: t.developerTools, shortcut: 'Ctrl+Shift+I' },
+    { kind: 'zoom', label: t.interfaceScale },
+    { kind: 'command', command: 'toggle-fullscreen', label: t.toggleFullScreen, shortcut: 'F11' },
     { kind: 'separator' },
-    { kind: 'command', command: 'about', label: zh ? '关于 DSH Desktop' : 'About DSH Desktop' },
-    { kind: 'command', command: 'quit', label: zh ? '退出' : 'Exit' }
+    { kind: 'command', command: 'about', label: t.about },
+    { kind: 'command', command: 'quit', label: t.quit }
   ]
 }
 

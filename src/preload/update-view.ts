@@ -1,6 +1,7 @@
 import type { UpdateStatus } from '../shared/contracts'
+import type { DesktopLocale } from '../shared/desktop-locale'
 
-export type UpdateLocale = 'en' | 'zh' | 'ru'
+export type UpdateLocale = DesktopLocale
 
 export function shouldShowUpdate(status: UpdateStatus): boolean {
   if (['available', 'downloading', 'downloaded'].includes(status.phase)) return true

@@ -568,7 +568,7 @@ function attachWindowsMenuView(window: BrowserWindow): void {
     if (menuView.webContents.isDestroyed()) return
     void loadDesktopResource(menuView.webContents, desktopResourcePath('windows-menu.html'), {
       query: {
-        locale: harnessLocale(),
+        locale: desktopLocale(),
         theme: windowsMenuDark ? 'dark' : 'light'
       }
     }).catch(showUnexpectedError)
@@ -584,7 +584,7 @@ function attachWindowsMenuView(window: BrowserWindow): void {
 
   void loadDesktopResource(menuView.webContents, desktopResourcePath('windows-menu.html'), {
     query: {
-      locale: harnessLocale(),
+      locale: desktopLocale(),
       theme: windowsMenuDark ? 'dark' : 'light'
     }
   }).catch(showUnexpectedError)
@@ -1011,6 +1011,18 @@ function restoreMainWindow(): void {
   } else if (snapshot?.phase === 'idle') {
     void launchHarness().catch(showUnexpectedError)
   }
+}
+
+/** The card reports what it resolved, so a wrong language in the log is explainable. */
+function describeRendererLocale(report: unknown): string {
+  if (typeof report !== 'object' || report === null) return '(unreadable)'
+  const parts: string[] = []
+  for (const [key, value] of Object.entries(report)) {
+    if (!['navigator', 'languages', 'card', 'shell'].includes(key)) continue
+    const text = typeof value === 'string' && value.length <= 80 ? value : '(unreadable)'
+    parts.push(`${key}=${text}`)
+  }
+  return parts.join(' ') || '(empty)'
 }
 
 function ensureTray(): void {
@@ -1600,6 +1612,11 @@ function launchHarness(): Promise<void> {
     }
     desktopStorageManager?.switchProfile(join(dshHome, 'profiles', 'web'))
     runtime.note('[desktop] starting preset migrations')
+    runtime.note(
+      `[desktop] locale shell=${desktopLocale()} harness=${harnessLocale()}`
+        + ` chromium=${app.commandLine.getSwitchValue('lang') || '(unset)'}`
+        + ` system=${app.getPreferredSystemLanguages().join(',') || '(none)'}`
+    )
     await migratePersonaPrefixesBeforeStart(dshHome)
     await migrateLegacyAgentPresets(dshHome, (line) => runtime.note(line))
     runtime.note('[desktop] preset migrations done; starting Harness')
@@ -1914,6 +1931,12 @@ function registerHarnessHandlers(): void {
 
   ipcMain.removeHandler('desktop:ui-locale')
   ipcMain.handle('desktop:ui-locale', () => desktopLocale())
+
+  ipcMain.removeHandler('desktop:report-ui-locale')
+  ipcMain.handle('desktop:report-ui-locale', (event, report: unknown) => {
+    assertTrustedMainWindowEvent(event)
+    runtime?.note(`[desktop] update card locale ${describeRendererLocale(report)}`)
+  })
 
   ipcMain.removeHandler('desktop:about-info')
   ipcMain.handle('desktop:about-info', (event) => {

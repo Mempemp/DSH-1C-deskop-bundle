@@ -38,7 +38,9 @@ let cardLabels = updateCardLabels(locale)
 /** Adopts the shell's answer once it arrives; the card is redrawn if it differs. */
 async function adoptShellLocale(): Promise<void> {
   try {
-    const resolved = cardLocale(await ipcRenderer.invoke('desktop:ui-locale'), navigator.language)
+    const shellValue = await ipcRenderer.invoke('desktop:ui-locale')
+    reportCardLocale(shellValue)
+    const resolved = cardLocale(shellValue, navigator.language)
     if (resolved === locale) return
     locale = resolved
     cardLabels = updateCardLabels(locale)
@@ -46,6 +48,20 @@ async function adoptShellLocale(): Promise<void> {
   } catch (error) {
     console.warn('[updater] unable to read the interface language', error)
   }
+}
+
+/** The card's own language is invisible when it is wrong, so the shell logs one line. */
+function reportCardLocale(shellValue: unknown): void {
+  void ipcRenderer
+    .invoke('desktop:report-ui-locale', {
+      shell: typeof shellValue === 'string' ? shellValue : '(unknown)',
+      navigator: navigator.language,
+      languages: navigator.languages.join(','),
+      card: cardLocale(shellValue, navigator.language)
+    })
+    .catch(() => {
+      // Diagnostics only: a failed report must never disturb the card.
+    })
 }
 
 let host: HTMLDivElement | undefined

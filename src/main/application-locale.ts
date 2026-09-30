@@ -1,7 +1,10 @@
+import { type DesktopLocale, desktopLocaleText, type LocaleText } from '../shared/desktop-locale'
+
 export type HarnessLocale = 'en' | 'zh'
 
-/** Languages the shell itself speaks: the harness ships two, the shell adds Russian. */
-export type DesktopLocale = 'en' | 'zh' | 'ru'
+export type { DesktopLocale, LocaleText } from '../shared/desktop-locale'
+
+export { desktopLocaleText } from '../shared/desktop-locale'
 
 export function resolveHarnessLocale(
   preference: unknown,
@@ -30,9 +33,3 @@ export function resolveDesktopLocale(
   return 'en'
 }
 
-export type LocaleText = { en: string; zh: string; ru: string }
-
-/** Main-process counterpart of the card's text helper: one entry per language. */
-export function desktopLocaleText(locale: DesktopLocale, values: LocaleText): string {
-  return values[locale]
-}
