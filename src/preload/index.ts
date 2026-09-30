@@ -3,6 +3,7 @@ import type { AvailableRelease, UpdateStatus } from '../shared/contracts'
 import { setupDesktopStoragePersistence } from './desktop-storage'
 import {
   aboutLabels,
+  cardLocale,
   isUpdateDismissed,
   shouldShowUpdate,
   updateCardLabels,
@@ -11,7 +12,7 @@ import {
 } from './update-view'
 import { isPluginLoadError } from './plugin-error-view'
 import { findBootFailureText } from './boot-failure'
-import { mountWindowsTitlebarLayout } from './windows-titlebar'
+import { documentIsDark, mountWindowsTitlebarLayout } from './windows-titlebar'
 import { mountMacosWindowChrome } from './macos-window-chrome'
 
 if (process.platform === 'darwin') {
@@ -31,10 +32,21 @@ setupDesktopStoragePersistence()
 const ROOT_ID = 'dsh-desktop-update-root'
 const MOBILE_BUTTON_ID = 'dsh-desktop-mobile-button'
 const SAFE_MODE_BANNER_ID = 'dsh-desktop-safe-mode-banner'
-const language = navigator.language.toLowerCase()
-const locale: UpdateLocale = language.startsWith('zh') ? 'zh' : language.startsWith('ru') ? 'ru' : 'en'
-/** Resolved once: the page's language does not change while the card is up. */
-const cardLabels = updateCardLabels(locale)
+let locale: UpdateLocale = cardLocale(undefined, navigator.language)
+let cardLabels = updateCardLabels(locale)
+
+/** Adopts the shell's answer once it arrives; the card is redrawn if it differs. */
+async function adoptShellLocale(): Promise<void> {
+  try {
+    const resolved = cardLocale(await ipcRenderer.invoke('desktop:ui-locale'), navigator.language)
+    if (resolved === locale) return
+    locale = resolved
+    cardLabels = updateCardLabels(locale)
+    render()
+  } catch (error) {
+    console.warn('[updater] unable to read the interface language', error)
+  }
+}
 
 let host: HTMLDivElement | undefined
 let content: HTMLDivElement | undefined
@@ -383,6 +395,8 @@ function initializeUi(): void {
   mount()
   mountAbout()
   mountMobileButton()
+  watchPageTheme()
+  void adoptShellLocale()
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
@@ -590,6 +604,27 @@ contextBridge.exposeInMainWorld(
 )
 
 
+/**
+ * The injected windows follow the app's theme, which the user picks in settings
+ * and which need not match the system's: the page marks its choice on `body`.
+ */
+function applyHostTheme(target: HTMLElement): void {
+  target.classList.toggle('dark', documentIsDark(document))
+}
+
+function watchPageTheme(): void {
+  const apply = (): void => {
+    if (host) applyHostTheme(host)
+    if (aboutHost) applyHostTheme(aboutHost)
+  }
+  new MutationObserver(apply).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-ds-dark-theme', 'class', 'style']
+  })
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', apply)
+  apply()
+}
+
 function mount(): void {
   if (document.getElementById(ROOT_ID)) return
 
@@ -641,6 +676,7 @@ function render(): void {
   }
 
   host.style.display = 'block'
+  applyHostTheme(host)
   const status = currentStatus
   const card = element('aside', 'card')
   card.setAttribute('aria-live', 'polite')
@@ -853,6 +889,7 @@ function renderAbout(): void {
   }
 
   aboutHost.style.display = 'flex'
+  applyHostTheme(aboutHost)
   const info = aboutInfo
   const labels = aboutLabels(info.locale)
   const currentVer = info.desktopVersion
@@ -1145,22 +1182,22 @@ const styles = `
   }
   .close:hover { color: var(--dsw-alias-label-primary, #202124); background: rgba(127, 127, 127, 0.1); }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-color-scheme: dark) {
-    .card {
-      color: var(--dsw-alias-label-primary, #f3f4f6);
-      background: var(--dsw-alias-bg-layer-1, rgba(31, 32, 35, 0.98));
-      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
-      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.25);
-    }
-    .description { color: var(--dsw-alias-label-secondary, #a9adb5); }
-    .badge { color: #3fb950; background: rgba(63, 185, 80, 0.16); }
-    .badge.warning { color: #e3b341; background: rgba(227, 179, 65, 0.18); }
-    .secondary {
-      color: var(--dsw-alias-label-secondary, #a9adb5);
-      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18));
-    }
-    .secondary:hover { color: var(--dsw-alias-label-primary, #f3f4f6); background: rgba(255, 255, 255, 0.08); }
+  /* The app's theme, not the system's: the host carries the dark class when the page is dark. */
+  :host(.dark) { color-scheme: dark; }
+  :host(.dark) .card {
+    color: var(--dsw-alias-label-primary, #f3f4f6);
+    background: var(--dsw-alias-bg-layer-1, rgba(31, 32, 35, 0.98));
+    border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.25);
   }
+  :host(.dark) .description { color: var(--dsw-alias-label-secondary, #a9adb5); }
+  :host(.dark) .badge { color: #3fb950; background: rgba(63, 185, 80, 0.16); }
+  :host(.dark) .badge.warning { color: #e3b341; background: rgba(227, 179, 65, 0.18); }
+  :host(.dark) .secondary {
+    color: var(--dsw-alias-label-secondary, #a9adb5);
+    border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18));
+  }
+  :host(.dark) .secondary:hover { color: var(--dsw-alias-label-primary, #f3f4f6); background: rgba(255, 255, 255, 0.08); }
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation: none; }
     .progressValue { transition: none; }
@@ -1338,34 +1375,42 @@ const aboutStyles = `
     font-size: 12px;
     color: var(--dsw-alias-label-secondary, #666b73);
   }
-  @media (prefers-color-scheme: dark) {
-    .about-card {
-      color: var(--dsw-alias-label-primary, #f3f4f6);
-      background: var(--dsw-alias-bg-layer-1, rgba(31, 32, 35, 0.98));
-      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
-      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.25);
-    }
-    .about-title, .about-body { color: var(--dsw-alias-label-primary, #f3f4f6); }
-    .about-hint, .version-status-text, .about-close { color: var(--dsw-alias-label-secondary, #a9adb5); }
-    .about-close:hover { color: var(--dsw-alias-label-primary, #f3f4f6); background: rgba(255, 255, 255, 0.1); }
-    .btn-action {
-      color: var(--dsw-alias-label-primary, #f3f4f6);
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18));
-    }
-    .btn-action:hover:not(:disabled) { background: rgba(255, 255, 255, 0.13); }
-    .btn-action.active {
-      background: rgba(77, 107, 254, 0.2);
-      border-color: rgba(77, 107, 254, 0.45);
-      color: #7b93ff;
-    }
-    .version-picker-container { border-top-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14)); }
-    .version-group-title, .version-tag-btn { color: var(--dsw-alias-label-secondary, #a9adb5); }
-    .version-tag-btn { border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18)); }
-    .version-tag-btn:hover:not(:disabled) {
-      color: var(--dsw-alias-label-primary, #f3f4f6);
-      background: rgba(255, 255, 255, 0.1);
-    }
+  :host(.dark) { color-scheme: dark; }
+  :host(.dark) .about-card {
+    color: var(--dsw-alias-label-primary, #f3f4f6);
+    background: var(--dsw-alias-bg-layer-1, rgba(31, 32, 35, 0.98));
+    border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 10px rgba(0, 0, 0, 0.25);
+  }
+  :host(.dark) .about-title, :host(.dark) .about-body { color: var(--dsw-alias-label-primary, #f3f4f6); }
+  :host(.dark) .about-hint, :host(.dark) .version-status-text, :host(.dark) .about-close {
+    color: var(--dsw-alias-label-secondary, #a9adb5);
+  }
+  :host(.dark) .about-close:hover {
+    color: var(--dsw-alias-label-primary, #f3f4f6);
+    background: rgba(255, 255, 255, 0.1);
+  }
+  :host(.dark) .btn-action {
+    color: var(--dsw-alias-label-primary, #f3f4f6);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18));
+  }
+  :host(.dark) .btn-action:hover:not(:disabled) { background: rgba(255, 255, 255, 0.13); }
+  :host(.dark) .btn-action.active {
+    background: rgba(77, 107, 254, 0.2);
+    border-color: rgba(77, 107, 254, 0.45);
+    color: #7b93ff;
+  }
+  :host(.dark) .version-picker-container {
+    border-top-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
+  }
+  :host(.dark) .version-group-title, :host(.dark) .version-tag-btn {
+    color: var(--dsw-alias-label-secondary, #a9adb5);
+  }
+  :host(.dark) .version-tag-btn { border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.18)); }
+  :host(.dark) .version-tag-btn:hover:not(:disabled) {
+    color: var(--dsw-alias-label-primary, #f3f4f6);
+    background: rgba(255, 255, 255, 0.1);
   }
 `
 

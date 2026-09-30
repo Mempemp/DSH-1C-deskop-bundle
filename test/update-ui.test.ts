@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { UpdateStatus } from '../src/shared/contracts'
 import {
   aboutLabels,
+  cardLocale,
   isUpdateDismissed,
   shouldShowUpdate,
   updateCardLabels,
@@ -111,6 +112,20 @@ describe('Russian copy', () => {
     })
     expect(updateCardLabels('en').updateNow).toBe('Update now')
     expect(updateCardLabels('zh').skip).toBe('跳过此版本')
+  })
+})
+
+describe('the card takes the shell language', () => {
+  it('prefers what the shell reports over the page language', () => {
+    expect(cardLocale('ru', 'en-US')).toBe('ru')
+    expect(cardLocale('en', 'ru-RU')).toBe('en')
+    expect(cardLocale('zh', 'ru-RU')).toBe('zh')
+  })
+
+  it('falls back to the page language while the shell has not answered', () => {
+    expect(cardLocale(undefined, 'ru-RU')).toBe('ru')
+    expect(cardLocale('nonsense', 'zh-Hans-CN')).toBe('zh')
+    expect(cardLocale(null, 'de-DE')).toBe('en')
   })
 })
 

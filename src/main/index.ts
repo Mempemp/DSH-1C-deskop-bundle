@@ -1912,6 +1912,9 @@ function registerHarnessHandlers(): void {
     return { ok: true }
   })
 
+  ipcMain.removeHandler('desktop:ui-locale')
+  ipcMain.handle('desktop:ui-locale', () => desktopLocale())
+
   ipcMain.removeHandler('desktop:about-info')
   ipcMain.handle('desktop:about-info', (event) => {
     assertTrustedMainWindowEvent(event)

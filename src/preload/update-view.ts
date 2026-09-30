@@ -16,6 +16,19 @@ export function isUpdateDismissed(
   return status.phase === dismissedTransientPhase
 }
 
+/**
+ * The card's language: what the shell reports wins, because Chromium's own locale
+ * is the system's and can disagree with the language the app is used in. The
+ * page's language is the answer only until the shell replies.
+ */
+export function cardLocale(shellValue: unknown, navigatorLanguage: string): UpdateLocale {
+  if (shellValue === 'en' || shellValue === 'zh' || shellValue === 'ru') return shellValue
+  const language = navigatorLanguage.toLowerCase()
+  if (language.startsWith('zh')) return 'zh'
+  if (language.startsWith('ru')) return 'ru'
+  return 'en'
+}
+
 export interface UpdateHeadline {
   title: string
   description: string
