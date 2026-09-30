@@ -15,15 +15,17 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.10.0-3
+version: 0.10.0-4
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
-  # VERIFIED_MARKET_BASELINE (src/main/state/market-baseline.ts) and the app's own
-  # dshmarket dependency in package.json. All three carry the same version.
+  # VERIFIED_MARKET_BASELINE (src/main/state/market-baseline.ts), which carries
+  # the same version. The app itself depends on no dshmarket copy since upstream
+  # #478 (a packaged copy shadowed the profile one), so these two are the pair
+  # that has to move together.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.66.2
+    spec: dshmarket@1.66.6
   # Pinned by commit, not `#main`: the catalog must carry exactly the code the
   # release names. This commit is v0.2.7 (`@wingsky-1/dsh-mcp-manager` 0.2.7).
   - kind: plugin
@@ -38,26 +40,38 @@ sources:
   - kind: plugin
     from: npm
     spec: "@liustack/modsearch@5.10.5"
+  # For the DSH 0.1.7 line the newest supported release is v0.22.1, not the
+  # npm `latest` v0.24.1: 0.23/0.24 declare the host peer `^0.2.0-rc.1`, and a
+  # host that does not satisfy a peer range gets the row rejected or silently
+  # disabled. v0.22.1 is the release upstream names for 0.1.7-rc.1…0.1.7-rc.2
+  # (peer `^0.1.7-rc.1`); moving to 0.24.x belongs to the base update.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.21.1
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.22.1
   # Pinned by commit (v0.4.3, `@linxin666/dsh-client-ui-skill-explorer` 0.4.3).
   - kind: plugin
     from: git
     url: https://github.com/zhu1090093659/dsh-web.git#c989e5a14189211c29d5f6aec30f9136681a31de
     path: packages/dsh-skill-explorer
-  # Pinned by commit: this is where `main` stood for the release, ahead of v2.16.0.
+  # From npm, not from the git tree, for the same reason as modsearch below:
+  # `integrations/deepseek-harness/skills` is in that directory's .gitignore and
+  # is materialized only by its `scripts/pack.mjs` (a staged copy of the skill at
+  # pack time). Packing the git tree therefore produced a plugin whose provider
+  # points at a `skills/` directory that does not exist — it installed and
+  # activated cleanly, and `skill("archify")` answered "unknown or no longer
+  # available", because the skill service listed nothing. The published tarball
+  # is the packed one (Skill 2.14) and it is the only adapter build upstream
+  # ever released; its GitHub releases carry no newer adapter artifact.
   - kind: plugin
-    from: git
-    url: https://github.com/tt-a1i/archify.git#9e35d2b0b39b155553ba9fcfe0b4f2a5198dd993
-    path: integrations/deepseek-harness
+    from: npm
+    spec: "@tt-a1i/archify-dsh@0.1.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
   # тот код, который в неё попал. 0.6.x — плагин владеет жизненным циклом
-  # MCP-сервера справки по API платформы (vendor/bsl-context-rs 0.19.1 внутри
+  # MCP-сервера справки по API платформы (vendor/bsl-context-rs 0.20.0 внутри
   # пакета) и не поднимает его, пока не задан путь к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#d91d73a66bb1a49127cc5b98681184f8ce344c1a
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#8694a81da660ea4352db81ad5cba37d74848447a
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
@@ -90,7 +104,7 @@ sources:
   # the market install the same package.
   - kind: plugin
     from: npm
-    spec: dsh-univer-office@0.3.5
+    spec: dsh-univer-office@0.3.6
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store
@@ -125,7 +139,7 @@ sources:
   # it (or let the tree digest change) or an existing install keeps its old copy.
   - kind: payload
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#0406719675eaeaebfa377ecc2ab52952dcdba3c3
+    url: https://github.com/comol/ai_rules_1c.git#45bacddc2ee21724e4b5e5aa342fa0c4e09d3250
     id: 1c-rules
     name: 1c-rules
-    version: 2026.09.27-0406719
+    version: 2026.09.30-45bacdd

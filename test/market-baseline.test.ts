@@ -7,6 +7,13 @@ import { runProfileStartupMaintenance, type ProfileStartupMaintenanceDeps } from
 import { readInstalledPluginVersion } from '../src/main/state/plugin-market-check'
 import { readDesired, registryLayout, writeDesired, writeGenerationMeta } from 'dsh-desktop-market-installer/generations/registry'
 
+// Cases that mean «a market version ahead of the verified baseline» must stay
+// ahead of it: the baseline moves with the catalog pin, and a literal that drops
+// below it turns the case into «repair a stale market» — the opposite of what it
+// asserts. Derived from the constant, never re-typed as a number.
+const [BASELINE_MAJOR = 0, BASELINE_MINOR = 0, BASELINE_PATCH = 0] = VERIFIED_MARKET_BASELINE.split('.').map(Number)
+const MARKET_AHEAD = `${BASELINE_MAJOR}.${BASELINE_MINOR}.${BASELINE_PATCH + 1}`
+
 const homes: string[] = []
 afterEach(async () => { await Promise.all(homes.splice(0).map((home) => rm(home, { recursive: true, force: true }))) })
 
@@ -179,7 +186,7 @@ describe('market baseline at normal startup', () => {
     expect(upgrade).not.toHaveBeenCalled()
   })
 
-  it.each(['1.66.3', '1.66.2', '2.0.0'])('does not reinstall or downgrade active %s', async (version) => {
+  it.each([VERIFIED_MARKET_BASELINE, MARKET_AHEAD, '2.0.0'])('does not reinstall or downgrade active %s', async (version) => {
     const { options } = await fixture(version)
     const upgrade = vi.fn()
     await ensureMarketBaseline(options, upgrade)
@@ -407,38 +414,38 @@ describe('market baseline at normal startup', () => {
     expect(order).toEqual(['demote', 'market', 'projection'])
   })
 
-  it('preserves an upgraded market version >= 1.66.3 when demoting back to shared tree', async () => {
+  it('preserves an upgraded market version >= the baseline when demoting back to shared tree', async () => {
     const { home, profile, market } = await fixture()
-    const generationDir = join(registryLayout(home).generations, 'dshmarket+1.66.3+cafebabe')
+    const generationDir = join(registryLayout(home).generations, `dshmarket+${MARKET_AHEAD}+cafebabe`)
     const generationPackage = join(generationDir, 'node_modules', 'dshmarket')
     await mkdir(generationPackage, { recursive: true })
-    await writeFile(join(generationPackage, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.3' }))
-    await writeGenerationMeta(generationDir, { pluginName: 'dshmarket', version: '1.66.3' })
-    await writeDesired(home, ['dshmarket+1.66.3+cafebabe'])
+    await writeFile(join(generationPackage, 'package.json'), JSON.stringify({ name: 'dshmarket', version: MARKET_AHEAD }))
+    await writeGenerationMeta(generationDir, { pluginName: 'dshmarket', version: MARKET_AHEAD })
+    await writeDesired(home, [`dshmarket+${MARKET_AHEAD}+cafebabe`])
     await rm(market, { recursive: true, force: true })
     await symlink(generationPackage, market, 'junction')
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
     manifest.dsh.desktop = {
       generationProjection: {
         version: 1,
-        plugins: { dshmarket: { generationId: 'dshmarket+1.66.3+cafebabe', visibleVersion: '1.66.3', previousOverride: { present: false } } }
+        plugins: { dshmarket: { generationId: `dshmarket+${MARKET_AHEAD}+cafebabe`, visibleVersion: MARKET_AHEAD, previousOverride: { present: false } } }
       }
     }
-    manifest.dependencies.dshmarket = '1.66.3'
+    manifest.dependencies.dshmarket = MARKET_AHEAD
     await writeFile(join(profile, 'package.json'), JSON.stringify(manifest, undefined, 2))
 
     expect(await demoteMarketGeneration(home)).toBe(true)
 
     const after = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    expect(after.dependencies.dshmarket).toBe('1.66.3')
+    expect(after.dependencies.dshmarket).toBe(MARKET_AHEAD)
   })
 
   it('upgrades to the newer declared version when declared version exceeds the baseline', async () => {
     const { options, profile, market } = await fixture()
-    // Simulate generation link with broken/missing active version, but declared version is 1.66.2
+    // Simulate generation link with broken/missing active version, but a declared version above the baseline
     await rm(market, { recursive: true, force: true })
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    manifest.dependencies.dshmarket = '1.66.2'
+    manifest.dependencies.dshmarket = MARKET_AHEAD
     await writeFile(join(profile, 'package.json'), JSON.stringify(manifest, undefined, 2))
 
     const upgrade = vi.fn(async ({ dshHome, targetVersion }: { dshHome: string; targetVersion: string }) => {
@@ -449,15 +456,15 @@ describe('market baseline at normal startup', () => {
     })
 
     await ensureMarketBaseline(options, upgrade)
-    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: '1.66.2' }))
-    expect(await readInstalledPluginVersion(options.dshHome, 'dshmarket')).toBe('1.66.2')
+    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: MARKET_AHEAD }))
+    expect(await readInstalledPluginVersion(options.dshHome, 'dshmarket')).toBe(MARKET_AHEAD)
   })
 
   it('pins the version a declared range names, since the installer verifies an exact version', async () => {
     const { options, profile, market } = await fixture()
     await rm(market, { recursive: true, force: true })
     const manifest = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    manifest.dependencies.dshmarket = '^1.66.3'
+    manifest.dependencies.dshmarket = `^${MARKET_AHEAD}`
     await writeFile(join(profile, 'package.json'), JSON.stringify(manifest, undefined, 2))
 
     const upgrade = vi.fn(async ({ targetVersion }: { dshHome: string; targetVersion: string }) => {
@@ -468,7 +475,7 @@ describe('market baseline at normal startup', () => {
     })
 
     await ensureMarketBaseline(options, upgrade)
-    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: '1.66.3' }))
+    expect(upgrade).toHaveBeenCalledWith(expect.objectContaining({ targetVersion: MARKET_AHEAD }))
   })
 })
 

@@ -1,16 +1,16 @@
 {
   "name": "DSH Desktop",
-  "version": "0.10.0-3",
+  "version": "0.10.0-4",
   "id": "dsh-desktop",
   "items": [
     {
       "kind": "plugin",
       "id": "dshmarket",
       "name": "dshmarket",
-      "version": "1.66.2",
+      "version": "1.66.6",
       "label": "Plugin: dshmarket",
-      "file": "plugins/dshmarket-1.66.2.tgz",
-      "digest": "ed2224e12ddcef74576222883a38315bdfc60c6afa9184400ec24390ba14e5aa"
+      "file": "plugins/dshmarket-1.66.6.tgz",
+      "digest": "119302c6b122a9b1ea3097aa91d50b17538706799cfd6f14e99696ff6b0204e6"
     },
     {
       "kind": "plugin",
@@ -34,10 +34,10 @@
       "kind": "plugin",
       "id": "dsh-better-sidebar",
       "name": "dsh-better-sidebar",
-      "version": "0.21.1",
+      "version": "0.22.1",
       "label": "Plugin: dsh-better-sidebar",
-      "file": "plugins/dsh-better-sidebar-0.21.1.tgz",
-      "digest": "6c36953b3ee0f9cabf06a6cac4c17132659c43ee24a57a4b289b147b380af90c"
+      "file": "plugins/dsh-better-sidebar-0.22.1.tgz",
+      "digest": "cfcfae332cc189c865a07eca273931975eeb9facfc50174d6f059682e5992685"
     },
     {
       "kind": "plugin",
@@ -52,19 +52,19 @@
       "kind": "plugin",
       "id": "@tt-a1i/archify-dsh",
       "name": "@tt-a1i/archify-dsh",
-      "version": "0.2.0",
+      "version": "0.1.0",
       "label": "Plugin: @tt-a1i/archify-dsh",
-      "file": "plugins/tt-a1i-archify-dsh-0.2.0.tgz",
-      "digest": "05bea951993772f5d997dadb7c39d7614abaa6de2cce737973734b8a1a160818"
+      "file": "plugins/tt-a1i-archify-dsh-0.1.0.tgz",
+      "digest": "3192afe54949da6494acea3bd2bf5113a58ea78651113b1289bcc7212130df38"
     },
     {
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.6.2.tgz",
-      "digest": "cb1c8b3c63d4e66611c7b1d7d74c7abe11ece2c3ccf7f8357f9692fa1547affd"
+      "file": "plugins/dsh-1c-project-properties-0.6.3.tgz",
+      "digest": "571bead16cfe3205cee808bba92846a40bd2ca4301066e8a2bcf41897b4de74c"
     },
     {
       "kind": "plugin",
@@ -106,10 +106,10 @@
       "kind": "plugin",
       "id": "dsh-univer-office",
       "name": "dsh-univer-office",
-      "version": "0.3.5",
+      "version": "0.3.6",
       "label": "Plugin: dsh-univer-office",
-      "file": "plugins/dsh-univer-office-0.3.5.tgz",
-      "digest": "61da1810bda7d04fd232fa22955574f178a7d4de5a6863114f9bc070b6c3a31e"
+      "file": "plugins/dsh-univer-office-0.3.6.tgz",
+      "digest": "5cc8fe08af295e26e9b3799f321f5c792ce4d464534e42c683fcddbd677f03cd"
     },
     {
       "kind": "mcp",
@@ -132,10 +132,10 @@
       "kind": "payload",
       "id": "1c-rules",
       "name": "1c-rules",
-      "version": "2026.09.27-0406719",
+      "version": "2026.09.30-45bacdd",
       "label": "Payload: 1c-rules",
       "path": "payload/1c-rules",
-      "digest": "0486d1554f7e4585815ebd1d42f38faa8ab5b1db9cbdbaacc5aca45b43218eb6"
+      "digest": "4c8beab0ce12ac4ba33211109b34c4f1f7887500a7c068bd40f00da29d4ef79b"
     }
   ]
 }

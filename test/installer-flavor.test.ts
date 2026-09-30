@@ -72,7 +72,7 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.2' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.6' },
       {
         kind: 'plugin',
         from: 'git',
@@ -87,7 +87,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.21.1'
+        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.22.1'
       },
       {
         kind: 'plugin',
@@ -97,14 +97,13 @@ describe('installer flavor schema', () => {
       },
       {
         kind: 'plugin',
-        from: 'git',
-        url: 'https://github.com/tt-a1i/archify.git#9e35d2b0b39b155553ba9fcfe0b4f2a5198dd993',
-        path: 'integrations/deepseek-harness'
+        from: 'npm',
+        spec: '@tt-a1i/archify-dsh@0.1.0'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#d91d73a66bb1a49127cc5b98681184f8ce344c1a',
+        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#8694a81da660ea4352db81ad5cba37d74848447a',
         path: 'dsh-1c-project-properties'
       },
       {
@@ -128,7 +127,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: 'dsh-univer-office@0.3.5'
+        spec: 'dsh-univer-office@0.3.6'
       },
       {
         kind: 'mcp',
@@ -146,10 +145,10 @@ describe('installer flavor schema', () => {
       {
         kind: 'payload',
         from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#0406719675eaeaebfa377ecc2ab52952dcdba3c3',
+        url: 'https://github.com/comol/ai_rules_1c.git#45bacddc2ee21724e4b5e5aa342fa0c4e09d3250',
         id: '1c-rules',
         name: '1c-rules',
-        version: '2026.09.27-0406719'
+        version: '2026.09.30-45bacdd'
       }
     ])
   })

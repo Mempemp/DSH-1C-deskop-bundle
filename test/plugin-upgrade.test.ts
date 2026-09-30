@@ -117,19 +117,23 @@ describe('upgradeMarketInSharedTree', () => {
   })
 
   it('retries a partially installed newer market instead of trusting its version', async () => {
-    const { ensureMarketBaseline } = await import('../src/main/state/market-baseline')
+    const { ensureMarketBaseline, VERIFIED_MARKET_BASELINE } = await import('../src/main/state/market-baseline')
+    // A "newer market" has to stay newer than the verified baseline: below it the
+    // case would assert the stale-market repair instead. Derived, not typed.
+    const [major = 0, minor = 0, patch = 0] = VERIFIED_MARKET_BASELINE.split('.').map(Number)
+    const marketAhead = `${major}.${minor}.${patch + 1}`
     const { home, profile, market, options } = await fixture()
     const before = await readFile(join(profile, 'package.json'), 'utf8')
     installMock.mockImplementationOnce(async () => {
-      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: '1.66.2' }))
+      await writeFile(join(market, 'package.json'), JSON.stringify({ name: 'dshmarket', version: marketAhead }))
       return { ok: false, detail: 'interrupted after package extraction' }
     })
-    expect((await upgradeMarketInSharedTree({ ...options, targetVersion: '1.66.2' })).ok).toBe(false)
+    expect((await upgradeMarketInSharedTree({ ...options, targetVersion: marketAhead })).ok).toBe(false)
     expect(JSON.parse(await readFile(marketInstallPendingPath(home), 'utf8')).previousManifest).toBe(before)
     installMock.mockResolvedValue({ ok: true })
     await ensureMarketBaseline({ ...options, dshEntryPath: resolve('node_modules/@deepseek-ai/dsh/lib/bin.js') })
     expect(installMock).toHaveBeenCalledTimes(2)
-    expect(JSON.parse(await readFile(join(profile, 'package.json'), 'utf8')).dependencies.dshmarket).toBe('1.66.2')
+    expect(JSON.parse(await readFile(join(profile, 'package.json'), 'utf8')).dependencies.dshmarket).toBe(marketAhead)
     await expect(readFile(marketInstallPendingPath(home))).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
