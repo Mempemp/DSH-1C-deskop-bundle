@@ -73,7 +73,7 @@ sources:
   # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.3.12"
+    spec: "@goodandready/dsh-russian-lang@0.3.25"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора

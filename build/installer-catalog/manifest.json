@@ -88,10 +88,10 @@
       "kind": "plugin",
       "id": "@goodandready/dsh-russian-lang",
       "name": "@goodandready/dsh-russian-lang",
-      "version": "0.3.12",
+      "version": "0.3.25",
       "label": "Plugin: @goodandready/dsh-russian-lang",
-      "file": "plugins/goodandready-dsh-russian-lang-0.3.12.tgz",
-      "digest": "35fab0c15292dd1ae62eee803d4cd6ef26b38d28e2d8b1628dde40d671519aad"
+      "file": "plugins/goodandready-dsh-russian-lang-0.3.25.tgz",
+      "digest": "49a218fc80298831b1ddfbed286101a883b497e4165b2e9053b57119eb1ac4bd"
     },
     {
       "kind": "plugin",

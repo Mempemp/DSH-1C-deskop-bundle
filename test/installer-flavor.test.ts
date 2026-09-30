@@ -122,7 +122,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.3.12'
+        spec: '@goodandready/dsh-russian-lang@0.3.25'
       },
       { kind: 'plugin', from: 'local', path: './packages/dsh-notifier-ru' },
       {
