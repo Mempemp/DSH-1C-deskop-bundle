@@ -14,7 +14,7 @@ const releaseAssets = [
 ]
 
 /** The exact Harness build every `@deepseek-ai/dsh-*` production dep is pinned to. */
-const HARNESS_VERSION = '0.1.7-rc.2'
+const HARNESS_VERSION = '0.2.0-rc.2'
 
 describe('GitHub release contract', () => {
   it('keeps the package and lockfile versions aligned', async () => {
@@ -184,7 +184,14 @@ describe('GitHub release contract', () => {
 
     expect(packageJson.build.artifactName).toBe('dsh-desktop-${os}-${arch}.${ext}')
     expect(packageJson.build.asar).toBe(true)
-    expect(packageJson.build.asarUnpack).toContain('node_modules/**/*')
+    // JavaScript stays in app.asar; only files the OS loads or executes unpack.
+    expect(packageJson.build.asarUnpack).not.toContain('node_modules/**/*')
+    expect(packageJson.build.asarUnpack).toEqual(expect.arrayContaining([
+      '**/*.{node,dylib,dll,so,exe}',
+      '**/spawn-helper',
+      '**/@vscode/ripgrep-*/bin/rg',
+      'node_modules/@deepseek-ai/libreoffice-kit-*/**/*'
+    ]))
     expect(packageJson.build.extraResources).toContainEqual({
       from: 'build/app-icon.png',
       to: 'icon.png'
@@ -201,6 +208,11 @@ describe('GitHub release contract', () => {
       to: 'host-module-fallback.mjs'
     })
     expect(harnessNodeEntry).toContain("from './host-module-fallback.mjs'")
+    expect(packageJson.build.extraResources).toContainEqual({
+      from: 'build/office-engine-resolution.mjs',
+      to: 'office-engine-resolution.mjs'
+    })
+    expect(harnessNodeEntry).toContain("from './office-engine-resolution.mjs'")
     expect(windowsHiddenConsole).toContain('export function createHiddenConsole')
     expect(packageJson.build.extraResources).toContainEqual({
       from: 'build/windows-child-process-hide.mjs',
@@ -450,7 +462,7 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain("$isolatedApp = Join-Path $env:RUNNER_TEMP")
     expect(workflow).toContain('$executable = Join-Path $isolatedApp $sourceExecutable.Name')
     expect(workflow).toContain('-WorkingDirectory $isolatedApp')
-    expect(workflow).toContain('Packaged koffi native binding failed.')
+    expect(workflow).toContain('Packaged koffi native binding failed (exit code $koffiExitCode).')
     expect(workflow).toContain("'dist-dev\\win-unpacked\\DSH Desktop Dev.exe'")
     expect(workflow).toContain('if (-not [string]::IsNullOrEmpty($log))')
     expect(workflow).toContain("dsh web: (http://127\\.0\\.0\\.1:\\d+/\\?token=[^\\s]+)")
@@ -563,7 +575,7 @@ describe('GitHub release contract', () => {
     expect(workflow).toContain('smoke-signed-windows:')
     expect(workflow).toContain('smoke-signed-windows-installer.ps1')
     expect(workflow).toContain("needs.smoke-signed-windows.result == 'success'")
-    expect(workflow).toContain("if (-not (Test-Path $packagedNode)) { throw 'Packaged Windows node.exe is missing.' }")
+    expect(workflow).toContain("if (Test-Path $packagedNode) { throw 'Standalone Windows node.exe must not be packaged.' }")
     expect(workflow).toContain('version="${PRERELEASE_TAG#v}"')
     expect(workflow).toContain('version="${SIGNED_VERSION#v}"')
     expect(workflow).not.toContain('version="${PRERELEASE_TAG:-${GITHUB_REF_NAME#v}}"')
@@ -690,6 +702,16 @@ describe('AI-organized GitHub release body', () => {
     expect(publishJob).toContain('--notes-file')
     expect(publishJob).toContain('github_release_notes.py')
     expect(publishJob).toContain('github-release-notes.md')
+  })
+
+  it('uses an available Copilot model and keeps generation failures diagnosable', async () => {
+    const yml = await load()
+    expect(yml).toContain('RELEASE_NOTES_MODEL: gpt-6-luna')
+    expect(yml).not.toContain('gpt-5.6-sol')
+    expect(yml.match(/--model "\$RELEASE_NOTES_MODEL"/g)).toHaveLength(3)
+    expect(yml.match(/2>"\$error_log"/g)).toHaveLength(3)
+    expect(yml).not.toContain('2>/dev/null')
+    expect(yml.match(/sed -n '1,20\{s\/\^\/copilot: \/;p;\}'/g)).toHaveLength(3)
   })
 
   it('still lets the prerelease job use --generate-notes', async () => {

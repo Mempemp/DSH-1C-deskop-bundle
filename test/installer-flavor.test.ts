@@ -72,11 +72,11 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.6' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.8' },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#65f7f72c2cb5c68ab7c7066b608dcd99de9c0ec9',
+        url: 'https://github.com/wingsky-1/dsh-plugin-hub.git#4e7fb6a8465b245d875e8c578039d7e398b6be2f',
         path: 'packages/dsh-mcp-manager'
       },
       {
@@ -87,12 +87,12 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.22.1'
+        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.24.1'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/zhu1090093659/dsh-web.git#c989e5a14189211c29d5f6aec30f9136681a31de',
+        url: 'https://github.com/zhu1090093659/dsh-web.git#aedff8f0d9edca0fb341d5bd06e88db084ad358a',
         path: 'packages/dsh-skill-explorer'
       },
       {
@@ -103,13 +103,13 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#8694a81da660ea4352db81ad5cba37d74848447a',
+        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#28d423720aee874c127add4aea43e2de4caef703',
         path: 'dsh-1c-project-properties'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43941199a2d251506eafbe0b5273d8191fb9460d',
+        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#b9a38f2e4244e5ef220d2007ea42311d59feefe2',
         path: 'dsh-rlm-tools-bsl'
       },
       {
@@ -121,7 +121,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.3.25'
+        spec: '@goodandready/dsh-russian-lang@0.3.34'
       },
       { kind: 'plugin', from: 'local', path: './packages/dsh-notifier-ru' },
       {
@@ -145,10 +145,10 @@ describe('installer flavor schema', () => {
       {
         kind: 'payload',
         from: 'git',
-        url: 'https://github.com/comol/ai_rules_1c.git#45bacddc2ee21724e4b5e5aa342fa0c4e09d3250',
+        url: 'https://github.com/comol/ai_rules_1c.git#c1fb8e687be5b9d71d5a05c6f5d32cf6a6919dcb',
         id: '1c-rules',
         name: '1c-rules',
-        version: '2026.09.30-45bacdd'
+        version: '2026.10.01-c1fb8e6'
       }
     ])
   })

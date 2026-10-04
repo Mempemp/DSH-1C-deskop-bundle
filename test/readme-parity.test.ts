@@ -11,10 +11,12 @@ const readmes = [
   'README.pt.md'
 ]
 
-// Facts every translated upstream README must carry. The runtime pin is checked
-// by name only: upstream's locale files lag behind their own package.json.
-const upstreamFacts = [
-  '@deepseek-ai/dsh@',
+const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as { dependencies: Record<string, string> }
+const requiredFacts = [
+  `@deepseek-ai/dsh@${manifest.dependencies['@deepseek-ai/dsh']}`,
+  'DOCX',
+  'PPTX',
+  'XLSX',
   '--safe-mode',
   'Cloudflare Quick Tunnel',
   'NSIS',
@@ -25,13 +27,13 @@ const upstreamFacts = [
 // README.md is this bundle's own document: it states the bundled runtime and
 // points at the upstream engineering docs, without claiming upstream features
 // the bundle does not document.
-const bundleFacts = ['@deepseek-ai/dsh@0.1.7-rc.2', 'docs/development.md', 'docs/architecture.md']
+const bundleFacts = ['@deepseek-ai/dsh@0.2.0-rc.2', 'docs/development.md', 'docs/architecture.md']
 
 describe('localized README parity', () => {
   for (const path of readmes) {
     it(`${path} carries the current product facts`, () => {
       const content = readFileSync(path, 'utf8')
-      const facts = path === 'README.md' ? bundleFacts : upstreamFacts
+      const facts = path === 'README.md' ? bundleFacts : requiredFacts
 
       for (const fact of facts) expect(content).toContain(fact)
       expect(content).not.toContain('@deepseek-ai/dsh@0.1.1-rc.1')
@@ -45,7 +47,8 @@ describe('localized README parity', () => {
       'docs/development.md',
       'docs/architecture.md',
       'docs/release-runbook.md',
-      'docs/preset-packages.md'
+      'docs/preset-packages.md',
+      'docs/office-runtime.md'
     ]
 
     for (const path of documents) {

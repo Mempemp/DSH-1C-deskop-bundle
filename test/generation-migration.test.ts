@@ -1,5 +1,5 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -94,10 +94,16 @@ describe('one-time profile migration to generations', () => {
   }
 
   function deps(home: string, reinstall = async () => ({ ok: true })) {
+    // Every real call site passes the packaged lock-recovery runner
+    // (`bundledPnpmRunnerPath()`), and the migration refuses to touch a
+    // projected profile without one; give the fixture the same shape.
+    const pnpmRunnerPath = join(home, 'pnpm-runner.cjs')
+    writeFileSync(pnpmRunnerPath, '')
     return {
       dshHome: home,
       nodeExecutablePath: 'node',
       pnpmEntryPath: 'pnpm',
+      pnpmRunnerPath,
       dshEntryPath: 'bin.js',
       note: silent,
       reinstallSharedTree: reinstall

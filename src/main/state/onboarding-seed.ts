@@ -13,7 +13,7 @@ import { parse, stringify } from 'yaml'
  * asserts the two stay equal, so a Harness bump that changes the notice makes the
  * test fail instead of silently writing a stale acknowledgement.
  */
-export const WELCOME_NOTICE_VERSION = '2026-08-13.1'
+export const WELCOME_NOTICE_VERSION = '2026-09-28.1'
 
 /** Durable settings namespace the Harness UI keeps product onboarding facts in. */
 const WELCOME_NOTICE_NAMESPACE = 'ui-onboarding'

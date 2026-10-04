@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.10.0-4
+version: 0.11.0-1
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
@@ -25,12 +25,12 @@ sources:
   # that has to move together.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.66.6
+    spec: dshmarket@1.66.8
   # Pinned by commit, not `#main`: the catalog must carry exactly the code the
   # release names. This commit is v0.2.7 (`@wingsky-1/dsh-mcp-manager` 0.2.7).
   - kind: plugin
     from: git
-    url: https://github.com/wingsky-1/dsh-plugin-hub.git#65f7f72c2cb5c68ab7c7066b608dcd99de9c0ec9
+    url: https://github.com/wingsky-1/dsh-plugin-hub.git#4e7fb6a8465b245d875e8c578039d7e398b6be2f
     path: packages/dsh-mcp-manager
   # Web search for the model. From npm rather than from the git tree: `./dist` is
   # a build artifact the repository does not commit, so packing #main produced a
@@ -40,18 +40,17 @@ sources:
   - kind: plugin
     from: npm
     spec: "@liustack/modsearch@5.10.5"
-  # For the DSH 0.1.7 line the newest supported release is v0.22.1, not the
-  # npm `latest` v0.24.1: 0.23/0.24 declare the host peer `^0.2.0-rc.1`, and a
-  # host that does not satisfy a peer range gets the row rejected or silently
-  # disabled. v0.22.1 is the release upstream names for 0.1.7-rc.1…0.1.7-rc.2
-  # (peer `^0.1.7-rc.1`); moving to 0.24.x belongs to the base update.
+  # v0.24.1 is the release upstream names for the 0.2.0 host line (peer
+  # `^0.2.0-rc.1`); on the DSH 0.1.7 base the newest usable release was v0.22.1
+  # (peer `^0.1.7-rc.1`). A host that does not satisfy a peer range gets the row
+  # rejected or silently disabled, so the pin follows the core line.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.22.1
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.24.1
   # Pinned by commit (v0.4.3, `@linxin666/dsh-client-ui-skill-explorer` 0.4.3).
   - kind: plugin
     from: git
-    url: https://github.com/zhu1090093659/dsh-web.git#c989e5a14189211c29d5f6aec30f9136681a31de
+    url: https://github.com/zhu1090093659/dsh-web.git#aedff8f0d9edca0fb341d5bd06e88db084ad358a
     path: packages/dsh-skill-explorer
   # From npm, not from the git tree, for the same reason as modsearch below:
   # `integrations/deepseek-harness/skills` is in that directory's .gitignore and
@@ -71,11 +70,11 @@ sources:
   # пакета) и не поднимает его, пока не задан путь к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#8694a81da660ea4352db81ad5cba37d74848447a
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#28d423720aee874c127add4aea43e2de4caef703
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43941199a2d251506eafbe0b5273d8191fb9460d
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#b9a38f2e4244e5ef220d2007ea42311d59feefe2
     path: dsh-rlm-tools-bsl
   - kind: plugin
     from: git
@@ -87,7 +86,7 @@ sources:
   # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.3.25"
+    spec: "@goodandready/dsh-russian-lang@0.3.34"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора
@@ -139,7 +138,7 @@ sources:
   # it (or let the tree digest change) or an existing install keeps its old copy.
   - kind: payload
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#45bacddc2ee21724e4b5e5aa342fa0c4e09d3250
+    url: https://github.com/comol/ai_rules_1c.git#c1fb8e687be5b9d71d5a05c6f5d32cf6a6919dcb
     id: 1c-rules
     name: 1c-rules
-    version: 2026.09.30-45bacdd
+    version: 2026.10.01-c1fb8e6

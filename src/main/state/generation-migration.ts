@@ -14,6 +14,7 @@ import {
 } from 'dsh-desktop-market-installer/generations/registry'
 import { resolveMarketRegistry } from 'dsh-desktop-market-installer/market-registry'
 import { VERIFIED_MARKET_BASELINE } from './market-baseline'
+import { packageCommandEnvironment } from '../runtime/profile-plugin-command'
 
 /**
  * One-time move of a profile that installed community plugins into the shared
@@ -84,6 +85,8 @@ interface MigrationDeps {
   dshHome: string
   nodeExecutablePath: string
   pnpmEntryPath: string
+  /** The packaged lock-recovery runner the `.desktop-bin` pnpm shim routes through. */
+  pnpmRunnerPath?: string
   dshEntryPath: string
   /** Rebuild the shared tree from the rewritten manifest (dshmarket only). */
   reinstallSharedTree: () => Promise<{ ok: boolean; detail?: string }>
@@ -708,6 +711,12 @@ export async function migrateProfileToGenerations(deps: MigrationDeps): Promise<
   }
   try {
     const generationIds: string[] = []
+    const environment = await packageCommandEnvironment({
+      dshHome,
+      nodeExecutablePath: deps.nodeExecutablePath,
+      pnpmEntryPath: deps.pnpmEntryPath,
+      pnpmRunnerPath: deps.pnpmRunnerPath
+    })
     // Preflight every plugin while the working legacy profile is still intact.
     // Promoted generations are inert until desired.json moves, so a failure here
     // leaves startup on the exact tree that was already working.
@@ -730,6 +739,7 @@ export async function migrateProfileToGenerations(deps: MigrationDeps): Promise<
         sourceDirectory: plugin.sourceDirectory,
         nodeExecutablePath: deps.nodeExecutablePath,
         pnpmEntryPath: deps.pnpmEntryPath,
+        environment,
         // Registry-sourced plugins are re-fetched here; keep them on the
         // registry the market reads rather than on ~/.npmrc's (#337).
         registry: await resolveMarketRegistry({ profileDir: profileDir(dshHome) }),
