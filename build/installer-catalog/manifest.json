@@ -61,19 +61,19 @@
       "kind": "plugin",
       "id": "dsh-1c-project-properties",
       "name": "dsh-1c-project-properties",
-      "version": "0.6.4",
+      "version": "0.6.5",
       "label": "Plugin: dsh-1c-project-properties",
-      "file": "plugins/dsh-1c-project-properties-0.6.4.tgz",
-      "digest": "0601bde2d5ecb5eac4b4eb9b2ccda4a97ff3b14e61c24812168586b39ab64f35"
+      "file": "plugins/dsh-1c-project-properties-0.6.5.tgz",
+      "digest": "f67e531b2d203e7364a9e78f5e66d58dbd2edbb3274245b0641a225b33448ce1"
     },
     {
       "kind": "plugin",
       "id": "dsh-rlm-tools-bsl",
       "name": "dsh-rlm-tools-bsl",
-      "version": "0.1.7",
+      "version": "0.1.8",
       "label": "Plugin: dsh-rlm-tools-bsl",
-      "file": "plugins/dsh-rlm-tools-bsl-0.1.7.tgz",
-      "digest": "326c60e47c6f739a2236aa25f1aa78fb307f33aa017b1dc3e27e45e5117d802d"
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.8.tgz",
+      "digest": "3185a15d55dbbc54896a316e0456c45ca29c2e2efb271270cbcf728123474bc2"
     },
     {
       "kind": "plugin",
@@ -123,10 +123,10 @@
       "kind": "plugin",
       "id": "dsh-engram-memory",
       "name": "dsh-engram-memory",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "label": "Plugin: dsh-engram-memory",
-      "file": "plugins/dsh-engram-memory-0.1.4.tgz",
-      "digest": "03faff75765d7ada4e3bbf1f420026941cb68710914f4e64add1a965d8abecad"
+      "file": "plugins/dsh-engram-memory-0.1.5.tgz",
+      "digest": "50f175f5c3536dff33317b7a3a1fe33d35321286e2e3da40cee7a040b3817c40"
     },
     {
       "kind": "payload",

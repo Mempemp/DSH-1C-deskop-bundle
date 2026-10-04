@@ -180,6 +180,48 @@ function readPackageName(filePath) {
 }
 
 /**
+ * Пакеты ядра, которые несёт эта ревизия: `@deepseek-ai/*` из `node_modules`
+ * рядом со скриптом. Каталог собирается той же ревизией ядра, что уезжает в
+ * установщик, поэтому список здесь — тот же, что увидит плагин на диске.
+ * @param {string} [root]
+ * @returns {Set<string>|undefined}
+ */
+function hostCorePackages(root = projectRoot) {
+  const scope = join(root, 'node_modules', '@deepseek-ai')
+  if (!existsSync(scope)) return undefined
+  return new Set(readdirSync(scope))
+}
+
+/**
+ * Ссылки плагина на пакеты ядра — необязательные пиры и клиентские инъекции.
+ *
+ * Пакет, которого в ядре больше нет, загрузку молча не ломает: неизвестная
+ * инъекция на клиенте пропускается, а расхождение пиров видно предупреждением
+ * уже у человека. Поэтому проверяем на сборке каталога, где рядом лежат и
+ * плагин, и ядро той же ревизии: пустой список — манифест сходится с ядром.
+ * @param {string|undefined} directory
+ * @param {Set<string>|undefined} [hostNames]
+ * @returns {string[]}
+ */
+export function hostReferenceGaps(directory, hostNames = hostCorePackages()) {
+  if (hostNames === undefined || typeof directory !== 'string' || directory === '') return []
+  let manifest
+  try {
+    manifest = JSON.parse(readFileSync(join(directory, 'package.json'), 'utf8'))
+  } catch {
+    return []
+  }
+  const optional = manifest.peerDependenciesMeta ?? {}
+  const declared = [
+    ...Object.keys(manifest.peerDependencies ?? {}).filter((name) => optional[name]?.optional !== true),
+    ...(Array.isArray(manifest.dsh?.client?.inject) ? manifest.dsh.client.inject : [])
+  ]
+  return [...new Set(declared)]
+    .filter((name) => typeof name === 'string' && name.startsWith('@deepseek-ai/'))
+    .filter((name) => !hostNames.has(name.slice('@deepseek-ai/'.length)))
+}
+
+/**
  * Quote a spawn argument when Windows `shell: true` would otherwise split it.
  * @param {string} value
  */
@@ -1120,11 +1162,14 @@ async function vendorResolvedSource(input) {
     let packed
     let name
     let version
+    /** Манифест, по которому проверяем ссылки на пакеты ядра. */
+    let checked
     if (source.from === 'npm' && tree === undefined) {
       packed = (options.packSpec ?? packNpmSpec)(source.spec ?? '', paths.pluginsDir)
       const extracted = join(workRoot, `read-${index}`)
       extractArchive(packed, extracted)
-      const pkg = readPackageName(join(firstExtractedDirectory(extracted), 'package.json'))
+      checked = firstExtractedDirectory(extracted)
+      const pkg = readPackageName(join(checked, 'package.json'))
       name = pkg.name
       version = pkg.version
     } else if (tree) {
@@ -1135,6 +1180,7 @@ async function vendorResolvedSource(input) {
         name = source.id ?? source.name ?? basename(tree, '.tgz')
         version = source.version ?? '0.0.0'
       } else {
+        checked = tree
         const pkg = readPackageName(join(tree, 'package.json'))
         name = pkg.name
         version = pkg.version
@@ -1142,6 +1188,12 @@ async function vendorResolvedSource(input) {
       }
     } else {
       throw new Error(`sources[${index}] plugin is missing a resolvable tree`)
+    }
+    const gaps = hostReferenceGaps(checked)
+    if (gaps.length > 0) {
+      throw new Error(
+        `sources[${index}] plugin ${name} references packages absent from this core: ${gaps.join(', ')}`
+      )
     }
     const id = source.id ?? name
     return [{

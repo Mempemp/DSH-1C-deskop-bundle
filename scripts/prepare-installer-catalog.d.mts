@@ -41,6 +41,7 @@ export function productionDependenciesToBundle(manifest: Record<string, unknown>
 export function ensureBundledProductionDependencies(directory: string): string[]
 export function repackTarballWithBundledDependencies(archive: string, destinationDir: string): string
 export function packageEntryPaths(manifest: Record<string, unknown>): string[]
+export function hostReferenceGaps(directory?: string, hostNames?: Set<string>): string[]
 export function tarballContainsPath(archive: string, relativePath: string): boolean
 export function fileSha256(file: string): string
 export function packPluginDirectory(

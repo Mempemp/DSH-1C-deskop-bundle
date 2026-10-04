@@ -70,11 +70,11 @@ sources:
   # пакета) и не поднимает его, пока не задан путь к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#28d423720aee874c127add4aea43e2de4caef703
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#7e7db3b9acd945e1bc0a33b63ed0f201b7a0a1e4
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#b9a38f2e4244e5ef220d2007ea42311d59feefe2
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#663e7a1bbdab78f9f5a4d04e7bd35d4873f3ef62
     path: dsh-rlm-tools-bsl
   - kind: plugin
     from: git
@@ -124,7 +124,7 @@ sources:
   # старте. Пин по коммиту, как у остальных наших.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/dsh-engram-memory.git#9d3fb8d1d60139ed4f7bf65ed2448a88e7dfaecc
+    url: https://github.com/Mempemp/dsh-engram-memory.git#f2f28e9fb126ea44182f3cedc5410fb35ee3f19e
   # 1C ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json + content/.
   # Delivered as a payload and nothing else: the skills inside it cross-reference
   # AGENTS.md, content/rules/* and content/agents/*, so shipping the skills tree

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -17,6 +17,7 @@ import {
 } from '../scripts/lib/installer-flavor.mjs'
 import {
   catalogOutputPaths,
+  hostReferenceGaps,
   packDirectoryAsTgz,
   packPluginDirectory,
   packageEntryPaths,
@@ -103,13 +104,13 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#28d423720aee874c127add4aea43e2de4caef703',
+        url: 'https://github.com/Mempemp/DSH-1CProjectProperties.git#7e7db3b9acd945e1bc0a33b63ed0f201b7a0a1e4',
         path: 'dsh-1c-project-properties'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#b9a38f2e4244e5ef220d2007ea42311d59feefe2',
+        url: 'https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#663e7a1bbdab78f9f5a4d04e7bd35d4873f3ef62',
         path: 'dsh-rlm-tools-bsl'
       },
       {
@@ -140,7 +141,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/dsh-engram-memory.git#9d3fb8d1d60139ed4f7bf65ed2448a88e7dfaecc'
+        url: 'https://github.com/Mempemp/dsh-engram-memory.git#f2f28e9fb126ea44182f3cedc5410fb35ee3f19e'
       },
       {
         kind: 'payload',
@@ -636,6 +637,65 @@ describe('package entry packing', () => {
   })
 })
 
+describe('host package references', () => {
+  const withManifest = (manifest: unknown) => {
+    const dir = mkdtempSync(join(tmpdir(), 'dsh-host-refs-'))
+    writeFileSync(join(dir, 'package.json'), JSON.stringify(manifest))
+    return dir
+  }
+
+  // Пакет ядра, которого в этой ревизии нет: загрузку он молча не ломает —
+  // неизвестная инъекция на клиенте пропускается, — поэтому расхождение ловим
+  // на сборке каталога, а не у человека после установки.
+  it('reports a peer the core no longer carries', () => {
+    const dir = withManifest({
+      name: 'probe',
+      peerDependencies: { '@deepseek-ai/dsh-client-runtime': '^0.1.1-rc.2' }
+    })
+    expect(hostReferenceGaps(dir, new Set(['dsh', 'cordis']))).toEqual([
+      '@deepseek-ai/dsh-client-runtime'
+    ])
+  })
+
+  it('ignores carried packages, optional peers, plain dependencies and foreign names', () => {
+    const dir = withManifest({
+      name: 'probe',
+      peerDependencies: { '@deepseek-ai/cordis': '^4.0.1', '@deepseek-ai/dsh-absent': '^1' },
+      peerDependenciesMeta: { '@deepseek-ai/dsh-absent': { optional: true } },
+      dependencies: { '@deepseek-ai/dsh-gone': '^1' },
+      dsh: { client: { inject: ['@deepseek-ai/dsh-client-ui-slots'] } }
+    })
+    expect(hostReferenceGaps(dir, new Set(['cordis', 'dsh-client-ui-slots']))).toEqual([])
+  })
+
+  it('reports a client inject the core no longer carries', () => {
+    const dir = withManifest({
+      name: 'probe',
+      dsh: {
+        client: { inject: ['@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-ui-slots'] }
+      }
+    })
+    expect(hostReferenceGaps(dir, new Set(['dsh-client-ui-slots']))).toEqual([
+      '@deepseek-ai/dsh-client-runtime'
+    ])
+  })
+
+  it('checks against the core this build ships when no list is given', () => {
+    const carried = withManifest({
+      name: 'probe',
+      peerDependencies: { '@deepseek-ai/cordis': '^4.0.1' },
+      dsh: { client: { inject: ['@deepseek-ai/dsh-client-ui-slots'] } }
+    })
+    expect(hostReferenceGaps(carried)).toEqual([])
+
+    const stale = withManifest({
+      name: 'probe',
+      dsh: { client: { inject: ['@deepseek-ai/dsh-client-runtime'] } }
+    })
+    expect(hostReferenceGaps(stale)).toEqual(['@deepseek-ai/dsh-client-runtime'])
+  })
+})
+
 describe('prepare-installer-catalog', () => {
   const roots: string[] = []
 
@@ -689,6 +749,43 @@ describe('prepare-installer-catalog', () => {
     await expect(
       readFile(join(prepared.paths.catalogDir, 'rules', 'AGENTS.md'), 'utf8')
     ).resolves.toContain('OEM rules')
+  })
+
+  // Манифест плагина — часть поставки: ссылка на пакет ядра, которого в этой
+  // ревизии нет, должна останавливать сборку каталога, а не всплывать у человека
+  // после установки (инъекция на клиенте молча пропускается, пиры — предупреждением).
+  it('refuses a plugin whose manifest references a package this core does not carry', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-prepare-hostrefs-'))
+    roots.push(root)
+    const plugin = join(root, 'plugin')
+    await mkdir(plugin, { recursive: true })
+    await writeFile(
+      join(plugin, 'package.json'),
+      JSON.stringify({
+        name: 'stale-plugin',
+        version: '1.0.0',
+        main: 'index.js',
+        dsh: { client: { inject: ['@deepseek-ai/dsh-client-runtime'] } }
+      })
+    )
+    await writeFile(join(plugin, 'index.js'), 'export {}\n')
+    const flavorPath = join(root, 'flavor.yml')
+    await writeFile(
+      flavorPath,
+      [
+        'name: Host refs Desktop',
+        'version: 1.0.0',
+        'sources:',
+        '  - kind: plugin',
+        '    from: local',
+        '    path: ./plugin',
+        ''
+      ].join('\n')
+    )
+
+    await expect(prepareInstallerCatalog({ projectRoot: root, flavorPath })).rejects.toThrow(
+      /references packages absent from this core: @deepseek-ai\/dsh-client-runtime/
+    )
   })
 
   it('vendors a payload tree whole, with a content digest that tracks its files', async () => {
