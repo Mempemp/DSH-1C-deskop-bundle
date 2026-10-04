@@ -1,0 +1,141 @@
+{
+  "name": "DSH Desktop",
+  "version": "0.11.0-1",
+  "id": "dsh-desktop",
+  "items": [
+    {
+      "kind": "plugin",
+      "id": "dshmarket",
+      "name": "dshmarket",
+      "version": "1.66.8",
+      "label": "Plugin: dshmarket",
+      "file": "plugins/dshmarket-1.66.8.tgz",
+      "digest": "74c92716e79b78b799545bca0a4f10ac6a7f67ece6f2065ace896801fe3c63dc"
+    },
+    {
+      "kind": "plugin",
+      "id": "@wingsky-1/dsh-mcp-manager",
+      "name": "@wingsky-1/dsh-mcp-manager",
+      "version": "0.2.8",
+      "label": "Plugin: @wingsky-1/dsh-mcp-manager",
+      "file": "plugins/wingsky-1-dsh-mcp-manager-0.2.8.tgz",
+      "digest": "96e0d718d30a9e76017aaaa6ecf18ef21ba1854f1d14ffd6c02999c57f668edb"
+    },
+    {
+      "kind": "plugin",
+      "id": "@liustack/modsearch",
+      "name": "@liustack/modsearch",
+      "version": "5.10.5",
+      "label": "Plugin: @liustack/modsearch",
+      "file": "plugins/liustack-modsearch-5.10.5.tgz",
+      "digest": "03a193f9da931e45f722b5b17c8f8ca0b80bd9c8261c9cee52707bb60b267f39"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-better-sidebar",
+      "name": "dsh-better-sidebar",
+      "version": "0.24.1",
+      "label": "Plugin: dsh-better-sidebar",
+      "file": "plugins/dsh-better-sidebar-0.24.1.tgz",
+      "digest": "cd2bc115663b75ca5980a419d5b6620566745810cdabad919e0e95bffe128b17"
+    },
+    {
+      "kind": "plugin",
+      "id": "@linxin666/dsh-client-ui-skill-explorer",
+      "name": "@linxin666/dsh-client-ui-skill-explorer",
+      "version": "0.4.4",
+      "label": "Plugin: @linxin666/dsh-client-ui-skill-explorer",
+      "file": "plugins/linxin666-dsh-client-ui-skill-explorer-0.4.4.tgz",
+      "digest": "0e373ad80ee52f4d38abf09a84e0c372b064c3168a3458f850c54da2f8c2457f"
+    },
+    {
+      "kind": "plugin",
+      "id": "@tt-a1i/archify-dsh",
+      "name": "@tt-a1i/archify-dsh",
+      "version": "0.1.0",
+      "label": "Plugin: @tt-a1i/archify-dsh",
+      "file": "plugins/tt-a1i-archify-dsh-0.1.0.tgz",
+      "digest": "3192afe54949da6494acea3bd2bf5113a58ea78651113b1289bcc7212130df38"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-1c-project-properties",
+      "name": "dsh-1c-project-properties",
+      "version": "0.6.4",
+      "label": "Plugin: dsh-1c-project-properties",
+      "file": "plugins/dsh-1c-project-properties-0.6.4.tgz",
+      "digest": "0601bde2d5ecb5eac4b4eb9b2ccda4a97ff3b14e61c24812168586b39ab64f35"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-rlm-tools-bsl",
+      "name": "dsh-rlm-tools-bsl",
+      "version": "0.1.7",
+      "label": "Plugin: dsh-rlm-tools-bsl",
+      "file": "plugins/dsh-rlm-tools-bsl-0.1.7.tgz",
+      "digest": "326c60e47c6f739a2236aa25f1aa78fb307f33aa017b1dc3e27e45e5117d802d"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-bsl-editor",
+      "name": "dsh-bsl-editor",
+      "version": "0.5.3",
+      "label": "Plugin: dsh-bsl-editor",
+      "file": "plugins/dsh-bsl-editor-0.5.3.tgz",
+      "digest": "c69891a2661d9af48961f6b6a409ae4413263f33cfa832027c944834ec6ae044"
+    },
+    {
+      "kind": "plugin",
+      "id": "@goodandready/dsh-russian-lang",
+      "name": "@goodandready/dsh-russian-lang",
+      "version": "0.3.34",
+      "label": "Plugin: @goodandready/dsh-russian-lang",
+      "file": "plugins/goodandready-dsh-russian-lang-0.3.34.tgz",
+      "digest": "b686ef3b55077631492633d0a176bd39daf689fdfccab155efe52895625d78df"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-notifier-ru",
+      "name": "dsh-notifier-ru",
+      "version": "0.2.7",
+      "label": "Plugin: dsh-notifier-ru",
+      "file": "plugins/dsh-notifier-ru-0.2.7.tgz",
+      "digest": "ef3e54ca10c6a42701cb0a07b37537bb5c923f91688f38f31a9fcd5f2e1da887"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-univer-office",
+      "name": "dsh-univer-office",
+      "version": "0.3.6",
+      "label": "Plugin: dsh-univer-office",
+      "file": "plugins/dsh-univer-office-0.3.6.tgz",
+      "digest": "5cc8fe08af295e26e9b3799f321f5c792ce4d464534e42c683fcddbd677f03cd"
+    },
+    {
+      "kind": "mcp",
+      "id": "v8std",
+      "label": "MCP: v8std",
+      "transport": "streamable-http",
+      "serverName": "v8std",
+      "url": "https://ai.v8std.ru/mcp"
+    },
+    {
+      "kind": "plugin",
+      "id": "dsh-engram-memory",
+      "name": "dsh-engram-memory",
+      "version": "0.1.4",
+      "label": "Plugin: dsh-engram-memory",
+      "file": "plugins/dsh-engram-memory-0.1.4.tgz",
+      "digest": "03faff75765d7ada4e3bbf1f420026941cb68710914f4e64add1a965d8abecad"
+    },
+    {
+      "kind": "payload",
+      "id": "1c-rules",
+      "name": "1c-rules",
+      "version": "2026.10.01-c1fb8e6",
+      "label": "Payload: 1c-rules",
+      "path": "payload/1c-rules",
+      "digest": "4b906bbb651caf92ea44a499239ed5228f9d49172100c4a6021d8e8d148de968"
+    }
+  ]
+}
