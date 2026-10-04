@@ -65,7 +65,7 @@ Profile 组合仍从当前 Profile 和安装 anchor 解析；普通 Profile 与 
 
 ## CLI-only peer 校验
 
-`@deepseek-ai/dsh@0.1.7-rc.2` 只提供 `bin.dsh = lib/bin.js`，没有可导入根入口。
+`@deepseek-ai/dsh@0.2.0-rc.2` 只提供 `bin.dsh = lib/bin.js`，没有可导入根入口。
 generation 校验不能把 `require.resolve()` 失败直接当作缺包：对于没有 main/exports 的 CLI 包，检查包内实际存在的 bin 文件，再沿用宿主目录和单例校验。
 不执行 CLI，不用 bin 掩盖损坏的 main/exports，不接受目录、缺失文件或越出包目录的 bin。
 这只影响安装后依赖校验阶段，不改变 Profile 解析基准和插件加载协议；实际 import/激活仍由 Harness 验证。

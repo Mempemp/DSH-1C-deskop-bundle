@@ -115,7 +115,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#fcb0357cf612db265114c95bd5f8304bad1fceeb',
+        url: 'https://github.com/Mempemp/DSH-CodeEditor_BSL.git#ecff08e2dd2bb05bd9e0fe92f12c9132caca85a6',
         path: 'dsh-bsl-editor'
       },
       {

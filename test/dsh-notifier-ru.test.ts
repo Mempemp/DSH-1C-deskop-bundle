@@ -110,7 +110,7 @@ describe('dsh-notifier-ru: русская редакция плагина уве
     expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
     expect(manifest.exports['.']).toBe('./lib/index.js')
     expect(manifest.exports['./client']).toBe('./lib/client.js')
-    expect(manifest.peerDependencies['@deepseek-ai/dsh-settings']).toBe('0.1.7-rc.2')
+    expect(manifest.peerDependencies['@deepseek-ai/dsh-settings']).toBe('^0.1.7-rc.2 || ^0.2.0-rc.1')
 
     for (const file of bundleFiles) expect(existsSync(path.join(packageRoot, file)), file).toBe(true)
 
