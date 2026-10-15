@@ -26,7 +26,13 @@ const patchedPackages = [
     name: 'dsh-workspace',
     version: '0.2.0-rc.2',
     file: 'lib/index.js',
-    markers: ['forgetSession(sessionId)', 'archivedSessionIds: state.archivedSessionIds.filter']
+    markers: [
+      'forgetSession(sessionId)',
+      'archivedSessionIds: state.archivedSessionIds.filter',
+      'releaseOtherOwners(sessionId, keepWorkspaceId)',
+      'await this.host.releaseOtherOwners(sessionId, this.id)',
+      'it is accounted by workspace'
+    ]
   },
   {
     name: 'dsh-api-session-controller',
