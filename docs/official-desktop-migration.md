@@ -106,6 +106,18 @@ peer **отклоняет установку до pnpm** и на старте в
   `skill-explorer` 0.4.4 (`@deepseek-ai/dsh >=0.2.0-rc.1`), `archify` 0.1.0 (пиров нет),
   `russian-lang` 0.3.34, `univer-office` 0.3.6; наши `1c-project-properties` 0.6.4,
   `rlm-tools-bsl` 0.1.7 и `engram` 0.1.4 несут только `@deepseek-ai/cordis` (ядро ставит 4.0.4).
+
+**Сверка пинов перед сборкой 0.11.0-2 (15.10.2026):** подняты `dshmarket` 1.66.8 → 1.66.22
+(вместе с `VERIFIED_MARKET_BASELINE` и `RECOMMENDED_MARKET_VERSION` — эти три всегда едут парой),
+`mcp-manager` 0.2.8 → 0.2.9 (коммит `97cc69f`, возвращает сохранение конфигурации на Windows и
+защищает внешние правки), `modsearch` 5.10.5 → 5.10.6, `better-sidebar` v0.24.1 → v0.26.0
+(хостовые пиры `^0.2.0-rc.2`), `skill-explorer` 0.4.4 → 0.4.6 (пир `@deepseek-ai/dsh >=0.2.0-rc.2`),
+`archify` 0.1.0 → 1.0.0 (состав tarball проверен: `skills/archify/**` и `lib/index.js` на месте),
+`russian-lang` 0.3.34 → 0.3.45 (пир `dsh-settings ^0.2.0-rc.2`), `univer-office` 0.3.6 → 0.3.7,
+`dsh-bsl-editor` 0.5.3 → v0.6.2 (`d65be2f`), payload `1c-rules` → коммит `96c4d96`. Без изменений:
+`1c-project-properties` 0.6.5, `rlm-tools-bsl` 0.1.8, `engram` 0.1.5. База — по-прежнему **v0.11.0**:
+у апстрима с 09.10.2026 лежит v0.11.1, но её пин ядра тот же (`0.2.0-rc.2`), и перенос базы —
+отдельная работа, а не часть этой сборки.
 - `dsh-bsl-editor` 0.5.3: из ядра убран `@deepseek-ai/dsh-client-runtime` (последняя публикация —
   0.1.1-rc.2), а плагин держал его и пиром, и в `dsh.client.inject`; снято, три хостовых пира
   расширены до `^0.1.0-rc.6 || ^0.2.0-rc.1`.

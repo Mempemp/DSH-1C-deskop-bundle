@@ -24,7 +24,7 @@ import { forgetPlugin } from './plugin-state.mjs'
 import { SIDELINE_MARKER } from './pnpm-runner.mjs'
 import { removeTree } from './remove-tree.mjs'
 
-export const RECOMMENDED_MARKET_VERSION = '^1.66.8'
+export const RECOMMENDED_MARKET_VERSION = '^1.66.22'
 export const MARKET_PACKAGE = 'dshmarket'
 export const MARKET_PROFILE = 'web'
 export const STATUS_PATH = '/dsh-desktop/market-installer/status'

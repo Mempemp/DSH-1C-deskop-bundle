@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.11.0-1
+version: 0.11.0-2
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
@@ -25,12 +25,14 @@ sources:
   # that has to move together.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.66.8
+    spec: dshmarket@1.66.22
   # Pinned by commit, not `#main`: the catalog must carry exactly the code the
-  # release names. This commit is v0.2.7 (`@wingsky-1/dsh-mcp-manager` 0.2.7).
+  # release names. This commit is v0.2.9 (`@wingsky-1/dsh-mcp-manager` 0.2.9) —
+  # the maintenance release that restores Windows config saving and protects
+  # externally edited server entries.
   - kind: plugin
     from: git
-    url: https://github.com/wingsky-1/dsh-plugin-hub.git#4e7fb6a8465b245d875e8c578039d7e398b6be2f
+    url: https://github.com/wingsky-1/dsh-plugin-hub.git#97cc69f0add5f4e999461df4590737c33b0376fc
     path: packages/dsh-mcp-manager
   # Web search for the model. From npm rather than from the git tree: `./dist` is
   # a build artifact the repository does not commit, so packing #main produced a
@@ -39,18 +41,22 @@ sources:
   # the exact pin keeps two installs of one build identical.
   - kind: plugin
     from: npm
-    spec: "@liustack/modsearch@5.10.5"
-  # v0.24.1 is the release upstream names for the 0.2.0 host line (peer
-  # `^0.2.0-rc.1`); on the DSH 0.1.7 base the newest usable release was v0.22.1
-  # (peer `^0.1.7-rc.1`). A host that does not satisfy a peer range gets the row
-  # rejected or silently disabled, so the pin follows the core line.
+    spec: "@liustack/modsearch@5.10.6"
+  # v0.26.0 is the release upstream names for the 0.2.0 host line: every host peer
+  # is `^0.2.0-rc.2`, which is exactly the core this bundle carries (`^0.2.0-rc.1`
+  # of the previous pin also accepted it, so the move narrows nothing — it stops
+  # lagging behind the line our core is on). A host that does not satisfy a peer
+  # range gets the row rejected or silently disabled, so the pin follows the core
+  # line.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.24.1
-  # Pinned by commit (v0.4.3, `@linxin666/dsh-client-ui-skill-explorer` 0.4.3).
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.26.0
+  # Pinned by commit (v0.4.6, `@linxin666/dsh-client-ui-skill-explorer` 0.4.6).
+  # Its host peer is `>=0.2.0-rc.2` — the same statement as the sidebar above:
+  # the release is built against the core line this bundle carries.
   - kind: plugin
     from: git
-    url: https://github.com/zhu1090093659/dsh-web.git#aedff8f0d9edca0fb341d5bd06e88db084ad358a
+    url: https://github.com/zhu1090093659/dsh-web.git#3cd18493de81dc2ac4b6ee17677325765d7e84bd
     path: packages/dsh-skill-explorer
   # From npm, not from the git tree, for the same reason as modsearch below:
   # `integrations/deepseek-harness/skills` is in that directory's .gitignore and
@@ -59,11 +65,12 @@ sources:
   # points at a `skills/` directory that does not exist — it installed and
   # activated cleanly, and `skill("archify")` answered "unknown or no longer
   # available", because the skill service listed nothing. The published tarball
-  # is the packed one (Skill 2.14) and it is the only adapter build upstream
-  # ever released; its GitHub releases carry no newer adapter artifact.
+  # is the packed one and the only adapter build upstream ever released: 1.0.0 is
+  # the same skill-only bundle, re-published 2026-10-04, and its tarball was
+  # checked to carry the payload (`skills/archify/**`, `lib/index.js`, LICENSE).
   - kind: plugin
     from: npm
-    spec: "@tt-a1i/archify-dsh@0.1.0"
+    spec: "@tt-a1i/archify-dsh@1.0.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
   # тот код, который в неё попал. 0.6.x — плагин владеет жизненным циклом
   # MCP-сервера справки по API платформы (vendor/bsl-context-rs 0.20.0 внутри
@@ -76,17 +83,24 @@ sources:
     from: git
     url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#663e7a1bbdab78f9f5a4d04e7bd35d4873f3ef62
     path: dsh-rlm-tools-bsl
+  # v0.6.2: приём и отклонение изменений в файле, отметки «просмотрено» (живут по
+  # изменениям, переживают коммит и отправку в индекс), подсказка редактора
+  # полоской сверху. Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`, то есть
+  # ядро 0.2.0-rc.2 сборки диапазоном принимается.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#ecff08e2dd2bb05bd9e0fe92f12c9132caca85a6
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#d65be2f47e6340efa7be0b11e44f591f8ec0cfcc
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
-  # range would silently change what a release delivers. Smart UX stays off by
-  # default — src/main/state/plugin-defaults-seed.ts pins those toggles.
+  # range would silently change what a release delivers. Its dsh-settings peer
+  # names `^0.2.0-rc.2`, the version this bundle installs — a stale pin is not a
+  # start failure, it kills the plugin on an unknown API and leaves the interface
+  # English (see references/shell-ui-locale.md). Smart UX stays off by default —
+  # src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.3.34"
+    spec: "@goodandready/dsh-russian-lang@0.3.45"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора
@@ -103,7 +117,7 @@ sources:
   # the market install the same package.
   - kind: plugin
     from: npm
-    spec: dsh-univer-office@0.3.6
+    spec: dsh-univer-office@0.3.7
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store
@@ -136,9 +150,12 @@ sources:
   # Pinned to a commit, not `#main`: a floating ref would hand two installs of the
   # same build different rulesets. `version` feeds the catalog fingerprint: bump
   # it (or let the tree digest change) or an existing install keeps its old copy.
+  # 96c4d96 — правила 1c-metadata-manage (поля ввода Tuning/Opening/StartListChoice,
+  # внешние отчёты могут называть общие формы конфигурации), дефолтный адрес
+  # поддержки, память и детали операций грузятся по требованию.
   - kind: payload
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#c1fb8e687be5b9d71d5a05c6f5d32cf6a6919dcb
+    url: https://github.com/comol/ai_rules_1c.git#96c4d96ad22b4d2751a9298147c76e8ea73aea4c
     id: 1c-rules
     name: 1c-rules
-    version: 2026.10.01-c1fb8e6
+    version: 2026.10.14-96c4d96

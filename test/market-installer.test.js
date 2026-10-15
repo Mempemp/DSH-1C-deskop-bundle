@@ -33,10 +33,10 @@ describe('desktop plugin market installer', () => {
       'web',
       'add',
       '--workspace-root',
-      'dshmarket@^1.66.8'
+      'dshmarket@^1.66.22'
     ])
     expect(MARKET_PACKAGE).toBe('dshmarket')
-    expect(RECOMMENDED_MARKET_VERSION).toBe('^1.66.8')
+    expect(RECOMMENDED_MARKET_VERSION).toBe('^1.66.22')
     expect(STATUS_PATH).toBe('/dsh-desktop/market-installer/status')
     expect(INSTALL_PATH).toBe('/dsh-desktop/market-installer/install')
     expect(UNINSTALL_PATH).toBe('/dsh-desktop/market-installer/uninstall')
