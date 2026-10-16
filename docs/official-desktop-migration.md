@@ -234,7 +234,33 @@ peer **отклоняет установку до pnpm** и на старте в
 Время: установка зависимостей ~4 мин, `pnpm run build` ~1 мин, упаковка ~13 мин. Машина — эта рабочая,
 Node 24.15.0, pnpm 11.7.0 через `npx` (до упаковки) либо напрямую `node apps/desktop/node_modules/pnpm/bin/pnpm.mjs`.
 
-### 5.5 Как каталог 1С едет в поставке (шов найден, не реализовано)
+### 5.5 Русская оболочка — сделано (16.10.2026)
+
+Три коммита в ветке `1c/main`:
+- `3436e93` — регистронезависимый поиск `ProgramFiles(x86)` в preflight упаковки;
+- `478ec08` — третий словарь в `apps/desktop/src/locale.ts` (**165 ключей** на язык, не 337: прежняя
+  оценка считала строки обеих словарей вместе) и русский блок в `apps/desktop/installer/strings.nsh`
+  (**28 `LangString`**). Резолверы проверены импортом модуля: русская система → русский, явный выбор
+  в настройках приоритетнее системы, японская → английский. Доказательство полноты перевода —
+  тип `DesktopMessages` (`{[Key in keyof typeof en]: string}`): удаление ключа роняет компиляцию.
+- `86ebba5` — `installerLanguages: ['en_US','zh_CN','ru_RU']` в `apps/desktop/scripts/electron-builder-config.mjs`.
+  **Языки NSIS объявлены не в `installer/*.nsh`**, а здесь; пока `ru_RU` не в списке, русские строки
+  установщика не компилируются вообще (поэтому блок обёрнут в `!ifdef LANG_RUSSIAN`).
+
+Проверки: `tsc -b apps/desktop/tsconfig.host.json` — чисто; `apps/desktop/tests/locale.spec.ts` — 3/3;
+`apps/desktop/tests/desktop-build-commit.spec.ts` — 11/11 (текст ошибки preflight не менялся);
+`ru_RU` присутствует в `bundledLanguages` electron-builder.
+
+Артефакт с русской оболочкой: прогон `packaging-runs/2026-10-16T04-45-17.304Z-YorMNP`,
+`success: true`, 1112 с; установщик **287 937 068 байт** (+7 632 к прежнему), в сгенерированном скрипте
+`MUI_LANGUAGE "English"/"Russian"/"SimpChinese"` — три языка; русские строки оболочки найдены в
+`win-unpacked/resources/app.asar` («Проверить обновления», «Выход», «Настройки»).
+Копия для проверки человеком: `D:\dsh-harness\out\DSH-1C-0.2.0-rc.2-ru-unsigned.exe`.
+
+Не проверено глазами: как выглядит русский установщик при установке (это шаг пользователя — установка
+идёт в `~/.dsh` с профилем `desktop`, рядом с CLI-профилями).
+
+### 5.6 Как каталог 1С едет в поставке (шов найден, не реализовано)
 
 Механика апстрима:
 - Дерево поставки — `resources/app.asar/dsh`. Его состав описывает `apps/desktop/src/runtime-tree.ts`:
