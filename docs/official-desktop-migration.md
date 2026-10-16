@@ -207,6 +207,14 @@ peer **отклоняет установку до pnpm** и на старте в
    `packages/dsh-desktop-hmr-fallback`. Переезжают как bundle'ы поставки: `dsh-image-generation`,
    `dsh-notifier-ru`, `dsh-plugin-gis`, `dsh-desktop-preset-transfer`, `dsh-desktop-client-ui`.
 
+- **Третья ловушка — MSYS-овый `tar`:** `apps/desktop/scripts/prepare-package-set.ts` читает манифест из
+  собранного тарбола как `tar -xOzf <абсолютный путь Windows>`, и GNU-tar из git-bash читает `D:` как
+  удалённый хост → падение на середине длинного прогона (`prepare:packages`). Их preflight этого не ловит.
+  Лечится окружением: `PATH="/c/Windows/System32:$PATH"` — системный bsdtar читает тот же архив.
+  Полная строка сборки: `printf '' > "$LOCALAPPDATA/Temp/npmrc-empty"; PATH="/c/Windows/System32:$PATH"
+  npm_config_userconfig="$LOCALAPPDATA/Temp/npmrc-empty" npx --yes pnpm@11.7.0 --dir apps/desktop run
+  package:win:x64:unsigned`.
+
 ### 5.5 Как каталог 1С едет в поставке (шов найден, не реализовано)
 
 Механика апстрима:
