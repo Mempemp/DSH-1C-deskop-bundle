@@ -217,6 +217,15 @@ peer **отклоняет установку до pnpm** и на старте в
   npm_config_userconfig="$LOCALAPPDATA/Temp/npmrc-empty" node apps/desktop/node_modules/pnpm/bin/pnpm.mjs
   --dir apps/desktop run package:win:x64:unsigned`.
 
+  **Порядок выпуска — каталог собирается ДО упаковки:**
+  `DSH_1C_BUNDLE_ROOT="D:/cursor projects/DSH-1C-deskop-bundle" node apps/desktop/scripts/prepare-1c-catalog.mjs`
+  кладёт `apps/desktop/installer-catalog/` (в git каталог не хранится — это продукт сборки), затем идёт
+  строка упаковки выше; без каталога упаковка молча соберёт сток.
+  ⚠️ Пока прогон идёт, в форке **не коммитить**: клиентские артефакты записывают хеш коммита, паковщик
+  сверяет его с текущим HEAD и роняет прогон (`client build environment differs from the required artifact
+  profile: DSH_CLIENT_COMMIT_HASH`) через минуту после старта. Обёртка при этом врёт (`stdin is not a tty`,
+  код 1) — судить только по `packaging-runs/<id>/result.json` и `stderr.log`.
+
 ### 5.4 Гейт сборки ПРОЙДЕН (16.10.2026)
 
 Их цепочка собирает установщик на этой машине целиком — от чистой копии репозитория до `.exe`:
