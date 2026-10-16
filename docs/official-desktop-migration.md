@@ -166,6 +166,16 @@ peer **отклоняет установку до pnpm** и на старте в
   или подстановка через `env 'ProgramFiles(x86)=C:\Program Files (x86)'`).
 - Следствие для плана: VS Build Tools — обязательное требование **сборочной машины** (и любого
   раннера: у `windows-latest` в GitHub Actions он предустановлен). Код и оверлей это не затрагивает.
+- **Устранено (16.10.2026):** VS Build Tools 2022 установлены (winget, workload VCTools с
+  `includeRecommended`; `vswhere -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64` отдаёт
+  `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`). Упаковка после этого ушла дальше:
+  правка ниже + прогон дошёл до сборки рантайм-дерева (`apps/desktop/.desktop-build/targets/win-x64/packed/dsh/*.tgz`).
+- **Вторая ловушка найдена и исправлена в нашей ветке `1c/main` (коммит `3436e93`):** preflight искал
+  `ProgramFiles(x86)` в обычном JS-объекте (регистрочувствительно), а bash/MSYS отдаёт имя в верхнем
+  регистре (`PROGRAMFILES(X86)`) — при установленной VS сборка всё равно падала с «Visual Studio cannot
+  be located». Подстановка через `env "ProgramFiles(x86)=…"` не помогает: pnpm нормализует окружение
+  дочернего скрипта и это имя теряет. Правка — регистронезависимый поиск в `desktop-toolchain-preflight.ts`;
+  текст ошибки оставлен дословно (на него ссылается их тест `desktop-build-commit.spec.ts`).
 
 Проверка без упаковки (MSVC не нужен): `pnpm run start:desktop` — собирает одноразовый проект и
 запускает Electron из уже собранных артефактов, дев-профиль `apps/desktop/.desktop-build/development/home`,
@@ -196,6 +206,28 @@ peer **отклоняет установку до pnpm** и на старте в
    `update-coordinator`), `packages/dsh-desktop-market-installer`, `packages/dsh-desktop-log-bridge`,
    `packages/dsh-desktop-hmr-fallback`. Переезжают как bundle'ы поставки: `dsh-image-generation`,
    `dsh-notifier-ru`, `dsh-plugin-gis`, `dsh-desktop-preset-transfer`, `dsh-desktop-client-ui`.
+
+### 5.5 Как каталог 1С едет в поставке (шов найден, не реализовано)
+
+Механика апстрима:
+- Дерево поставки — `resources/app.asar/dsh`. Его состав описывает `apps/desktop/src/runtime-tree.ts`:
+  `desktop-runtime.json` фиксирует release, `sharedPackages` (пути `node_modules/<name>`) и **полный инвентарь
+  файлов**, который проверяется при старте. Значит всё, что мы добавим в дерево, входит в инвентарь и обязано
+  создаваться их же сборочным шагом — иначе старт отчитается о нарушении целостности.
+- Резолв бандлов: «сначала из поставки, затем из профиля» (`apps/cli/reference/README.md`). Профиль `desktop`
+  инициализируется списком `WEB_PROFILE.bundles` (`apps/desktop/src/project-manager.ts`), а
+  `packages/boot/app-boot/src/profile.ts` держит `OPTIONAL_BUNDLES` — бандлы, поставляемые выключенными.
+- Слой плагина — его собственный `cordis.patch.yml` (`dsh.bundle.patch`); наш каталог — 13 таких пакетов.
+
+Отсюда форма поставки: пакеты каталога кладутся в дерево `app.asar/dsh/node_modules`, их имена добавляются в
+список бандлов профиля (или в `OPTIONAL_BUNDLES`), и плагины монтируются на первом запуске **без pnpm и без
+реестра**. Ограничения, которые надо проверить прогоном:
+- их `apps/desktop/scripts/runtime-file-policy.ts` фильтрует дерево перед подписью и запечатыванием инвентаря
+  (выбрасывает `.d.ts`, карты, кэши) — наши пакеты должны это пережить (`lib/*.js` + ассеты);
+- peer-проверка app-boot применяется к каждому бандлу при загрузке профиля — каталог обязан быть на версии
+  ядра (см. §4);
+- размер установщика растёт на payload каталога, а обновление одного плагина становится новым установщиком
+  (для пользователя остаётся dshmarket).
 
 ## 6. Отвергнутая схема: надстройка без форка
 
