@@ -151,6 +151,26 @@ peer **отклоняет установку до pnpm** и на старте в
 `packageManager` (глобальный pnpm на машине 11.0.8, corepack сломан → запускаем `npx pnpm@11.7.0`).
 Гейт «`install` → `build` → `package:win:x64:unsigned`» — прогон в работе, результат дописывается сюда.
 
+**Результат гейта (16.10.2026, машина сборки):**
+- `pnpm install --frozen-lockfile` — **ОК** (~4 мин, 1392 пакета, `node_modules` 826 МБ).
+- `pnpm run build` — **ОК** (client-бандлы, 347 артефактов; без MSVC, только Node/tsdown/vite).
+- `package:win:x64:unsigned` — **падает** на preflight `apps/desktop/scripts/desktop-toolchain-preflight.ts`:
+  `vswhere: ProgramFiles(x86) is not set…` → реальная причина: **Visual Studio C++ build tools не
+  установлены** (`vswhere.exe` отсутствует). Их кастомный NSIS-инсталлятор компилирует нативный
+  helper (`installer/window-frame.cpp`, extract), поэтому preflight требует компонент
+  `Microsoft.VisualStudio.Component.VC.Tools.x86.x64` **для любого режима упаковки**, включая
+  `--dir` и `--unsigned` (`package-target.ts:363` — шаг `toolchain` идёт до `windows-package`,
+  флага «пропустить» нет).
+- Отдельно: в git-bash `ProgramFiles(x86)` в окружение не попадает (имя с круглыми скобками) —
+  даже с установленной VS упаковку надо запускать так, чтобы переменная была видна (cmd/PowerShell
+  или подстановка через `env 'ProgramFiles(x86)=C:\Program Files (x86)'`).
+- Следствие для плана: VS Build Tools — обязательное требование **сборочной машины** (и любого
+  раннера: у `windows-latest` в GitHub Actions он предустановлен). Код и оверлей это не затрагивает.
+
+Проверка без упаковки (MSVC не нужен): `pnpm run start:desktop` — собирает одноразовый проект и
+запускает Electron из уже собранных артефактов, дев-профиль `apps/desktop/.desktop-build/development/home`,
+рабочий `~/.dsh` не трогается. При первом запуске докачивает primary-runtime (Python/Node payload).
+
 1. **Форк и сборка.** Клон, наш remote, сборка их же цепочкой: `pnpm install`, `pnpm run build`,
    затем `package:win:x64:unsigned` (`apps/desktop/scripts/package-target.ts`). Нужны Node 22.19+/24,
    pnpm 11.7 (пин в `packageManager`), загрузка `prepare:primary-runtime` (Python/Node/pnpm payload,
