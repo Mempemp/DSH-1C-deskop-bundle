@@ -211,9 +211,11 @@ peer **отклоняет установку до pnpm** и на старте в
   собранного тарбола как `tar -xOzf <абсолютный путь Windows>`, и GNU-tar из git-bash читает `D:` как
   удалённый хост → падение на середине длинного прогона (`prepare:packages`). Их preflight этого не ловит.
   Лечится окружением: `PATH="/c/Windows/System32:$PATH"` — системный bsdtar читает тот же архив.
-  Полная строка сборки: `printf '' > "$LOCALAPPDATA/Temp/npmrc-empty"; PATH="/c/Windows/System32:$PATH"
-  npm_config_userconfig="$LOCALAPPDATA/Temp/npmrc-empty" npx --yes pnpm@11.7.0 --dir apps/desktop run
-  package:win:x64:unsigned`.
+  Полная рабочая строка сборки (проверенная форма; `npx` в ней не использовать — с `System32` впереди PATH
+  он падает `npx: No such file or directory`, exit 127):
+  `printf '' > "$LOCALAPPDATA/Temp/npmrc-empty"; PATH="/c/Windows/System32:$PATH"
+  npm_config_userconfig="$LOCALAPPDATA/Temp/npmrc-empty" node apps/desktop/node_modules/pnpm/bin/pnpm.mjs
+  --dir apps/desktop run package:win:x64:unsigned`.
 
 ### 5.5 Как каталог 1С едет в поставке (шов найден, не реализовано)
 
