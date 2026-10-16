@@ -145,6 +145,12 @@ peer **отклоняет установку до pnpm** и на старте в
 База: тег апстрима `dsh-v<версия ядра>` (на момент плана — `dsh-v0.2.0-rc.2`). Форкается **весь**
 монорепо; наш слой — оверлей поверх `apps/desktop` и конфига сборки, остальное не трогаем.
 
+**Точка базы зафиксирована:** тег `dsh-v0.2.0-rc.2`, коммит `639ed015397290b3745d163aafe02ffee4aa3f84`
+(29.09.2026), дерево `D:\dsh-harness\deepseek-harness` (клон `--depth 1 --single-branch`, 182 МБ).
+Окружение сборки: Node 24.15.0 (их `engines` — `^22.19.0 || >=24`), pnpm **11.7.0** их пин
+`packageManager` (глобальный pnpm на машине 11.0.8, corepack сломан → запускаем `npx pnpm@11.7.0`).
+Гейт «`install` → `build` → `package:win:x64:unsigned`» — прогон в работе, результат дописывается сюда.
+
 1. **Форк и сборка.** Клон, наш remote, сборка их же цепочкой: `pnpm install`, `pnpm run build`,
    затем `package:win:x64:unsigned` (`apps/desktop/scripts/package-target.ts`). Нужны Node 22.19+/24,
    pnpm 11.7 (пин в `packageManager`), загрузка `prepare:primary-runtime` (Python/Node/pnpm payload,
