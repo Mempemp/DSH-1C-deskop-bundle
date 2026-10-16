@@ -217,6 +217,23 @@ peer **отклоняет установку до pnpm** и на старте в
   npm_config_userconfig="$LOCALAPPDATA/Temp/npmrc-empty" node apps/desktop/node_modules/pnpm/bin/pnpm.mjs
   --dir apps/desktop run package:win:x64:unsigned`.
 
+### 5.4 Гейт сборки ПРОЙДЕН (16.10.2026)
+
+Их цепочка собирает установщик на этой машине целиком — от чистой копии репозитория до `.exe`:
+- артефакт: `apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/deepseek-harness-0.2.0-rc.2-win-x64-unsigned.exe`,
+  **287 929 464 байта**, sha256 `b46919ffd5250cd5921da9719f21a8619f75c060b54f404615121b573189e609`,
+  `FileVersion 0.2.0-rc.2`, `ProductName DeepSeek Harness`, подпись `NotSigned` (ожидаемо, SmartScreen предупредит);
+- прогон `packaging-runs/2026-10-16T04-18-01.125Z-nCzOaR/result.json`: `success: true`, 768 с; стадии `build:official`
+  50 с, `release:pack` (семейства dsh/vendor/landlock) 181 с, `download/extract:electron` 4 с,
+  `prepare:primary-runtime` 57 с, `prepare:packages` 7 с, `runtime:{stage-packages,lockfile,install,materialize-modules}`
+  44 с, дальше electron-builder и NSIS;
+- из этого следует, что **встроенные Python/Node/pnpm приезжают бесплатно** (их `prepare:primary-runtime` качает
+  payload сам), и что требование к сборочной машине — ровно три вещи из блока выше (VS Build Tools, PATH с
+  системным `tar`, отсутствие `npx` в строке сборки).
+
+Время: установка зависимостей ~4 мин, `pnpm run build` ~1 мин, упаковка ~13 мин. Машина — эта рабочая,
+Node 24.15.0, pnpm 11.7.0 через `npx` (до упаковки) либо напрямую `node apps/desktop/node_modules/pnpm/bin/pnpm.mjs`.
+
 ### 5.5 Как каталог 1С едет в поставке (шов найден, не реализовано)
 
 Механика апстрима:
