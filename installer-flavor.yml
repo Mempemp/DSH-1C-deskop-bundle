@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.11.0-2
+version: 0.2.0-rc.2-1
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible and at or above
@@ -25,7 +25,7 @@ sources:
   # that has to move together.
   - kind: plugin
     from: npm
-    spec: dshmarket@1.66.22
+    spec: dshmarket@1.66.37
   # Pinned by commit, not `#main`: the catalog must carry exactly the code the
   # release names. This commit is v0.2.9 (`@wingsky-1/dsh-mcp-manager` 0.2.9) —
   # the maintenance release that restores Windows config saving and protects
@@ -41,7 +41,7 @@ sources:
   # the exact pin keeps two installs of one build identical.
   - kind: plugin
     from: npm
-    spec: "@liustack/modsearch@5.10.6"
+    spec: "@liustack/modsearch@5.10.7"
   # v0.26.0 is the release upstream names for the 0.2.0 host line: every host peer
   # is `^0.2.0-rc.2`, which is exactly the core this bundle carries (`^0.2.0-rc.1`
   # of the previous pin also accepted it, so the move narrows nothing — it stops
@@ -50,7 +50,7 @@ sources:
   # line.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.26.0
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.26.1
   # Pinned by commit (v0.4.6, `@linxin666/dsh-client-ui-skill-explorer` 0.4.6).
   # Its host peer is `>=0.2.0-rc.2` — the same statement as the sidebar above:
   # the release is built against the core line this bundle carries.
@@ -100,7 +100,7 @@ sources:
   # src/main/state/plugin-defaults-seed.ts pins those toggles.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.3.45"
+    spec: "@goodandready/dsh-russian-lang@0.3.48"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора

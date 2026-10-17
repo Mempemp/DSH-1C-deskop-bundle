@@ -73,7 +73,7 @@ describe('installer flavor schema', () => {
       await readFile(join(projectRoot, 'installer-flavor.yml'), 'utf8')
     )
     expect(flavor.sources).toEqual([
-      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.22' },
+      { kind: 'plugin', from: 'npm', spec: 'dshmarket@1.66.37' },
       {
         kind: 'plugin',
         from: 'git',
@@ -83,12 +83,12 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@liustack/modsearch@5.10.6'
+        spec: '@liustack/modsearch@5.10.7'
       },
       {
         kind: 'plugin',
         from: 'git',
-        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.26.0'
+        url: 'https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.26.1'
       },
       {
         kind: 'plugin',
@@ -122,7 +122,7 @@ describe('installer flavor schema', () => {
       {
         kind: 'plugin',
         from: 'npm',
-        spec: '@goodandready/dsh-russian-lang@0.3.45'
+        spec: '@goodandready/dsh-russian-lang@0.3.48'
       },
       { kind: 'plugin', from: 'local', path: './packages/dsh-notifier-ru' },
       {
