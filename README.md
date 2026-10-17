@@ -20,22 +20,29 @@
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-171513.svg" />
 </p>
 
-**DSH для 1С** — сборка десктопного клиента [DSH Desktop](https://github.com/dataelement/dsh-desktop)
-с офлайн-каталогом плагинов и MCP-серверов для 1С. Один установщик ставит
+**DSH для 1С** — сборка десктопного клиента [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+с русским интерфейсом и офлайн-каталогом плагинов и MCP-серверов для 1С. Один установщик ставит
 всё сразу: приложение, редактор BSL, параметры подключения к базам, веб-поиск,
 поиск по документации платформы и маркет плагинов.
+
+Версия сборки — `<версия ядра>-<номер подрелиза>`: `0.2.0-rc.2-1` — первый подрелиз на ядре
+`0.2.0-rc.2`. Номер подрелиза растёт с изменениями сборки, версия ядра — с обновлением
+DeepSeek Harness.
 
 ## Установка
 
 - Скачайте `.exe` со [страницы релизов](https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest)
   и пройдите мастер установки. Node.js и CLI ставить не нужно — рантайм лежит внутри приложения.
-- Установка идёт поверх предыдущей версии: профили, сессии, настройки, ключи доступа
-  и плагины, добавленные вами, хранятся в `%APPDATA%\dsh-desktop\harness` и сохраняются.
+- Данные — профиль, сессии, настройки, вложения и ваши плагины — хранятся в
+  `%USERPROFILE%\.dsh` и сохраняются при обновлении.
+- При первом запуске данные предыдущей сборки (`%APPDATA%\dsh-desktop\harness`)
+  копируются в `.dsh` один раз; исходный каталог остаётся нетронутым.
+- Первый экран предлагает «Настроить позже»: рабочее пространство открывается без
+  входа и без ключа. Аккаунт DeepSeek и модели настраиваются в «Настройки → Модели».
 - Установщик не подписан сертификатом, поэтому Windows покажет предупреждение
   SmartScreen: «Подробнее» → «Выполнить в любом случае».
-- Автообновление работает: приложение само проверяет страницу релизов и, когда
-  выходит новая версия, предлагает обновиться, скачивая только изменившуюся часть
-  файла. Установка идёт тем же мастером, что и первая.
+- Автообновление: приложение проверяет страницу релизов и предлагает обновиться,
+  скачивая только изменившуюся часть файла. Установка идёт тем же мастером.
 
 ## Зачем это нужно
 
@@ -69,6 +76,8 @@
   модели, подача нужного в разговор и вкладка «Память Engram» в настройках для
   сведения заметок в карточки-знания. База лежит локально
   (`%USERPROFILE%\.engram\engram.db`), ключей и интернета не нужно.
+- **Документы** — просмотр docx/pptx/xlsx и конвертация Office→PDF встроены в клиент;
+  агент создаёт и правит файлы через навыки office-*.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
@@ -83,8 +92,8 @@
 
 ## Состав сборки
 
-Полный список — в `installer-flavor.yml` (источники) и
-`build/installer-catalog/manifest.json` (зафиксированные версии и digest):
+Полный список — в `installer-flavor.yml` (источники); при сборке из него собирается
+`apps/desktop/installer-catalog/manifest.json` с зафиксированными версиями и digest:
 
 - 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify, dsh-russian-lang, `dsh-notifier-ru` (русские уведомления: системный тост Windows,
@@ -103,25 +112,27 @@
 
 ## Сборка из исходников
 
-Требования: Windows x64, Node.js LTS, npm.
+Приложение собирается из форка DeepSeek Harness (ветка `1c/main`); каталог 1С собирается
+до упаковки.
+
+Требования: Windows x64, Node.js 24, pnpm, Visual Studio Build Tools 2022 (C++).
 
 ```sh
-npm install
-npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
+cd apps/desktop && node scripts/prepare-1c-catalog.mjs
+cd ../.. && node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
 ```
 
-Проверки перед изменениями: `npm test`, `npm run typecheck`, `npm run build`.
-
-Инженерная документация: [обзор проекта](docs/overview.md),
-[архитектура](docs/architecture.md), [разработка](docs/development.md),
-[релизный процесс](docs/release-runbook.md).
+Инженерная документация: [архитектура](docs/architecture.md),
+[разработка](docs/development.md), [релизный процесс](docs/release-runbook.md),
+[переезд на официальный десктоп](docs/official-desktop-migration.md).
 
 ## Благодарности
 
 Проект построен на открытых разработках, и мы благодарны их авторам:
 
-- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — агентный рантайм;
-- [DSH Desktop](https://github.com/dataelement/dsh-desktop) — десктопная оболочка (MIT), основа нашей сборки: мы развиваем её поверх апстрима, не переписывая рантайм, и добавляем свои плагины, каталог компонентов и установщик;
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — агентный рантайм
+  и десктопный клиент (MIT): основа сборки, которую мы развиваем форком, добавляя
+  русскую оболочку, каталог компонентов и установщик;
 - [dsh-russian-lang](https://github.com/GooDAnDReaDY/dsh-russian-lang) — русская локализация интерфейса;
 - [dsh-market](https://github.com/dsh-market/dsh-market) — маркет плагинов сообщества;
 - плагины [wingsky-1](https://github.com/wingsky-1/dsh-plugin-hub),
@@ -146,5 +157,5 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 
 ## Лицензия
 
-Сборка распространяется под [лицензией MIT](LICENSE), как и апстрим DSH Desktop.
+Сборка распространяется под [лицензией MIT](LICENSE), как и апстрим DeepSeek Harness.
 DeepSeek Harness и остальные зависимости подчиняются своим лицензиям.
