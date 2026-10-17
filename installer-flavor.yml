@@ -111,13 +111,6 @@ sources:
   - kind: plugin
     from: local
     path: ./packages/dsh-notifier-ru
-  # Univer office documents (spreadsheets, decks, docs) with inline previews and
-  # a floating worktree window. Taken from the market: `dsh-univer-office` is the
-  # npm name its catalog entry carries (owner dream-num), so the offline seed and
-  # the market install the same package.
-  - kind: plugin
-    from: npm
-    spec: dsh-univer-office@0.3.7
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store

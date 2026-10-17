@@ -126,11 +126,6 @@ describe('installer flavor schema', () => {
       },
       { kind: 'plugin', from: 'local', path: './packages/dsh-notifier-ru' },
       {
-        kind: 'plugin',
-        from: 'npm',
-        spec: 'dsh-univer-office@0.3.7'
-      },
-      {
         kind: 'mcp',
         from: 'remote',
         id: 'v8std',

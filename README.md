@@ -86,9 +86,8 @@
 Полный список — в `installer-flavor.yml` (источники) и
 `build/installer-catalog/manifest.json` (зафиксированные версии и digest):
 
-- 13 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
-  skill-explorer, archify, dsh-russian-lang, dsh-univer-office (документы и
-  таблицы Univer), `dsh-notifier-ru` (русские уведомления: системный тост Windows,
+- 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+  skill-explorer, archify, dsh-russian-lang, `dsh-notifier-ru` (русские уведомления: системный тост Windows,
   звук и каналы push) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
   агента: правила, подача памяти и MCP-сервер `engram` внутри пакета);
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
@@ -133,8 +132,6 @@ npm run package:win     # dist/dsh-desktop-windows-x64-setup.exe
 - [dsh-notifier](https://github.com/wingsky-1/dsh-plugin-hub) — уведомления о ходе
   работы агента: системный тост Windows, звук и каналы ntfy / Gotify / Bark /
   webhook. В сборке едет русская редакция `dsh-notifier-ru` (MIT, © wingsky-1);
-- [Univer](https://github.com/dream-num/dsh-univer-office) (DreamNum Co., Ltd.) —
-  документы, таблицы и презентации прямо в интерфейсе;
 - [v8std](https://v8std.ru/) — публичный MCP-сервер стандартов разработки 1С
   ([исходники](https://github.com/zeegin/v8std)): поиск по стандартам, БСП / SSL и
   документации платформы, разбор диагностик ACC и BSLLS; подключён в сборке по
