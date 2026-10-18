@@ -1,6 +1,0 @@
-{
-  "name": "acme-mcp-intranet",
-  "version": "0.4.0",
-  "private": true,
-  "main": "index.js"
-}
