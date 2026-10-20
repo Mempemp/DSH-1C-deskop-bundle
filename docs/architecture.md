@@ -7,7 +7,7 @@
 
 | слой | где живёт | роль |
 | --- | --- | --- |
-| клиент | форк `deepseek-harness`, `apps/desktop` | Electron-хост, Web UI, менеджер обновлений, перенос данных |
+| клиент | форк [Mempemp/deepseek-harness](https://github.com/Mempemp/deepseek-harness), ветка `1c/main`, `apps/desktop` | Electron-хост, Web UI, менеджер обновлений, перенос данных |
 | рантайм | внутри клиента (`@deepseek-ai/dsh`) | агент, сессии, инструменты; Node.js ставить не нужно |
 | каталог | `installer-flavor.yml` → `apps/desktop/installer-catalog/` | плагины, навыки, правила и MCP-серверы, которые приложение получает без интернета |
 | профиль | `%USERPROFILE%\.dsh` | сессии, настройки, ключи, установленные плагины |

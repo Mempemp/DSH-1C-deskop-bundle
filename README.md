@@ -112,15 +112,28 @@ DeepSeek Harness.
 
 ## Сборка из исходников
 
-Приложение собирается из форка DeepSeek Harness (ветка `1c/main`); каталог 1С собирается
-до упаковки.
+Приложение живёт в форке DeepSeek Harness — [Mempemp/deepseek-harness](https://github.com/Mempemp/deepseek-harness),
+ветка `1c/main` (она же ветка по умолчанию). Этот репозиторий держит состав каталога, редакцию
+notifier и документацию, поэтому клонировать нужно оба репозитория рядом: скрипт каталога читает
+`installer-flavor.yml` и `packages/dsh-notifier-ru` отсюда.
 
-Требования: Windows x64, Node.js 24, pnpm, Visual Studio Build Tools 2022 (C++).
+Требования: Windows x64, Node.js 24, pnpm (`corepack enable`, версия из `packageManager`),
+Visual Studio Build Tools 2022 с C++.
 
 ```sh
-cd apps/desktop && node scripts/prepare-1c-catalog.mjs
-cd ../.. && node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
+git clone https://github.com/Mempemp/deepseek-harness.git
+git clone https://github.com/Mempemp/DSH-1C-deskop-bundle.git
+cd deepseek-harness
+corepack enable
+pnpm install --frozen-lockfile
+node apps/desktop/scripts/prepare-1c-catalog.mjs
+pnpm --dir apps/desktop run package:win:x64:unsigned
 ```
+
+Готовое — в `apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/`: установщик, `.blockmap`
+и `dsh1c.yml`. Каталог собирается из сети (npm, git, локальные пути) и в репозиторий не коммитится;
+если он лежит не рядом с форком, путь задаётся `DSH_1C_BUNDLE_ROOT`. Сборка идёт под TTY: без
+терминала pnpm падает с `stdin is not a tty`.
 
 Инженерная документация: [архитектура](docs/architecture.md),
 [разработка](docs/development.md), [релизный процесс](docs/release-runbook.md),

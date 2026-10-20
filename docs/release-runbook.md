@@ -11,9 +11,14 @@
 ## 2. Сборка
 
 ```sh
-cd apps/desktop && node scripts/prepare-1c-catalog.mjs
-cd ../.. && node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
+# из корня клона форка; каталог берётся из клона DSH-1C-deskop-bundle рядом с форком,
+# иначе путь задаётся DSH_1C_BUNDLE_ROOT
+node apps/desktop/scripts/prepare-1c-catalog.mjs
+node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
 ```
+
+Второй вызов эквивалентен `pnpm --dir apps/desktop run package:win:x64:unsigned`, если pnpm подключён
+через `corepack enable`.
 
 Сборка длится около 13 минут и заканчивается `success: True` в
 `apps/desktop/.desktop-build/packaging-runs/<время>/result.json`. Артефакты — в
