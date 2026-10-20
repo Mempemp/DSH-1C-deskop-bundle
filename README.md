@@ -126,6 +126,7 @@ git clone https://github.com/Mempemp/DSH-1C-deskop-bundle.git
 cd deepseek-harness
 corepack enable
 pnpm install --frozen-lockfile
+cp apps/desktop/.env.windows.1c apps/desktop/.env.windows
 node apps/desktop/scripts/prepare-1c-catalog.mjs
 pnpm --dir apps/desktop run package:win:x64:unsigned
 ```
@@ -133,7 +134,9 @@ pnpm --dir apps/desktop run package:win:x64:unsigned
 Готовое — в `apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/`: установщик, `.blockmap`
 и `dsh1c.yml`. Каталог собирается из сети (npm, git, локальные пути) и в репозиторий не коммитится;
 если он лежит не рядом с форком, путь задаётся `DSH_1C_BUNDLE_ROOT`. Сборка идёт под TTY: без
-терминала pnpm падает с `stdin is not a tty`.
+терминала pnpm падает с `stdin is not a tty`. Собирать из PowerShell или cmd — в git-bash первым в
+PATH оказывается GNU `tar`, и упаковка падает на `Cannot connect to D:`, а шимы `corepack` ломаются
+на путях.
 
 Инженерная документация: [архитектура](docs/architecture.md),
 [разработка](docs/development.md), [релизный процесс](docs/release-runbook.md),

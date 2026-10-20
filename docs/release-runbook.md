@@ -13,6 +13,7 @@
 ```sh
 # из корня клона форка; каталог берётся из клона DSH-1C-deskop-bundle рядом с форком,
 # иначе путь задаётся DSH_1C_BUNDLE_ROOT
+cp apps/desktop/.env.windows.1c apps/desktop/.env.windows   # один раз на клон, файл в git не входит
 node apps/desktop/scripts/prepare-1c-catalog.mjs
 node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
 ```

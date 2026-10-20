@@ -20,9 +20,13 @@ git clone https://github.com/Mempemp/DSH-1C-deskop-bundle.git   # рядом, и
 cd deepseek-harness
 corepack enable
 pnpm install --frozen-lockfile
+cp apps/desktop/.env.windows.1c apps/desktop/.env.windows          # настройки упаковки, в git не входят
 node apps/desktop/scripts/prepare-1c-catalog.mjs                 # каталог из installer-flavor.yml
 pnpm --dir apps/desktop run package:win:x64:unsigned             # установщик и манифесты фида
 ```
+
+`apps/desktop/.env.windows` создаётся из шаблона `.env.windows.1c` в форке: без него упаковка
+останавливается на `cannot read …\.env.windows`. Файл в git не попадает (исключён апстримом).
 
 Скрипт каталога ищет второй репозиторий рядом с форком (`../DSH-1C-deskop-bundle`); другой путь —
 переменная `DSH_1C_BUNDLE_ROOT`, конкретный файл — `DSH_1C_FLAVOR`. Каталог требует сети: плагины
@@ -31,7 +35,9 @@ pnpm --dir apps/desktop run package:win:x64:unsigned             # устано�
 
 Готовое лежит в `apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/`:
 установщик, `.blockmap`, `dsh1c.yml`. Сборка идёт под TTY: без терминала pnpm падает с
-`stdin is not a tty`.
+`stdin is not a tty`. Собирать из PowerShell или cmd: в git-bash первым в PATH оказывается GNU `tar`,
+и упаковка падает на `Cannot connect to D:` (`tar.exe` из `System32` такой путь понимает), а шимы
+`corepack` ломаются на путях MSYS.
 
 ## Проверки
 
