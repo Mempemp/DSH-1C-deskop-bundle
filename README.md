@@ -80,6 +80,10 @@ DeepSeek Harness.
   агент создаёт и правит файлы через навыки office-*.
 - **Веб-поиск** ([modsearch](https://github.com/liustack/modsearch)) и **схемы**
   ([archify](https://github.com/tt-a1i/archify), Mermaid) из коробки.
+- **Браузер для агента** ([dsh-browser-agent](https://github.com/hermes-ai-2026/dsh-browser-agent)) —
+  19 инструментов `browser_*` поверх встроенного sidebar-браузера: чтение
+  accessibility-дерева со стабильными ссылками, ввод через CDP, скриншоты,
+  перехват сети, эмуляция устройств, хранилище cookie и несколько окон.
 - **Маркет плагинов** ([dshmarket](https://github.com/dsh-market/dsh-market)) —
   сообщество DSH доступно сразу, свои плагины и MCP добавляются поверх сборки.
 - **Русский интерфейс** ([dsh-russian-lang](https://github.com/GooDAnDReaDY/dsh-russian-lang)) —
@@ -95,8 +99,10 @@ DeepSeek Harness.
 Полный список — в `installer-flavor.yml` (источники); при сборке из него собирается
 `apps/desktop/installer-catalog/manifest.json` с зафиксированными версиями и digest:
 
-- 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
-  skill-explorer, archify, dsh-russian-lang, `dsh-notifier-ru` (русские уведомления: системный тост Windows,
+- 13 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+  skill-explorer, archify, dsh-russian-lang, dsh-browser-agent (агент управляет
+  встроенным браузером: 19 инструментов browser_* поверх CDP), `dsh-notifier-ru`
+  (русские уведомления: системный тост Windows,
   звук и каналы push) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
   агента: правила, подача памяти и MCP-сервер `engram` внутри пакета);
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
@@ -156,6 +162,8 @@ PATH оказывается GNU `tar`, и упаковка падает на `Ca
   [omdsh-dev](https://github.com/omdsh-dev/DSH-better-sidebar),
   [tt-a1i](https://github.com/tt-a1i/archify),
   [zhu1090093659](https://github.com/zhu1090093659/dsh-web);
+- [dsh-browser-agent](https://github.com/hermes-ai-2026/dsh-browser-agent) —
+  браузерные инструменты для агента поверх встроенного sidebar-браузера (MIT);
 - [dsh-notifier](https://github.com/wingsky-1/dsh-plugin-hub) — уведомления о ходе
   работы агента: системный тост Windows, звук и каналы ntfy / Gotify / Bark /
   webhook. В сборке едет русская редакция `dsh-notifier-ru` (MIT, © wingsky-1);
