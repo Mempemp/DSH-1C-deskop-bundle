@@ -8,8 +8,10 @@
 Это русская редакция плагина
 [`@wingsky-1/dsh-notifier`](https://github.com/wingsky-1/dsh-plugin-hub) (автор
 wingsky-1, MIT, версия 0.2.7). Спасибо автору за плагин: вся логика событий,
-каналы доставки, тихие часы и системный тост через PowerShell + WinRT — его работа.
-Здесь переведены тексты и добавлена русская локаль интерфейса; поведение не менялось.
+каналы доставки, тихие часы и системный тост через WinRT — его работа.
+Здесь переведены тексты и добавлена русская локаль интерфейса; поведение
+менялось точечно: deep-link клика по тосту и нативный helper вместо
+PowerShell (см. ниже).
 
 ## Что переведено
 
@@ -33,6 +35,7 @@ wingsky-1, MIT, версия 0.2.7). Спасибо автору за плаги
 | Имя пакета | `@wingsky-1/dsh-notifier` | `dsh-notifier-ru` |
 | Папка данных плагина | `$DSH_HOME/@wingsky-1/dsh-notifier` | `$DSH_HOME/dsh-notifier-ru` |
 | Языки интерфейса | zh, en | zh, en, ru |
+| Клик по системному тосту | просто закрывает его | открывает окно DSH **и переключает на сессию, из которой пришло уведомление** |
 
 Своё имя и своя папка данных выбраны намеренно: рядом с русской редакцией может
 стоять апстрим, и настройки не будут перетирать друг друга. Ставить обе версии
@@ -62,6 +65,27 @@ lib/                    собранный пакет (правится толь
 - после перевода в строковых литералах не осталось иероглифов;
 - набор ключей русского словаря совпадает с ключами `zh`/`en` апстрима.
 
+Единственная дельта вне текстов — deep-link «клик по тосту → сессия
+уведомления» ([tools/deep-link.mjs](tools/deep-link.mjs)): хост кладёт
+`sessionId` в payload тоста, тост ставит `launch="dsh-notify://goto/<id>"`,
+обработчик протокола вызывает роут `/api/dsh-notifier/goto` (хост публикует
+SSE-кадр `goto-session`) и поднимает окно через `dsh://open`, клиентская
+половина переключает UI через `ctx.uiWorkspace.openSession(sessionId)`. Без
+сессии в payload (тестовый тост) клик просто поднимает окно. Апстрим
+проверяется по хешу до дельты, результат — по своему зафиксированному хешу
+после неё.
+
+Показ тоста и обработку клика выполняет нативный
+[lib/server/dsh-notify-helper.exe](lib/server/dsh-notify-helper.exe) (исходник —
+[tools/helper/NotifyHelper.cs](tools/helper/NotifyHelper.cs), сборка —
+`tools/helper/build.ps1`, csc.exe из .NET Framework 4.x): GUI-subsystem, окна
+нет никогда, старт мгновенный, PowerShell не нужен — важно для корпоративных
+политик AppLocker/WDAC. Helper сам регистрирует в HKCU и AUMID
+`DSH.dsh-notifier`, и протокол `dsh-notify://` на себя. Если exe нет (старая
+установка), `buildSystemCommand` молча откатывается на апстримный PowerShell
+путь: `toast.ps1` + [lib/server/goto.ps1](lib/server/goto.ps1). Пересборка exe
+требует обновить `HELPER_SHA256` в `tools/localize.mjs` — `--check` следит.
+
 Собрать заново:
 
 ```sh
@@ -88,7 +112,9 @@ node tools/localize.mjs --check                           # проверить �
 | --- | --- |
 | `lib/index.js` | хост-половина: события, каналы, системный тост, хранение истории |
 | `lib/client.js` | клиентская половина: страница настроек, словари zh/en/ru |
-| `lib/server/channels/impl/system/toast.ps1` | PowerShell-скрипт тоста Windows (копия апстрима) |
+| `lib/server/channels/impl/system/toast.ps1` | PowerShell-скрипт тоста Windows (апстрим + дельта deep-link) — fallback, когда нет exe |
+| `lib/server/goto.ps1` | helper протокола `dsh-notify://` (наш файл, источник — [tools/goto.ps1](tools/goto.ps1)) — fallback |
+| `lib/server/dsh-notify-helper.exe` | нативный helper: показ тоста и обработка клика без PowerShell (источник — [tools/helper](tools/helper)) |
 | `lib/THIRD-PARTY-LICENSES` | лицензии сторонних библиотек внутри сборки (копия апстрима) |
 
 ## Лицензия

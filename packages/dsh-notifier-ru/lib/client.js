@@ -479,6 +479,14 @@ window.__ModuleLoader__.load({
               const data = JSON.parse(event.data);
               lastActivity = ports.now();
               if (data.type === "ping") return;
+              if (data.type === "goto-session") {
+                if (typeof data.seq === "number") {
+                  if (lastSeq > 0 && data.seq <= lastSeq) return;
+                  lastSeq = data.seq;
+                }
+                onFrame(data);
+                return;
+              }
               if (data.type === "notify") {
                 if (typeof data.seq === "number") {
                   if (lastSeq > 0 && data.seq <= lastSeq) return;
@@ -3547,6 +3555,13 @@ var KIND_KEY_TABLE = {
           });
           notification.onclick = () => {
             window.focus();
+            if (opts.sessionId && uiWorkspaceRef.current) {
+              try {
+                uiWorkspaceRef.current.openSession(opts.sessionId);
+              } catch (error) {
+                console.warn("[dsh-notifier] не удалось переключить сессию: ", error);
+              }
+            }
             notification.close();
           };
           trackNotification(notification, owner);
@@ -3565,6 +3580,7 @@ var KIND_KEY_TABLE = {
       const kind = typeof payload.kind === "string" ? payload.kind : "";
       const title = typeof payload.title === "string" ? payload.title : "";
       const message = typeof payload.message === "string" ? payload.message : "";
+      const sessionId = typeof payload.sessionId === "string" ? payload.sessionId : "";
       if (!frameAccepted({
         kind,
         whenVisible: payload.whenVisible,
@@ -3579,11 +3595,13 @@ var KIND_KEY_TABLE = {
         message,
         {
           sound: payload.sound,
-          playOnly: payload.playOnly === true
+          playOnly: payload.playOnly === true,
+          sessionId
         },
         owner
       );
     }
+    var uiWorkspaceRef = { current: null };
     var eventsHandle = { current: null };
     function assertOk(r, body) {
       if (!r.ok) throw markHttpFailure(new Error("HTTP " + r.status), r.status, body);
@@ -4569,6 +4587,17 @@ var KIND_KEY_TABLE = {
                 }
               },
               function(payload) {
+                uiWorkspaceRef.current = ctx.uiWorkspace;
+                if (payload.type === "goto-session") {
+                  if (typeof payload.sessionId === "string" && payload.sessionId.length > 0) {
+                    try {
+                      ctx.uiWorkspace.openSession(payload.sessionId);
+                    } catch (error) {
+                      console.warn("[dsh-notifier] не удалось переключить сессию: ", error);
+                    }
+                  }
+                  return;
+                }
                 handleNotifyFrame(payload, owner);
               }
             );
@@ -4591,7 +4620,7 @@ var KIND_KEY_TABLE = {
         });
       }
     }
-    var inject = ["slots", "locale"];
+    var inject = ["slots", "locale", "uiWorkspace"];
 
     Object.defineProperty(module.exports, Symbol.toStringTag, { value: 'Module' })
     return module.exports

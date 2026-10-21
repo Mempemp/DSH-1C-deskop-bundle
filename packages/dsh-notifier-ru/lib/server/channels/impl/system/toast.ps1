@@ -31,6 +31,9 @@ if ($Payload) {
   }
 }
 $useSilent = if ($hasPayload) { [bool]$d.silent -or $Silent.IsPresent } else { $Silent.IsPresent }
+# DSH для 1С: deep-link — клик по тосту ведёт в сессию уведомления.
+$launchUrl = "dsh://open"
+if ($hasPayload -and $d.session) { $launchUrl = "dsh-notify://goto/$($d.session)" }
 # AUMID 自举：CreateToastNotifier("DSH.dsh-notifier") 用的 AppUserModelId 若未在
 # HKCU 注册，Win10/11 会静默丢弃 toast（不报错也不弹出）。幂等写 HKCU 键
 # （含 DisplayName 供操作中心显示可读名），无需管理员权限；失败不阻断弹窗尝试。
@@ -44,11 +47,30 @@ try {
 } catch {
   # 注册表不可写等场景仍尝试弹窗（旧版 Windows 未注册也可能成功）
 }
+# DSH для 1С: протокол dsh-notify:// → helper рядом с пакетом (exe, иначе goto.ps1).
+try {
+  $serverDir = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+  $helperExe = Join-Path $serverDir "dsh-notify-helper.exe"
+  if (Test-Path $helperExe) {
+    $protoTarget = "`"$helperExe`" goto --url `"%1`""
+  } else {
+    $gotoScript = Join-Path $serverDir "goto.ps1"
+    $psExe = Join-Path $PSHome "powershell.exe"
+    $protoTarget = "`"$psExe`" -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$gotoScript`" -Url `"%1`""
+  }
+  $null = (New-Item -Path "HKCU:\SOFTWARE\Classes\dsh-notify" -Force).SetValue("URL Protocol", "", "String")
+  $protoCmd = New-Item -Path "HKCU:\SOFTWARE\Classes\dsh-notify\shell\open\command" -Force
+  $null = $protoCmd.SetValue("", $protoTarget, "String")
+} catch {
+  # Протокол не зарегистрировался — тост всё равно показываем, клик просто не сработает.
+}
 try {
   Add-Type -AssemblyName System.Runtime.WindowsRuntime
   $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
   $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime]
   $template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+  $null = $template.DocumentElement.SetAttribute("launch", $launchUrl)
+  $null = $template.DocumentElement.SetAttribute("activationType", "protocol")
   $texts = $template.GetElementsByTagName("text")
   $texts.Item(0).AppendChild($template.CreateTextNode($Title)) | Out-Null
   $texts.Item(1).AppendChild($template.CreateTextNode($Message)) | Out-Null
