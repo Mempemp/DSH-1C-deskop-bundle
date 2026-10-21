@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url'
 
 import { HOST_IDENTITY, HOST_TEXT } from './host-texts.mjs'
 import { CLIENT_TEXT } from './client-texts.mjs'
+import { CLIENT_DELTAS, FEATURE_MARKERS, HOST_DELTAS, TOAST_DELTAS } from './deep-link.mjs'
 
 export const UPSTREAM = {
   name: '@wingsky-1/dsh-notifier',
@@ -34,9 +35,33 @@ export const UPSTREAM_SHA256 = {
   'lib/THIRD-PARTY-LICENSES': '7631be7cfcd922e26b7e5fa653b75a75f7a7ecd75c18e601281f6b64eae78ac9'
 }
 
-// Файлы, которые едут в наш пакет: два бандла правим, остальное копируем как есть.
+// Файлы, которые едут в наш пакет: два бандла правим, toast.ps1 правим одной
+// дельтой (см. localizeToast), лицензии копируем как есть.
 export const PATCHED_FILES = ['lib/index.js', 'lib/client.js']
-export const COPIED_FILES = ['lib/server/channels/impl/system/toast.ps1', 'lib/THIRD-PARTY-LICENSES']
+export const COPIED_FILES = ['lib/THIRD-PARTY-LICENSES']
+
+// toast.ps1 — копия апстрима плюс дельта deep-link (см. tools/deep-link.mjs):
+// launch="dsh-notify://goto/<sessionId>" из payload, регистрация протокола,
+// запасной dsh://open. Апстримный файл проверяется по UPSTREAM_SHA256 до
+// дельты, результат — по TOAST_PATCHED_SHA256 после неё.
+export const TOAST_PS1 = 'lib/server/channels/impl/system/toast.ps1'
+export const TOAST_PATCHED_SHA256 = 'a75e9f7d619123015985785297f319bb9ff3659253417bee57154eb3fd0674fa'
+// goto.ps1 — наш helper протокола dsh-notify:// (источник: tools/goto.ps1).
+export const GOTO_PS1 = 'lib/server/goto.ps1'
+// dsh-notify-helper.exe — нативная замена toast.ps1 + goto.ps1 (без PowerShell):
+// исходник tools/helper/NotifyHelper.cs, сборка tools/helper/build.ps1.
+// Хеш пинится: пересобрал exe — обнови HELPER_SHA256, иначе --check упадёт.
+export const HELPER_EXE = 'lib/server/dsh-notify-helper.exe'
+export const HELPER_SOURCE_EXE = 'tools/helper/dsh-notify-helper.exe'
+export const HELPER_SHA256 = '1687f4d9960ca7cdc343aef286ccf6d8e1137b8b1a996016a5ecfceda321fdfa'
+
+export function localizeToast(source) {
+  const applied = applyEntries(source, TOAST_DELTAS, 'дельта toast.ps1 (deep-link)')
+  if (applied.absent.length > 0) {
+    throw new Error(`${TOAST_PS1}: в апстриме не найдены якоря дельты — ${applied.absent.join(' | ')}`)
+  }
+  return applied.text
+}
 
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -226,6 +251,11 @@ export async function generate({ upstream, out = PACKAGE_ROOT }) {
     if (result.absent.length > 0) {
       throw new Error(`${rel}: в апстриме не найдены фрагменты — ${result.absent.join(' | ')}`)
     }
+    const feature = applyEntries(result.text, rel.endsWith('client.js') ? CLIENT_DELTAS : HOST_DELTAS, 'дельта deep-link')
+    if (feature.absent.length > 0) {
+      throw new Error(`${rel}: в апстриме не найдены якоря deep-link — ${feature.absent.join(' | ')}`)
+    }
+    result.text = feature.text
     const left = rel.endsWith('client.js') ? untranslatedClientLiterals(result.text) : untranslatedLiterals(result.text)
     if (left.length > 0) throw new Error(`${rel}: остались непереведённые строки — ${left.join(' | ')}`)
     const target = path.join(out, rel)
@@ -233,6 +263,25 @@ export async function generate({ upstream, out = PACKAGE_ROOT }) {
     await writeFile(target, result.text, 'utf8')
     notes.push(`${rel}: переведено, ${(bytes.length / 1024).toFixed(0)} КБ`)
   }
+
+  const toastBytes = await readUpstreamFile(dir, TOAST_PS1)
+  const toastText = localizeToast(toastBytes.toString('utf8'))
+  await mkdir(path.dirname(path.join(out, TOAST_PS1)), { recursive: true })
+  await writeFile(path.join(out, TOAST_PS1), toastText, 'utf8')
+  notes.push(`${TOAST_PS1}: скопировано с дельтой (клик по тосту открывает сессию уведомления)`)
+
+  const gotoSource = await readFile(path.join(PACKAGE_ROOT, 'tools', 'goto.ps1'))
+  await mkdir(path.dirname(path.join(out, GOTO_PS1)), { recursive: true })
+  await writeFile(path.join(out, GOTO_PS1), gotoSource)
+  notes.push(`${GOTO_PS1}: наш helper протокола dsh-notify://`)
+
+  const helperBytes = await readFile(path.join(PACKAGE_ROOT, ...HELPER_SOURCE_EXE.split('/')))
+  if (sha256(helperBytes) !== HELPER_SHA256) {
+    throw new Error(`${HELPER_SOURCE_EXE}: хеш не совпал с зафиксированным — пересборка? обновите HELPER_SHA256`)
+  }
+  await mkdir(path.dirname(path.join(out, HELPER_EXE)), { recursive: true })
+  await writeFile(path.join(out, HELPER_EXE), helperBytes)
+  notes.push(`${HELPER_EXE}: нативный helper (тост и клик без PowerShell)`)
 
   for (const rel of COPIED_FILES) {
     const bytes = await readUpstreamFile(dir, rel)
@@ -263,6 +312,24 @@ export async function check(out = PACKAGE_ROOT) {
   const shippedKeys = parseDictKeys(client, 'ru')
   if (!(ruKeys.length === shippedKeys.length && ruKeys.every((key, index) => key === shippedKeys[index]))) {
     problems.push(`lib/client.js: словарь ru в бандле разошёлся с tools/ui-ru.json (${shippedKeys.length} против ${ruKeys.length})`)
+  }
+  const toast = await readFile(path.join(out, TOAST_PS1))
+  if (sha256(toast) !== TOAST_PATCHED_SHA256) problems.push(`${TOAST_PS1}: файл отличается от зафиксированной копии с дельтой`)
+  try {
+    const helper = await readFile(path.join(out, HELPER_EXE))
+    if (sha256(helper) !== HELPER_SHA256) problems.push(`${HELPER_EXE}: хеш не совпал с зафиксированным`)
+  } catch {
+    problems.push(`${HELPER_EXE}: файл отсутствует`)
+  }
+  for (const [rel, markers] of Object.entries(FEATURE_MARKERS)) {
+    let text
+    try {
+      text = await readFile(path.join(out, rel), 'utf8')
+    } catch {
+      problems.push(`${rel}: файл отсутствует`)
+      continue
+    }
+    for (const marker of markers) if (!text.includes(marker)) problems.push(`${rel}: нет маркера deep-link — ${marker}`)
   }
   for (const rel of COPIED_FILES) {
     const bytes = await readFile(path.join(out, rel))

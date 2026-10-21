@@ -4,3 +4,8 @@ patches/*.patch whitespace=-space-before-tab
 
 # Preserve pinned third-party inputs byte-for-byte, including upstream whitespace.
 packages/ppt-runtime/upstream/** -whitespace
+
+# Файлы-копии апстрима dsh-notifier-ru сверяются по sha256 с опубликованным
+# пакетом (tools/localize.mjs --check): при autocrlf чекаут превращает LF в CRLF
+# и проверка падает, хотя в репозитории байты верные. Храним и выгружаем как есть.
+packages/dsh-notifier-ru/lib/** -text

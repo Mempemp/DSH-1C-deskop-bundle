@@ -8066,6 +8066,11 @@ function legacyFile(fileName) {
 function toastScriptPath() {
   return join3(dirname2(fileURLToPath(import.meta.url)), "server", "channels", "impl", "system", "toast.ps1");
 }
+// DSH для 1С: нативный helper вместо powershell.exe — без вспышки консоли,
+// мгновенный старт, не блокируется AppLocker-политиками на PowerShell.
+function notifyHelperPath() {
+  return join3(dirname2(fileURLToPath(import.meta.url)), "server", "dsh-notify-helper.exe");
+}
 
 // lib/server/api/impl/stream/index.js
 var REPLAY_LIMIT = 200;
@@ -8172,7 +8177,8 @@ var StreamHub = class {
       ts: Date.now(),
       sound: frame.sound,
       // 可见性判定归浏览器出口, 帧自描述: 客户端拿到就能执行, 不必回查自己那份可能已过期的配置快照.
-      whenVisible: frame.whenVisible
+      whenVisible: frame.whenVisible,
+      sessionId: frame.sessionId
     };
     if (!frame.pop)
       event.playOnly = true;
@@ -8182,6 +8188,13 @@ var StreamHub = class {
     void writeTextAtomic(this.file, `${this.seq}
 `);
     this.hub.broadcast(encode(event));
+  }
+  /** Клик по тосту → клиент переключает UI на сессию уведомления. */
+  publishGoto(sessionId) {
+    if (!this.installed)
+      return;
+    this.seq += 1;
+    this.hub.broadcast(encode({ type: "goto-session", seq: this.seq, sessionId, ts: Date.now() }));
   }
   /** 序号大于 `since` 的帧, 按序. */
   since(value) {
@@ -8575,9 +8588,19 @@ var ApiService = class {
       {
         path: "/api/dsh-notifier/events",
         methods: { GET: (req, res) => streamHub.handle(req, res) }
+      },
+      {
+        path: "/api/dsh-notifier/goto",
+        methods: { GET: (req, res) => {
+          const sessionId = new URLSearchParams((req.url ?? "").split("?")[1] ?? "").get("session");
+          if (typeof sessionId === "string" && sessionId.length > 0)
+            streamHub.publishGoto(sessionId);
+          sendJson(res, 200, { ok: true });
+        } }
       }
     ];
     this.disposers.push(...registerEndpoints(deps.register, endpoints, deps.logger), deps.frames.onFrame((payload) => streamHub.publish(payload)));
+    writeTextAtomic(notifierFile("runtime.json"), JSON.stringify({ apiBase: `http://127.0.0.1:${deps.webServerPort()}` }));
   }
   /** 卸载: 摘路由, 退订帧, 停掉流.重复调用无害——卸载链可能走到不止一次. */
   release() {
@@ -8719,7 +8742,8 @@ function buildFrame(message, target) {
     sound: resolveSound(target.popup, target.sound),
     whenVisible: target.whenVisible,
     title: truncateCodePoints(message.title, displayCaps.browser.titleMax),
-    body: truncateCodePoints(message.body, displayCaps.browser.bodyMax)
+    body: truncateCodePoints(message.body, displayCaps.browser.bodyMax),
+    sessionId: message.sessionId
   };
   if (message.severity !== void 0)
     frame.severity = message.severity;
@@ -9233,9 +9257,14 @@ function probeCommand(bin, args) {
 function buildSystemCommand(probe, title, message, options) {
   const silent = options.sound === false || options.selfPlay;
   if (probe.platform === "win32") {
+    const notifyHelper = notifyHelperPath();
+    if (systemDeps().existsSync(notifyHelper)) {
+      const helperPayload = Buffer.from(JSON.stringify({ title, message, silent, session: options.session }), "utf8").toString("base64");
+      return [notifyHelper, "toast", "--payload", helperPayload];
+    }
     if (!probe.toastScriptAvailable)
       return [];
-    const payload = Buffer.from(JSON.stringify({ title, message, silent }), "utf8").toString("base64");
+    const payload = Buffer.from(JSON.stringify({ title, message, silent, session: options.session }), "utf8").toString("base64");
     return [
       "powershell",
       "-NoProfile",
@@ -9434,7 +9463,7 @@ async function sendSystem(target, message) {
   const prep = selfPlay ? prepareSound(probe, toneOf(target.sound)) : NO_SOUND;
   if (!target.popup)
     return runSoundOnly(prep, target, probe);
-  const pop = buildSystemCommand(probe, truncateCodePoints(message.title, displayCaps.system.titleMax), truncateCodePoints(message.body, displayCaps.system.bodyMax), { sound: target.sound, selfPlay, toastScript: target.toastScript });
+  const pop = buildSystemCommand(probe, truncateCodePoints(message.title, displayCaps.system.titleMax), truncateCodePoints(message.body, displayCaps.system.bodyMax), { sound: target.sound, selfPlay, toastScript: target.toastScript, session: message.sessionId });
   const popRan = pop.length > 0;
   const popOk = popRan ? await runCommand(pop, target.logger) : true;
   if (prep.kind !== "ready") {
@@ -11491,7 +11520,10 @@ var NOTIFY_KINDS = {
 var NOT_A_NOTIFICATION = { ok: false };
 function render(kind, detail) {
   const text = NOTIFY_KINDS[kind];
-  return { ok: true, request: { kind, title: text.title, body: text.body(detail) } };
+  return { ok: true, request: { kind, title: text.title, body: text.body(detail), sessionId: detail.sessionId } };
+}
+function agentSessionId(agent) {
+  return agent === void 0 ? void 0 : agent.id;
 }
 function titleOf(agent) {
   return agent === void 0 ? { found: false } : sessionTitleOf(agent);
@@ -11499,6 +11531,7 @@ function titleOf(agent) {
 function translateApproval(request) {
   const title = titleOf(request.agent);
   return render("ask", {
+    sessionId: agentSessionId(request.agent),
     tool: request.toolName,
     taskTitle: title.found ? title.title : void 0,
     reason: request.reason
@@ -11508,6 +11541,7 @@ function translateUserQuestion(request) {
   const first = request.questions[0];
   const title = titleOf(request.agent);
   return render("question", {
+    sessionId: agentSessionId(request.agent),
     taskTitle: title.found ? title.title : void 0,
     question: first !== void 0 && first.question.length > 0 ? first.question : void 0
   });
@@ -11522,7 +11556,7 @@ function translateAgentStatus(payload) {
   const outcome = agentStates.observeStatus(payload);
   if (!outcome.ok)
     return NOT_A_NOTIFICATION;
-  return render(outcome.kind, { taskTitle: outcome.taskTitle, durationMs: outcome.durationMs });
+  return render(outcome.kind, { sessionId: agentSessionId(payload.agent), taskTitle: outcome.taskTitle, durationMs: outcome.durationMs });
 }
 function translateAgentDisposed(payload) {
   agentStates.forget(payload.agent.id);
@@ -11532,11 +11566,12 @@ function translateTurnStopping(payload) {
   const outcome = agentStates.observeTurnStopping(payload);
   if (!outcome.ok)
     return NOT_A_NOTIFICATION;
-  return render("turn-end", { turn: outcome.turn, taskTitle: outcome.taskTitle });
+  return render("turn-end", { sessionId: agentSessionId(payload.agent), turn: outcome.turn, taskTitle: outcome.taskTitle });
 }
 function translateAgentError(payload) {
   const title = titleOf(payload.agent);
   return render("error", {
+    sessionId: agentSessionId(payload.agent),
     message: payload.error,
     taskTitle: title.found ? title.title : void 0,
     turn: payload.turn,
@@ -11789,7 +11824,8 @@ function finalizeRequest(request, ts) {
     kind: request.kind,
     ts,
     title: truncateCodePoints(request.title, TITLE_MAX_CODE_POINTS),
-    body: request.body
+    body: request.body,
+    sessionId: request.sessionId
   };
   const severity = resolveSeverity(request);
   return severity.provided ? { ...base, severity: severity.severity } : base;
@@ -13265,6 +13301,7 @@ function bindHost(ctx) {
     // 依赖已由 `inject` 声明, 服务就绪才轮到本插件装配: 这里直接取用, 没有探测, 也没有迟到分支.
     legacySettings: ctx.settings,
     register: (route) => ctx.webServer.register(route),
+    webServerPort: () => ctx.webServer.port,
     // 名字取自 sdk 域 (ABI 的定义处).显式类型参数是道保险: 谁把那里退回硬编码字面量, 
     // 少了它就静默失败——`ctx.provide` 的 `(name: string, value?: any)` 重载会兜住任意字符串.
     expose: {
@@ -13347,6 +13384,7 @@ function assemble(host, config, stack) {
   stack.own(releaseSdk);
   installApi({
     register: host.register,
+    webServerPort: host.webServerPort,
     frames: host.frames,
     logger: host.logger,
     config: interface_exports2,

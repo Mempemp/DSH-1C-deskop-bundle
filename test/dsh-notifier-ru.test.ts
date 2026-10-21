@@ -17,6 +17,8 @@ const bundleFiles = [
   'lib/index.js',
   'lib/client.js',
   'lib/server/channels/impl/system/toast.ps1',
+  'lib/server/goto.ps1',
+  'lib/server/dsh-notify-helper.exe',
   'lib/THIRD-PARTY-LICENSES'
 ]
 const han = /[\u3400-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uffef]/
