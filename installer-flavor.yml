@@ -111,6 +111,20 @@ sources:
   - kind: plugin
     from: local
     path: ./packages/dsh-notifier-ru
+  # Браузерные инструменты для агента: 19 browser_* инструментов поверх
+  # встроенного sidebar-браузера (чтение accessibility-дерева со стабильными
+  # ref, CDP-ввод, скриншоты, перехват сети, cookie vault, multi-instance).
+  # В npm не публикуется, поэтому from: git. Пин по коммиту, а не `#main`:
+  # каталог должен доставать ровно тот код, который называет релиз
+  # (a69f2ca — main на момент добавления, package.json называет версию 1.0.1).
+  # ВНИМАНИЕ: в package.json плагина стоит UTF-8 BOM (EF BB BF). Старый pnpm на
+  # таком манифесте падал ('Unexpected token ... is not valid JSON'), поэтому
+  # плагин нельзя было поставить из маркета; pnpm 11.7.0 BOM переваривает
+  # (pack и install на пиннутом коммите проверены 2026-10-20). Хостовая половина
+  # использует только node builtins, установки зависимостей плагину не нужно.
+  - kind: plugin
+    from: git
+    url: https://github.com/hermes-ai-2026/dsh-browser-agent.git#a69f2ca50e21793a7335e5c93be70695f2d4d685
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store
