@@ -1,0 +1,85 @@
+# Перенос сборки на ядро 0.2.1-rc.2
+
+База сборки — тег `dsh-v0.2.1-rc.2` (коммит `687f282e86`) вместо `dsh-v0.2.0-rc.2`
+(`639ed0153972`). Между базами 1925 коммитов и 8431 файл, но сама оболочка затронута точечно:
+`apps/desktop` — 174 файла, из них `apps/desktop/src` — 7 (`main.ts`, `update-coordinator.ts`,
+`mandatory-update-policy.ts`, `update-dialog.ts`, `account-backend.ts` плюс новые `update-channel.ts`
+и `settings.ts`). Основной объём — релизный и CI-пайплайн апстрима (`scripts/desktop-publish*`),
+в котором бандл не участвует.
+
+Версия сборки — `0.2.1-rc.2-1`.
+
+## Как переносили
+
+- Ветки: сборка — `feat/upstream-v0.2.1-rc.2` (от `release/0.2.0-rc.2-7`, поэтому в перенос попал
+  присланный PR по `dsh-notifier-ru`), форк `Mempemp/deepseek-harness` — `1c/port-0.2.1` на теге
+  апстрима.
+- Наш слой — 44 файла (34 правки и 10 добавлений). Пересечение с апстримом — 16 файлов; каждый
+  слит пофайлово (`git merge-file ours base theirs`), остальные скопированы как есть. Удалений
+  апстрим не делал, поэтому ни один наш файл не потерялся.
+
+## Что пришлось решать
+
+- **Канал обновлений.** Апстрим ввёл `src/update-channel.ts` и поле `dshDesktopUpdateChannel` в
+  манифесте приложения (`'nightly' | 'latest'`, любое другое значение — исключение при старте), а
+  `DesktopUpdateCoordinator` получил параметр `channel`. У бандла свой фид `dsh1c.yml`, поэтому
+  канал остался наш, а `allowPrerelease` следует их параметру: наш номер `0.2.1-rc.2-1` для
+  electron-updater — prerelease. Их новый тест канала адаптирован под это — единственное место, где
+  мы разошлись с их ожиданиями.
+- **`src/settings.ts` (новый).** `<userData>/desktop/settings.json`, поле
+  `updates.allowTestAuthPopupWindow` гасит окно входа в политику; читается один раз за процесс, до
+  создания окон. На бандл влияет только тем, что политика не вшивается (см. ниже).
+- **pnpm переехал:** `resources/runtime/pnpm/…` → `resources/runtime/primary-runtime/dependencies/
+  pnpm/bin/pnpm.mjs`. Сид каталога берёт путь из `runtimeResources()`, поэтому едет за апстримом;
+  устаревший комментарий в `catalog-seed.ts` поправлен.
+- **`electron-builder-config.mjs`** собран заново от апстрима: взяты `desktopArtifactOutput`
+  (`-unsigned`/`-unnotarized` и каталог вывода), `skipNotarization`, канал в `extraMetadata`.
+  Наши правки поверх: свой фид вместо их CDN, снятая mandatory-политика, имя продукта из
+  `desktop-product-name.mjs`, артефакт `DSH-1C-Setup-…`, `ru_RU` в `installerLanguages`, каталог в
+  `extraResources`.
+- **`packages/session/session-persistence-jsonl`.** Апстрим переписал листинг на `p-limit` с
+  `GenerationHeader`. Наша правка «дубль сессии во второй рабочей папке не скрывает остальные
+  сессии» пересажена на новую структуру; три места, где мы бросаем
+  `SessionPersistenceCorruptionError` вместо `Error`, сохранились без изменений.
+- **Установщик.** Новые строки апстрима `INSTALLER_DIRECTORY_FAILED`, `INSTALLER_DIRECTORY_HINT`,
+  `INSTALLER_DIRECTORY_RESTORE_HINT` пришли только на английском и китайском; добавлен русский
+  перевод, иначе при `ru_RU` эти сообщения об отказе замены папки установки оставались английскими.
+- **Каталог: `dsh-better-sidebar` v0.26.1 → v0.28.0.** Старый пин не просто отстал: его метаданные
+  ссылаются на `@deepseek-ai/dsh-invariants`, которого в ядре 0.2.1 больше нет, и сборщик каталога
+  такой источник пропускает (`plugin references packages absent from this core`) — сборка осталась
+  бы без боковой панели при полном молчании остальных позиций. У v0.28.0 хостовые пиры
+  `^0.2.1-rc.1` и Cordis `^4.0.5` — ядро 0.2.1-rc.2 несёт ровно 4.0.5. Из git-дерева v0.28.0
+  собранного `lib/` нет (он в `.gitignore`), поэтому каталог берёт опубликованный npm-тарбол
+  той же версии — для поставки это лучше: в нём лежит сборка.
+
+## Что не меняется
+
+- Формат сессий остался **v4** (`session-format-catalog` → `currentVersion: 4`), поэтому перенос
+  дома из `%APPDATA%\dsh-desktop\harness` остаётся тем же шагом и конвертации не требует.
+- Пиры наших плагинов объявлены как `^0.2.0-rc.1` и диапазон `0.2.1-rc.2` принимают.
+- Новых обязательных переменных в `apps/desktop/.env.windows` не появилось: их релизный пайплайн
+  (`desktop-publish*`) требует своих ключей только при публикации на их CDN.
+
+## Инструментарий
+
+pnpm 11.28.5 (было 11.7.0), Electron 44.7.0 (было 44.0.0), electron-builder и app-builder-lib
+26.17.0 (было 26.15.3), `tsdown --config-loader native`, `@types/node` 22.20.1.
+
+## Проверено
+
+- `pnpm install --frozen-lockfile` на новом локе, `pnpm run build:official` — 9 из 9 гейтов
+  (typecheck хоста и клиента, сборки host/desktop/client, web), 124 с.
+- Наши собственные тесты форка (каталог, перенос дома, host-process, core package set, runtime tree,
+  node environment, координатор обновлений, welcome) — 9 файлов / 107 тестов зелёные.
+- Каталог в поставке: 15 источников flavor → 14 позиций манифеста без пропусков после подъёма
+  боковой панели, включая `dsh-notifier-ru` 0.2.7 и `dsh-browser-agent` 1.0.1.
+
+## Не проверено
+
+- Установка на чистую машину и на машину с прошлой сборкой — на пользователе.
+- Автообновление парой «поставить N → выпустить N+1».
+- `macos-signature`, `windows-update-publisher`, `upload-with-credentials`, `windows-cli-signals` в
+  прогоне `apps/desktop/tests` красные по причинам, не связанным с переносом: первые два стерегут
+  упаковочные решения апстрима, от которых бандл отклоняется осознанно (имя артефакта, каталог в
+  `extraResources`, всегда включённый свой фид), остальные требуют `pwsh` и рабочего Electron-CLI.
+  Тот же набор был красным и на прежней базе.
