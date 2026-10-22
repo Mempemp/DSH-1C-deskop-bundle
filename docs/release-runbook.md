@@ -21,6 +21,13 @@ node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:
 Второй вызов эквивалентен `pnpm --dir apps/desktop run package:win:x64:unsigned`, если pnpm подключён
 через `corepack enable`.
 
+Прогоны каталога в течение одного релиза повторяются (сдвинулся пин плагина, поменялась версия),
+поэтому архивы git-источников, закреплённых коммитом, кэшируются в
+`%LOCALAPPDATA%\dsh-1c-catalog\downloads` — `DSH_1C_CATALOG_CACHE` для другого места. Первый прогон
+после смены пина качает `dsh-web` (~800 МБ), следующие печатают `download cache hit`. Теги и ветки
+не кэшируются, поэтому пин тегом стоит повторной загрузки. Подробности — в
+[разработке](development.md#кэш-загрузок-каталога).
+
 Сборка длится около 13 минут и заканчивается `success: True` в
 `apps/desktop/.desktop-build/packaging-runs/<время>/result.json`. Артефакты — в
 `apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts/`.
