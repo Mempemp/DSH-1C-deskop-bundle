@@ -80,7 +80,7 @@ sources:
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#663e7a1bbdab78f9f5a4d04e7bd35d4873f3ef62
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43a73765eb8d1432730af5a49a437ce439020aeb
     path: dsh-rlm-tools-bsl
   # v0.6.2: приём и отклонение изменений в файле, отметки «просмотрено» (живут по
   # изменениям, переживают коммит и отправку в индекс), подсказка редактора
