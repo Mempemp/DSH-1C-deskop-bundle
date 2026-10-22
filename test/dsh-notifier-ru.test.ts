@@ -107,12 +107,15 @@ describe('dsh-notifier-ru: русская редакция плагина уве
     // Сам плагин читает свою версию из этого манифеста и разбирает её
     // собственным строго числовым parseVersion (`lib/index.js`, upgrade-цепочка):
     // «0.2.7-ru.1» роняет его на активации — «неподдерживаемый номер версии»,
-    // и харнесс не стартует. Форк сохраняет версию апстрима; отличие от него —
-    // в имени пакета и текстах.
+    // и харнесс не стартует. Поэтому свой счётчик правок — только числом
+    // (0.2.8 поверх базы 0.2.7), без суффиксов и префиксов.
     expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
     expect(manifest.exports['.']).toBe('./lib/index.js')
     expect(manifest.exports['./client']).toBe('./lib/client.js')
     expect(manifest.peerDependencies['@deepseek-ai/dsh-settings']).toBe('^0.1.7-rc.2 || ^0.2.0-rc.1')
+    // Точная версия в пире объявляет совместимость ровно с одной сборкой ядра:
+    // на 0.2.1 с cordis 4.0.5 такая запись врёт о нём и о нас.
+    expect(manifest.peerDependencies['@deepseek-ai/cordis']).toMatch(/^\^/)
 
     for (const file of bundleFiles) expect(existsSync(path.join(packageRoot, file)), file).toBe(true)
 
