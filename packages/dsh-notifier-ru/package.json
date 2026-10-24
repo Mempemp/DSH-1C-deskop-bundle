@@ -1,6 +1,6 @@
 {
   "name": "dsh-notifier-ru",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Русские уведомления DSH: системные тосты Windows о вопросе, запросе подтверждения, завершении и ошибке задачи, звуки, каналы ntfy/Gotify/Bark/webhook и страница настроек на русском. Форк @wingsky-1/dsh-notifier 0.2.7 (MIT).",
   "type": "module",
   "main": "lib/index.js",
@@ -96,5 +96,8 @@
     "notification",
     "toast",
     "russian"
-  ]
+  ],
+  "scripts": {
+    "test": "node test/single-toast.mjs"
+  }
 }

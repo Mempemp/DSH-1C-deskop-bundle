@@ -8739,7 +8739,7 @@ function resolveSound(popup, sound) {
 function buildFrame(message, target) {
   const frame = {
     pop: target.popup,
-    sound: resolveSound(target.popup, target.sound),
+    sound: target.mutedByNative === true ? { mode: "silent" } : resolveSound(target.popup, target.sound),
     whenVisible: target.whenVisible,
     title: truncateCodePoints(message.title, displayCaps.browser.titleMax),
     body: truncateCodePoints(message.body, displayCaps.browser.bodyMax),
@@ -11909,6 +11909,22 @@ function resolvePool(deps, config, kind) {
     }
   } catch (cause) {
     deps.logger.warn(`dsh-notifier: не удалось прочитать каналы (пропущено, fail-soft): ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+  // Одно событие — один визуальный тост. Когда системный канал Windows действительно умеет
+  // показать тост, браузерная половина остаётся только ради звука: иначе на событие приходят
+  // два уведомления (виндовое и нарисованное в окне) и закрывать нужно оба. Проверяем именно
+  // наличие средства показа: на другой платформе или без helper тост обязан остаться в окне.
+  const systemCanToast = process.platform === "win32"
+    && (existsSync(notifyHelperPath()) || existsSync(toastScriptPath()));
+  const nativeToast = systemCanToast
+    && pool.some((entry) => entry.target.type === "system" && entry.target.popup !== false);
+  if (nativeToast) {
+    for (const entry of pool) {
+      if (entry.target.type !== "browser") continue;
+      entry.target.popup = false;
+      // Тост Windows звенит сам: если оставить браузеру тон, звук придёт дважды.
+      entry.target.mutedByNative = true;
+    }
   }
   return pool;
 }
