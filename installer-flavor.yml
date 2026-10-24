@@ -71,24 +71,27 @@ sources:
     from: npm
     spec: "@tt-a1i/archify-dsh@1.0.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
-  # тот код, который в неё попал. 0.6.x — плагин владеет жизненным циклом
-  # MCP-сервера справки по API платформы (vendor/bsl-context-rs 0.20.0 внутри
-  # пакета) и не поднимает его, пока не задан путь к платформе.
+  # тот код, который в неё попал. 0.8.2 — визард добавления проекта (база,
+  # платформа, правила, выгрузка) и проверка входа в базу внешним соединением
+  # `V83.COMConnector` вместо пакетного Конфигуратора; MCP-сервер справки
+  # по-прежнему поднимается только при заданном пути к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#7e7db3b9acd945e1bc0a33b63ed0f201b7a0a1e4
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#2c17101934fe58480a48adfff701c172f4e72292
     path: dsh-1c-project-properties
   - kind: plugin
     from: git
     url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#43a73765eb8d1432730af5a49a437ce439020aeb
     path: dsh-rlm-tools-bsl
-  # v0.6.2: приём и отклонение изменений в файле, отметки «просмотрено» (живут по
-  # изменениям, переживают коммит и отправку в индекс), подсказка редактора
-  # полоской сверху. Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`, то есть
-  # ядро 0.2.0-rc.2 сборки диапазоном принимается.
+  # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
+  # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
+  # распаковывает строка `kind: tool` ниже) → PATH → места установки Git for
+  # Windows; состояние Git видно в настройках «1С-редактор». Плюс кнопка
+  # «Обновить дерево», сбрасывающая кэши листингов и разобранных метаданных.
+  # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#d65be2f47e6340efa7be0b11e44f591f8ec0cfcc
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#f78d36e3b1226a3d61ed8acb220d878d6929ecaa
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
