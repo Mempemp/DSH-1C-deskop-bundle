@@ -79,6 +79,13 @@ PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mj
 
 ## 5. Публикация
 
+Сначала — зависимости. Каталог ссылается на коммиты других репозиториев, поэтому до тега проверить,
+что они запушены: форк (ветка с патчами десктопа), `Mempemp/DSH-1CProjectProperties`,
+`Mempemp/DSH-CodeEditor_BSL`. Локальные плагины (`packages/*`) своего репозитория не имеют и едут
+внутри бандла. Признак незапушенного: у ветки нет upstream в `git branch -vv` либо
+`git rev-list --count origin/main..main` больше нуля. Установщик с пином на незапушенный sha
+собирается и работает, но повторить его из GitHub уже нельзя.
+
 ```sh
 git tag 0.2.0-rc.2-5 && git push origin 0.2.0-rc.2-5
 gh release create 0.2.0-rc.2-5 --latest --notes-file docs/releases/0.2.0-rc.2-5.md \
@@ -101,6 +108,18 @@ curl -sL https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest/downloa
 ```
 
 Первая строка — новая версия, вторая — `0.11.0-3` с путём на тот же установщик.
+
+Локальная сверка до загрузки не ловит перепутанные вложения, поэтому после публикации скачать
+манифесты из самого релиза и сравнить с файлом:
+
+```sh
+cd /tmp && rm -rf relchk && mkdir relchk && cd relchk
+gh release download <тег> --pattern "*.yml"
+grep -E "^version:|^path:|sha512|size:" dsh1c.yml latest.yml
+```
+
+`sha512` и `size` в обоих файлах должны совпадать с установщиком, `dsh1c.yml` нести версию сборки,
+`latest.yml` — версию линии (`0.11.0-N`) и путь на тот же файл.
 
 Промежуточные сборки удаляются сразу после выхода рабочей версии, чтобы их нельзя было поставить
 случайно: `gh release delete <тег> -y` и `git push origin --delete <тег>`.
