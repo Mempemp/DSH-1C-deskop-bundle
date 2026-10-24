@@ -79,7 +79,7 @@ sources:
   # Отдельной строкой раннер больше не подключается — второй экземпляр дрался бы за порт.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#5f184d80630b640d041eff147516cf185bc128dc
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#8ebb4064f69fbc6432b5fef6e73d491783732a61
     path: dsh-1c-project-properties
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
@@ -182,3 +182,25 @@ sources:
     name: git
     version: 2.56.0.3
     url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.3/MinGit-2.56.0.3-busybox-64-bit.zip
+
+  # uv ставит Python-инструменты при первой раскатке каталога. Нужен потому, что часть
+  # возможностей 1С — Python-пакеты, а не бинарники: у rlm-bsl-index (индекс кода) отдельного
+  # exe нет, это консольная команда пакета rlm-tools-bsl. uv едет в каталоге, чтобы установка
+  # была делом установщика, а не плагина в момент клика пользователя. Сеть нужна один раз:
+  # uv скачивает управляемый Python и колёса пакета, дальше всё лежит в доме.
+  # Проверка после установки: $DSH_HOME/rlm-tools-bsl/bin/rlm-bsl-index.exe
+  - kind: tool
+    from: remote
+    id: uv
+    name: uv
+    version: 0.13.5
+    url: https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-pc-windows-msvc.zip
+  # Ставится тем же uv в $DSH_HOME/rlm-tools-bsl/{tool,bin,python} — ровно туда, где плагин
+  # dsh-rlm-tools-bsl ищет команду индекса, поэтому сам он уже ничего не докачивает.
+  - kind: python
+    from: pypi
+    id: rlm-tools-bsl
+    name: rlm-tools-bsl
+    spec: rlm-tools-bsl
+    version: 1.46.0
+    bin: rlm-bsl-index
