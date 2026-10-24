@@ -59,11 +59,12 @@ pnpm --dir apps/desktop run package:win:x64:unsigned             # устано�
   `scripts/electron-builder-config.mjs` (`createDesktopArtifactName`, `DESKTOP_UPDATE_PUBLIC_URL`),
   а не повторяют строку у себя. Правя имя установщика или адрес обновлений, менять их там — иначе
   тесты снова начнут утверждать чужой продукт.
-- Известное исключение — `windows-cli-signals.spec.ts`, проверка доставки SIGINT в Electron:
-  падает с `ready=1 signalled=1 completed=0 code=0` (процесс выходит с нулём, не выполнив
-  асинхронный обработчик завершения). Код под проверкой (`desktop-host/src/windows-cli-signals.ts`)
-  в форке не менялся, на этой машине падение воспроизводится и в cmd, и с увеличенными таймаутами.
-  Разбирать отдельно, а не считать следствием релиза.
+- `windows-cli-signals.spec.ts` был красным по настоящей причине, а не из-за окружения: Ctrl+C до
+  слушателя не доходил, хотя Ctrl+Break доходил. Инструментирование колбэка koffi показало
+  `event=1` и ни одного `event=0`: Electron в Node-режиме стартует как процесс, игнорирующий
+  CTRL_C, а такой процесс Windows вообще не получает событие — обработчик не вызывается.
+  Исправлено в `apps/desktop-host/src/windows-cli-signals.ts`: перед регистрацией снимается флаг
+  игнорирования (`SetConsoleCtrlHandler(NULL, FALSE)`).
 - `upload-with-credentials.spec.ts` требует PowerShell 7 (`pwsh`); при его отсутствии восемь
   проверок пропускаются, а не падают: `execFile` отдаёт отсутствующий запускатор как `ENOENT`,
   и тест сообщал бы о дефекте, которого нет.
