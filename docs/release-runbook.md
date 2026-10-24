@@ -56,6 +56,13 @@ PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mj
   и строка `installed tool git@` в `%USERPROFILE%\.dsh\logs\catalog-seed.log`. Каталог без
   `tools/git` теперь валит сборку (`CATALOG INCOMPLETE`, ненулевой код), но на машине с
   антивирусом копирование может упасть по EPERM — раскатка повторит попытку и назовёт элемент.
+- **Страница «1С: Параметры проектов» отвечает 404 на `/1cprops/*`.** Клиент рисуется, значит плагин
+  в профиле есть, а хост-часть не зарегистрировала маршруты: почти всегда в профиле два владельца
+  одних и тех же маршрутов и второй `apply` упал. Проверять в
+  `%USERPROFILE%\.dsh\profiles\desktop\package.json` список `dsh.profile.bundles` — ушедший
+  `dsh-rlm-tools-bsl` быть не должен, и в `logs\catalog-seed.log` строки
+  `uninstalled plugins the catalog no longer ships` / `dropped bundle rows`. Если строка осталась,
+  раскатка не дошла до сверки: смотреть `[catalog] ... failed` в том же журнале.
 
 ## 4. Манифесты фида
 
