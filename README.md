@@ -55,8 +55,9 @@ DeepSeek Harness.
   дерево метаданных 1С, подсветка, diff, отправка фрагмента кода в чат.
 - **Параметры проектов 1С** ([DSH-1CProjectProperties](https://github.com/Mempemp/DSH-1CProjectProperties)) —
   данные подключения и авторизации для каждой ИБ, доступные инструментам агента.
-- **RLM-инструменты для BSL** ([DSH-runner-rlm-tools-bsl](https://github.com/Mempemp/DSH-runner-rlm-tools-bsl)) —
-  быстрый поиск и навигация по коду 1С.
+- **RLM-инструменты для BSL** — быстрый поиск и навигация по коду 1С: MCP-сервер
+  `rlm-tools-bsl` живёт внутри [DSH-1CProjectProperties](https://github.com/Mempemp/DSH-1CProjectProperties)
+  со своими настройками и индексами проектов.
 - **Правила 1С в проекте** — набор [ai_rules_1c](https://github.com/comol/ai_rules_1c):
   52 правила, 13 ролей субагентов, 37 команд, 21 навык и OpenSpec разворачиваются
   в конкретный проект кнопкой «Развернуть правила в проект» в окне параметров

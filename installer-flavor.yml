@@ -71,23 +71,16 @@ sources:
     from: npm
     spec: "@tt-a1i/archify-dsh@1.0.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
-  # тот код, который в неё попал. 0.8.3 — карточка «Индекс rlm» в окне проекта и
-  # маршрут `/project-index`, который пишет флаг `rlmIndex` в `.dsh/1c-project.json`
-  # (включает индексацию в dsh-rlm-tools-bsl ≥ 0.1.10). До этого визарда: добавление
-  # проекта (база, платформа, правила, выгрузка) и проверка входа в базу внешним
-  # соединением `V83.COMConnector` вместо пакетного Конфигуратора; MCP-сервер справки
-  # по-прежнему поднимается только при заданном пути к платформе.
+  # тот код, который в неё попал. 0.9.0 — движок rlm-tools-bsl переехал внутрь этого
+  # плагина (бывший отдельный `dsh-rlm-tools-bsl`): автозапуск MCP-сервера анализа
+  # кода, автоустановка через `uv`, индексы проектов через `rlm-bsl-index`, своя
+  # вкладка настроек. Роуты остались под `/rlm/*`, а каталог `$DSH_HOME/rlm-tools-bsl`
+  # тем же, поэтому установленный движок и его Python-окружение переживают обновление.
+  # Отдельной строкой раннер больше не подключается — второй экземпляр дрался бы за порт.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#7d1667030fee040cf13b4660678fcfdc850c5fd7
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#5f184d80630b640d041eff147516cf185bc128dc
     path: dsh-1c-project-properties
-  # v0.1.10: индексы проектов через CLI `rlm-bsl-index` (флаг в `.dsh/1c-project.json`
-  # переключают «Параметры проектов») и пир `@deepseek-ai/dsh-client-ui-slots`,
-  # объявленный явно. Движок — 1.46.0.
-  - kind: plugin
-    from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d7b64ffb32c1032d2b001d3b9a13c4fd5bed1421
-    path: dsh-rlm-tools-bsl
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
   # распаковывает строка `kind: tool` ниже) → PATH → места установки Git for
