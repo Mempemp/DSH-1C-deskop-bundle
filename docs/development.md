@@ -59,6 +59,14 @@ pnpm --dir apps/desktop run package:win:x64:unsigned             # устано�
   `scripts/electron-builder-config.mjs` (`createDesktopArtifactName`, `DESKTOP_UPDATE_PUBLIC_URL`),
   а не повторяют строку у себя. Правя имя установщика или адрес обновлений, менять их там — иначе
   тесты снова начнут утверждать чужой продукт.
+- Известное исключение — `windows-cli-signals.spec.ts`, проверка доставки SIGINT в Electron:
+  падает с `ready=1 signalled=1 completed=0 code=0` (процесс выходит с нулём, не выполнив
+  асинхронный обработчик завершения). Код под проверкой (`desktop-host/src/windows-cli-signals.ts`)
+  в форке не менялся, на этой машине падение воспроизводится и в cmd, и с увеличенными таймаутами.
+  Разбирать отдельно, а не считать следствием релиза.
+- `upload-with-credentials.spec.ts` требует PowerShell 7 (`pwsh`); при его отсутствии восемь
+  проверок пропускаются, а не падают: `execFile` отдаёт отсутствующий запускатор как `ENOENT`,
+  и тест сообщал бы о дефекте, которого нет.
 - Первый запуск: приложение ставят на отдельный `DSH_HOME`, проверяют каталог в профиле
   (`profiles/desktop/.1c-catalog-applied`), число плагинов и файлы правил.
 
