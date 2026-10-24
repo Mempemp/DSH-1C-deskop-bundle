@@ -85,7 +85,7 @@ sources:
   # Отдельной строкой раннер больше не подключается — второй экземпляр дрался бы за порт.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#dc1a78ef725835b69f03baeeb35206dcb46b218f
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#e8d571ddcc4708d0f6da44a3a63bc6c6876fc2f5
     path: dsh-1c-project-properties
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
@@ -95,7 +95,7 @@ sources:
   # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#cb2d8800b23a8c5a52b485a9bd2e7e36579dcb75
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#6b43e4a4285e7dda1d7aa637f0e8c3e6ca82202a
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
