@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-1
+version: 0.2.1-rc.2-2
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible. It already names
@@ -71,13 +71,15 @@ sources:
     from: npm
     spec: "@tt-a1i/archify-dsh@1.0.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
-  # тот код, который в неё попал. 0.8.2 — визард добавления проекта (база,
-  # платформа, правила, выгрузка) и проверка входа в базу внешним соединением
-  # `V83.COMConnector` вместо пакетного Конфигуратора; MCP-сервер справки
+  # тот код, который в неё попал. 0.8.3 — карточка «Индекс rlm» в окне проекта и
+  # маршрут `/project-index`, который пишет флаг `rlmIndex` в `.dsh/1c-project.json`
+  # (включает индексацию в dsh-rlm-tools-bsl ≥ 0.1.10). До этого визарда: добавление
+  # проекта (база, платформа, правила, выгрузка) и проверка входа в базу внешним
+  # соединением `V83.COMConnector` вместо пакетного Конфигуратора; MCP-сервер справки
   # по-прежнему поднимается только при заданном пути к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#2c17101934fe58480a48adfff701c172f4e72292
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#73c3ae1a31d9f5fbbe3b4d868fc9252dad8a03ac
     path: dsh-1c-project-properties
   # v0.1.10: индексы проектов через CLI `rlm-bsl-index` (флаг в `.dsh/1c-project.json`
   # переключают «Параметры проектов») и пир `@deepseek-ai/dsh-client-ui-slots`,
