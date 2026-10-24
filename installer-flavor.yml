@@ -85,7 +85,7 @@ sources:
   # Отдельной строкой раннер больше не подключается — второй экземпляр дрался бы за порт.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#e8d571ddcc4708d0f6da44a3a63bc6c6876fc2f5
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#fc787fdbe6d99d83334dabd2833c6f4ac9bdd04b
     path: dsh-1c-project-properties
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
