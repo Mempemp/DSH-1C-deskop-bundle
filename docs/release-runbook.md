@@ -15,11 +15,23 @@
 # иначе путь задаётся DSH_1C_BUNDLE_ROOT
 cp apps/desktop/.env.windows.1c apps/desktop/.env.windows   # один раз на клон, файл в git не входит
 node apps/desktop/scripts/prepare-1c-catalog.mjs
-node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run package:win:x64:unsigned
+PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mjs \
+  --dir apps/desktop run package:win:x64:unsigned
 ```
 
 Второй вызов эквивалентен `pnpm --dir apps/desktop run package:win:x64:unsigned`, если pnpm подключён
 через `corepack enable`.
+
+Два условия запуска — оба выглядят как дефекты сборки, хотя это окружение:
+
+- **`PATH` с `System32` впереди.** Упаковка читает манифесты паков через `tar -xOzf <путь>`, а
+  первым в `PATH` из git-bash идёт GNU tar, для которого `D:\…` — это «хост D»: ошибка
+  `tar (child): Cannot connect to D: resolve failed`, за ней `unexpected end of file` и падение
+  `prepare:packages`. Системный `C:\Windows\System32\tar.exe` такие пути понимает.
+- **Настоящий TTY на stdin и stdout.** Упаковка рисует прогресс и падает с `stdin is not a tty`
+  (если stdin — не терминал) или `stdout is not a tty` (если stdout перенаправлен или идёт через
+  `tee`). В фоне запускать с pty и без перенаправления вывода.
+
 
 Прогоны каталога в течение одного релиза повторяются (сдвинулся пин плагина, поменялась версия),
 поэтому архивы git-источников, закреплённых коммитом, кэшируются в
