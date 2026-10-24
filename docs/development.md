@@ -49,7 +49,16 @@ pnpm --dir apps/desktop run package:win:x64:unsigned             # устано�
 ## Проверки
 
 - В этом репозитории: `npm ci && npm test` — редакция notifier и маршруты поставки.
-- В форке: `tsc -b`, `vitest run` по затронутым пакетам.
+- В форке: `node_modules/.bin/tsc -b apps/desktop/tsconfig.host.json` и
+  `npx vitest run apps/desktop/tests/*.spec.ts`. Каталог (`apps/desktop/tests`) передавать
+  нельзя: путь затягивает в прогон `*.e2e.ts`, которые конфиг репозитория исключает — им нужна
+  собранная сборка, и они дают сотню падений, не связанных с кодом. Тот же эффект у любого
+  пути-фильтра, который совпадает с именем e2e-файла.
+- Гейт форка зелёный: спеки сборки (`windows-update-publisher`, `macos-signature`,
+  `installer-packaging`) читают имя артефакта и адрес фида из
+  `scripts/electron-builder-config.mjs` (`createDesktopArtifactName`, `DESKTOP_UPDATE_PUBLIC_URL`),
+  а не повторяют строку у себя. Правя имя установщика или адрес обновлений, менять их там — иначе
+  тесты снова начнут утверждать чужой продукт.
 - Первый запуск: приложение ставят на отдельный `DSH_HOME`, проверяют каталог в профиле
   (`profiles/desktop/.1c-catalog-applied`), число плагинов и файлы правил.
 
