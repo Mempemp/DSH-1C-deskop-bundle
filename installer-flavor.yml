@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-2
+version: 0.2.1-rc.2-3
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
   # offline seed installs, so it stays reproducible. It already names
@@ -79,14 +79,14 @@ sources:
   # по-прежнему поднимается только при заданном пути к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#73c3ae1a31d9f5fbbe3b4d868fc9252dad8a03ac
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#f96bd6b60f434bf44b2a496d80e8ea61fa5a5d0e
     path: dsh-1c-project-properties
   # v0.1.10: индексы проектов через CLI `rlm-bsl-index` (флаг в `.dsh/1c-project.json`
   # переключают «Параметры проектов») и пир `@deepseek-ai/dsh-client-ui-slots`,
   # объявленный явно. Движок — 1.46.0.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#ee57d089fbb787bf3aa7caa6df8cda47990ed787
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#255cda641688edc9d0d3238983ca8bd95b3b98b0
     path: dsh-rlm-tools-bsl
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
@@ -96,7 +96,7 @@ sources:
   # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#f78d36e3b1226a3d61ed8acb220d878d6929ecaa
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#2d230a5c28db4b80f3df0231ede1abe4e7fc74a0
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
