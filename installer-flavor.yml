@@ -79,14 +79,14 @@ sources:
   # по-прежнему поднимается только при заданном пути к платформе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#f96bd6b60f434bf44b2a496d80e8ea61fa5a5d0e
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#7d1667030fee040cf13b4660678fcfdc850c5fd7
     path: dsh-1c-project-properties
   # v0.1.10: индексы проектов через CLI `rlm-bsl-index` (флаг в `.dsh/1c-project.json`
   # переключают «Параметры проектов») и пир `@deepseek-ai/dsh-client-ui-slots`,
   # объявленный явно. Движок — 1.46.0.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#255cda641688edc9d0d3238983ca8bd95b3b98b0
+    url: https://github.com/Mempemp/DSH-runner-rlm-tools-bsl.git#d7b64ffb32c1032d2b001d3b9a13c4fd5bed1421
     path: dsh-rlm-tools-bsl
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
