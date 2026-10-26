@@ -208,5 +208,5 @@ sources:
     id: rlm-tools-bsl
     name: rlm-tools-bsl
     spec: rlm-tools-bsl
-    version: 1.46.0
+    version: 1.47.0
     bin: rlm-bsl-index
