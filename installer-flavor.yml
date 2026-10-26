@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-4
+version: 0.2.1-rc.2-5
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -86,9 +86,12 @@ sources:
   # 0.10.0 — движок 1.47.0 (схема индекса v18) и поведение карточки индекса: при
   # stale_structure она больше не запускает update сама, флаги берутся из параметров
   # проекта, папка выгрузки задаётся настройкой.
+  # 0.10.1 — вендоренный сервер справки bsl-context-rs 0.21.5 → 0.23.1 (MIT, ассет
+  # bsl-context-windows-x64.zip): ложные находки в проверках модулей, KEYWORDS по
+  # грамматике, NFC-имена в lite-индексе.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#94f40c2978042a46efa529a0e63f87c587e6f434
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#80fa3d7fb8fe6ab508867447fc26ace0dd57cb60
     path: dsh-1c-project-properties
   # v0.8.0: git работает без установки в системе, не плодит процессы и называет
   # причину отказа; вбирает 0.7.0–0.7.5.
