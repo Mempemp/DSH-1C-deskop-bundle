@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-6
+version: 0.2.1-rc.2-7
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -89,9 +89,12 @@ sources:
   # 0.10.1 — вендоренный сервер справки bsl-context-rs 0.21.5 → 0.23.1 (MIT, ассет
   # bsl-context-windows-x64.zip): ложные находки в проверках модулей, KEYWORDS по
   # грамматике, NFC-имена в lite-индексе.
+  # Релиз 0.10.1 переиздан с исправлением индексации: причина отказа берётся из вывода
+  # движка (а не «код 1»), а окончательный отказ не повторяется каждую секунду опросом
+  # карточки.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#80fa3d7fb8fe6ab508867447fc26ace0dd57cb60
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#68f11afe6960ba774c78a86316ce04dd022fc5fc
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
