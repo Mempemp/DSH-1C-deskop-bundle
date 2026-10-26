@@ -83,10 +83,15 @@ sources:
   # вкладка настроек. Роуты остались под `/rlm/*`, а каталог `$DSH_HOME/rlm-tools-bsl`
   # тем же, поэтому установленный движок и его Python-окружение переживают обновление.
   # Отдельной строкой раннер больше не подключается — второй экземпляр дрался бы за порт.
+  # 0.10.0 — движок 1.47.0 (схема индекса v18) и поведение карточки индекса: при
+  # stale_structure она больше не запускает update сама, флаги берутся из параметров
+  # проекта, папка выгрузки задаётся настройкой.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#7a2725915820bd63cc3343a018d9a58c9a600921
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#94f40c2978042a46efa529a0e63f87c587e6f434
     path: dsh-1c-project-properties
+  # v0.8.0: git работает без установки в системе, не плодит процессы и называет
+  # причину отказа; вбирает 0.7.0–0.7.5.
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
   # ищется сам — путь из настроек → комплектная копия в `$DSH_HOME/git` (её
   # распаковывает строка `kind: tool` ниже) → PATH → места установки Git for
@@ -95,7 +100,7 @@ sources:
   # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#6b43e4a4285e7dda1d7aa637f0e8c3e6ca82202a
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#4fbbe26402f46f05da17c5f25a4785590448f28e
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
