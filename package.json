@@ -1,6 +1,6 @@
 {
   "name": "dsh-1c-bundle",
-  "version": "0.2.1-rc.2-3",
+  "version": "0.2.1-rc.2-4",
   "description": "Каталог поставки «DSH для 1С»: состав сборки, редакция плагина уведомлений и документация.",
   "license": "MIT",
   "private": true,
