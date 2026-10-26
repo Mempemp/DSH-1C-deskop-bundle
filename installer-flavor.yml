@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-5
+version: 0.2.1-rc.2-6
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -93,6 +93,8 @@ sources:
     from: git
     url: https://github.com/Mempemp/DSH-1CProjectProperties.git#80fa3d7fb8fe6ab508867447fc26ace0dd57cb60
     path: dsh-1c-project-properties
+  # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
+  # ошибка привязана к папке проекта и не видна в настройках другого проекта.
   # v0.8.0: git работает без установки в системе, не плодит процессы и называет
   # причину отказа; вбирает 0.7.0–0.7.5.
   # v0.7.0: git для диффов, индикаторов изменений и кнопок «В индекс» / «Коммит»
@@ -103,7 +105,7 @@ sources:
   # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#4fbbe26402f46f05da17c5f25a4785590448f28e
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#368acf09d8238a441f44b6e3786c63cd2cbbe0d9
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
