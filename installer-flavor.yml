@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-4
+version: 0.2.1-rc.2-5
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -92,9 +92,13 @@ sources:
   # Релиз 0.10.1 переиздан с исправлением индексации: причина отказа берётся из вывода
   # движка (а не «код 1»), а окончательный отказ не повторяется каждую секунду опросом
   # карточки.
+  # 0.11.0: таймауты индексации выведены в настройки плагина и перестали быть ошибкой —
+  # проверка свежести 15 мин вместо 60 с (на слабой машине и сетевом диске обход дерева дольше),
+  # сборка 4 ч вместо часа; сработавший предел читается как «состав файлов не проверен», а не
+  # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#68f11afe6960ba774c78a86316ce04dd022fc5fc
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#778f92ac6afc9055f58ff5d1c9f91be3ad6da3ad
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -106,9 +110,12 @@ sources:
   # Windows; состояние Git видно в настройках «1С-редактор». Плюс кнопка
   # «Обновить дерево», сбрасывающая кэши листингов и разобранных метаданных.
   # Хостовые пиры — `^0.1.0-rc.6 || ^0.2.0-rc.1`: ядро сборки принимается диапазоном.
+  # v0.9.0: `git status` на большой выгрузке и сетевом диске больше не обрывается по 60 с —
+  # предел чтения 300 с и поле «Таймаут чтения git, с» в настройках (10 с … 1 ч); все вызовы
+  # идут с GIT_OPTIONAL_LOCKS=0 и GIT_TERMINAL_PROMPT=0.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#368acf09d8238a441f44b6e3786c63cd2cbbe0d9
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#2aab349033bc23cee447f30a823723fa1d75822e
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
