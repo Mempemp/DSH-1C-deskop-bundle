@@ -113,9 +113,12 @@ sources:
   # v0.9.0: `git status` на большой выгрузке и сетевом диске больше не обрывается по 60 с —
   # предел чтения 300 с и поле «Таймаут чтения git, с» в настройках (10 с … 1 ч); все вызовы
   # идут с GIT_OPTIONAL_LOCKS=0 и GIT_TERMINAL_PROMPT=0.
+  # v0.9.5: отказ объясняется словами самого хоста, а не «HTTP 400» (клиент читает тело
+  # ответа), у дерева/метаданных/изменений появился индикатор загрузки, отказы уходят в
+  # штатный журнал DSH через ctx.logger — своего errors.log и кнопок «открыть журнал» нет.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#2aab349033bc23cee447f30a823723fa1d75822e
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#9974c561c1d2ddb40de3571df5a48bd1048b04e0
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
