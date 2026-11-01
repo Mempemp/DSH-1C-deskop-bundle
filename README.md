@@ -189,6 +189,11 @@ PATH оказывается GNU `tar`, и упаковка падает на `Ca
 - [dsh-notifier](https://github.com/wingsky-1/dsh-plugin-hub) — уведомления о ходе
   работы агента: системный тост Windows, звук и каналы ntfy / Gotify / Bark /
   webhook. В сборке едет русская редакция `dsh-notifier-ru` (MIT, © wingsky-1);
+- [dsh-mcp-manager](https://github.com/wingsky-1/dsh-plugin-hub) — панель
+  MCP-серверов. В сборке едет локальная редакция 0.2.10
+  ([`packages/dsh-mcp-manager`](packages/dsh-mcp-manager/README.md), MIT, © wingsky-1):
+  исправлена очередь записи каталога инструментов, из-за которой хост падал по OOM
+  на нескольких MCP-серверах;
 - [v8std](https://v8std.ru/) — публичный MCP-сервер стандартов разработки 1С
   ([исходники](https://github.com/zeegin/v8std)): поиск по стандартам, БСП / SSL и
   документации платформы, разбор диагностик ACC и BSLLS; подключён в сборке по

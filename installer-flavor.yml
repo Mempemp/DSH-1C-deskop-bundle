@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-5
+version: 0.2.1-rc.2-6
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -31,15 +31,18 @@ sources:
   - kind: plugin
     from: npm
     spec: dshmarket@1.66.47
-  # Pinned by commit, not `#main`: the catalog must carry exactly the code the
-  # release names. This commit is v0.2.10 (`@wingsky-1/dsh-mcp-manager` 0.2.10),
-  # the release built for core 0.2.1. 0.2.9 is NOT merely older: its peers name
-  # exact core versions (`0.2.0-rc.2`), so app-boot rejects the plugin on 0.2.1 and
-  # the MCP panel never appears.
+  # Локальная редакция (packages/dsh-mcp-manager), а не установка из git/npm: апстрим
+  # 0.2.10 держит нагрузку каждого ждущего вызова записи каталога инструментов, и на
+  # машине с несколькими MCP-серверами хост умирает по OOM (issue #3 в нашем репозитории).
+  # Сборка — `node packages/dsh-mcp-manager/tools/patch.mjs` поверх опубликованного
+  # @wingsky-1/dsh-mcp-manager@0.2.10 с проверкой контрольной суммы архива и бандла.
+  # Имя и версию не меняем: на них держатся $DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json,
+  # сид каталога и профили пользователей. 0.2.9 не «просто старее»: её пиры называют
+  # точные версии ядра (0.2.0-rc.2), поэтому на 0.2.1 приложение отвергает плагин и
+  # панель MCP не появляется.
   - kind: plugin
-    from: git
-    url: https://github.com/wingsky-1/dsh-plugin-hub.git#5a9c12aa33dc9853b1610f3295d26a5fc112ce1f
-    path: packages/dsh-mcp-manager
+    from: local
+    path: ./packages/dsh-mcp-manager
   # Web search for the model. From npm rather than from the git tree: `./dist` is
   # a build artifact the repository does not commit, so packing #main produced a
   # plugin whose `bin` entry (`./dist/main.js`) did not exist — the tool started

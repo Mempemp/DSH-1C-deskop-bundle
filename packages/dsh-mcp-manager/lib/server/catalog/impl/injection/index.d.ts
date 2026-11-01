@@ -1,0 +1,45 @@
+/**
+ * dsh-mcp-manager — catalog/impl/injection/index.ts：能力目录注入决策（#664 阶段 5）。
+ *
+ * 自 src/catalog.ts 拆出（injection 域）：pre-step 监听器的目录注入决策纯函数，
+ * 完全复刻官方 dsh-tool-skill 的 catalog 语义（根治重复注入）。
+ */
+import type { CatalogCache, SupervisorLite } from "../entries/index.js";
+import type { CatalogAgent } from "../history/index.js";
+/** 会话消息最小面（pre-step decision.messages / session.snapshotEvents()）。 */
+export interface CatalogMessage {
+    id?: unknown;
+    role?: string;
+    content?: Array<{
+        type?: string;
+        text?: string;
+    }>;
+    source?: {
+        kind?: unknown;
+        plugin?: unknown;
+        form?: unknown;
+        entries?: unknown;
+        sections?: unknown;
+    };
+}
+/** pre-step 决策最小面。 */
+export interface CatalogDecision {
+    kind: string;
+    messages: CatalogMessage[];
+}
+/**
+ * 目录注入决策（纯函数，pre-step 监听器薄调用，便于单测）。
+ * 完全复刻官方 dsh-tool-skill 的 catalog 语义（根治重复注入）：
+ * 1. 历史（session.snapshotEvents()）digest 相同 → 本轮不注入（撤销本轮已注入的）——**去重源是历史而非本轮消息**；
+ * 2. 历史 digest 不同 → 注入"更新"消息（声明替换旧目录）；
+ * 3. 从未发布且无服务器 → 不注入；
+ * 4. compaction/resume 后旧目录不可见 → 重新注入（events-based 重建）。
+ * @param decision next() 的决策。
+ * @param messages 本轮输入消息（签名兼容）。
+ * @param supervisors manager.supervisors。
+ * @param maxEntries 目录条目上限。
+ * @param cache 目录缓存。
+ * @param agent pre-step 的 agent（session.snapshotEvents() 来源）。
+ * @returns 新决策。
+ */
+export declare function resolveCatalogInjection(decision: CatalogDecision, messages: CatalogMessage[], supervisors: Map<string, SupervisorLite>, maxEntries?: number, cache?: CatalogCache, agent?: CatalogAgent): CatalogDecision;
