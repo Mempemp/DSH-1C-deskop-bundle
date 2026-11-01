@@ -9,3 +9,8 @@ packages/ppt-runtime/upstream/** -whitespace
 # пакетом (tools/localize.mjs --check): при autocrlf чекаут превращает LF в CRLF
 # и проверка падает, хотя в репозитории байты верные. Храним и выгружаем как есть.
 packages/dsh-notifier-ru/lib/** -text
+
+# То же для локальной редакции менеджера MCP: tools/patch.mjs --check сверяет весь
+# собранный пакет (включая lib/index.js) с байтами апстрима плюс дельтой, поэтому
+# чекаут с autocrlf ломал бы проверку на пустом месте.
+packages/dsh-mcp-manager/** -text
