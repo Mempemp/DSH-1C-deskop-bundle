@@ -218,10 +218,10 @@ sources:
   # переустановку каталога на уже стоящей машине запускает изменившийся digest.
   - kind: tool
     from: remote
-    id: uv
-    name: uv
-    version: 0.13.7
-    url: https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip
+    id: git
+    name: git
+    version: 2.56.0.4
+    url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-busybox-64-bit.zip
   # Анализатор кода для «1С: Анализ кода». Один файл, не архив: раскатка кладёт его в
   # $DSH_HOME/bsl-analyzer/bsl-analyzer-app-windows-amd64.exe, плагин проверяет sha256
   # и берёт оттуда — вместо прежней кнопки «Скачать» на 76 МБ. Версия закреплена:
