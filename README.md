@@ -117,12 +117,15 @@ DeepSeek Harness.
 Полный список — в `installer-flavor.yml` (источники); при сборке из него собирается
 `apps/desktop/installer-catalog/manifest.json` с зафиксированными версиями и digest:
 
-- 13 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
+- 12 плагинов: dshmarket, dsh-mcp-manager, modsearch, dsh-better-sidebar,
   skill-explorer, archify, dsh-russian-lang, dsh-browser-agent (агент управляет
   встроенным браузером: 19 инструментов browser_* поверх CDP), `dsh-notifier-ru`
-  (русские уведомления: системный тост Windows,
-  звук и каналы push) + четыре наших: три 1С-плагина и `dsh-engram-memory` (память
-  агента: правила, подача памяти и MCP-сервер `engram` внутри пакета);
+  (русские уведомления: системный тост Windows, звук и каналы push) и четыре наших:
+  `dsh-1c-project-properties` (параметры проекта, правила, анализ кода, Напарник),
+  `dsh-bsl-editor` (редактор BSL) и `dsh-engram-memory` (память агента: правила,
+  подача памяти и MCP-сервер `engram` внутри пакета);
+- MCP-сервер `1c-bsl-checks`: проверка кода по правилам 1С, поднимается плагином
+  параметров вместе с движком `bsl-analyzer`; без включённой галочки его нет;
 - MCP-сервер `v8std`: поиск по документации платформы 1С, БСП / SSL и стандартам;
 - MCP-сервер `1c-platform-context`: справка по объектной модели **установленной**
   версии платформы — типы, методы, свойства, конструкторы, значения системных
