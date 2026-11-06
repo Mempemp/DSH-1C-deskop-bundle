@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.1-rc.2-6
+version: 0.2.2-rc.1-1
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -24,13 +24,14 @@ retired:
   - dsh-rlm-tools-bsl
 sources:
   # Official market host. Pinned exactly, not by range: this is the version the
-  # offline seed installs, so it stays reproducible. It already names
-  # `@deepseek-ai/dsh-settings ^0.2.1-rc.1` among its peers, i.e. it is built for the
-  # core line this bundle now carries. The app itself depends on no dshmarket copy
-  # since upstream #478 (a packaged copy shadowed the profile one).
+  # offline seed installs, so it stays reproducible. Its `@deepseek-ai/dsh-settings`
+  # peer names the 0.2.1 line, which the host gate accepts on the 0.2.2 runtime
+  # (`includePrerelease`), and 1.73.12 is the newest release at the time of the pin.
+  # The app itself depends on no dshmarket copy since upstream #478 (a packaged copy
+  # shadowed the profile one).
   - kind: plugin
     from: npm
-    spec: dshmarket@1.66.47
+    spec: dshmarket@1.73.12
   # Локальная редакция (packages/dsh-mcp-manager), а не установка из git/npm: апстрим
   # 0.2.10 держит нагрузку каждого ждущего вызова записи каталога инструментов, и на
   # машине с несколькими MCP-серверами хост умирает по OOM (issue #3 в нашем репозитории).
@@ -50,21 +51,21 @@ sources:
   # the exact pin keeps two installs of one build identical.
   - kind: plugin
     from: npm
-    spec: "@liustack/modsearch@5.10.10"
-  # v0.28.0 is the release upstream names for the 0.2.1 host line: every host peer is
-  # `^0.2.1-rc.1` and Cordis `^4.0.5`, which is what this bundle now carries (core
-  # 0.2.1-rc.2, Cordis 4.0.5). The previous pin (v0.26.1) is not merely older: its
-  # metadata names `@deepseek-ai/dsh-invariants`, a package the 0.2.1 runtime no longer
-  # has, and the catalog skips a row whose host references cannot be satisfied.
+    spec: "@liustack/modsearch@5.10.11"
+  # v0.30.1 is built for the core line this bundle carries: every host peer is
+  # `^0.2.2-rc.1` and Cordis `^4.0.5` (core 0.2.2-rc.1, Cordis 4.1.0). The old pin
+  # (v0.28.0) names the 0.2.1 line; keeping it after the core bump would leave the
+  # sidebar on APIs the new runtime no longer has.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.28.0
-  # Pinned by commit (v0.4.8, `@linxin666/dsh-client-ui-skill-explorer` 0.4.8).
-  # Its host peer is `>=0.2.1-rc.2` — the same statement as the sidebar above:
-  # the release is built against the core line this bundle carries.
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.30.1
+  # Pinned by commit (v0.4.15, `@linxin666/dsh-client-ui-skill-explorer` 0.4.15).
+  # Its host peer is `>=0.2.2-rc.1` — the same statement as the sidebar above:
+  # the release is built against the core line this bundle carries, so it moves
+  # together with the core bump and not later.
   - kind: plugin
     from: git
-    url: https://github.com/zhu1090093659/dsh-web.git#8a61df948d9d6a35af15344eae565d27ebd4dc0d
+    url: https://github.com/zhu1090093659/dsh-web.git#e8cc1955bab16cd6acecdefd5259d8b2531a98a2
     path: packages/dsh-skill-explorer
   # From npm, not from the git tree, for the same reason as modsearch below:
   # `integrations/deepseek-harness/skills` is in that directory's .gitignore and
@@ -95,13 +96,18 @@ sources:
   # Релиз 0.10.1 переиздан с исправлением индексации: причина отказа берётся из вывода
   # движка (а не «код 1»), а окончательный отказ не повторяется каждую секунду опросом
   # карточки.
+  # 0.15.0: правила 1С разворачиваются своим слоем (девять плейбуков в самом пакете),
+  # comol стал необязательным флажком и правится только по нему; проверка кода —
+  # 210 правил на движке bsl-analyzer (скачивается при включении, в сборке его нет);
+  # 1С:Напарник отдельным MCP-сервером с одним инструментом, бюджетом ключа и
+  # `bsl_review` как «вторым мнением». Всё это выключено по умолчанию, кроме правил.
   # 0.11.0: таймауты индексации выведены в настройки плагина и перестали быть ошибкой —
   # проверка свежести 15 мин вместо 60 с (на слабой машине и сетевом диске обход дерева дольше),
   # сборка 4 ч вместо часа; сработавший предел читается как «состав файлов не проверен», а не
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#778f92ac6afc9055f58ff5d1c9f91be3ad6da3ad
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#07b326d6840d2a8317aa6364448adef431cf876f
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -119,19 +125,25 @@ sources:
   # v0.9.5: отказ объясняется словами самого хоста, а не «HTTP 400» (клиент читает тело
   # ответа), у дерева/метаданных/изменений появился индикатор загрузки, отказы уходят в
   # штатный журнал DSH через ctx.logger — своего errors.log и кнопок «открыть журнал» нет.
+  # v0.9.6: языковой сервер вырезан целиком (F12 идёт по модели метаданных, Java на машине
+  # не нужна), прицел дерева сравнивает пути в одной форме и ставит строку по центру,
+  # контекстное меню сокращено, подсказки над кодом оформлены как сообщения DSH.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#9974c561c1d2ddb40de3571df5a48bd1048b04e0
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#f2f0790e294077c51f77ffaeac491a8b884b7dd4
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
-  # range would silently change what a release delivers. Its dsh-settings peer
-  # accepts `^0.2.0-rc.1`/`^0.2.0-rc.2`, so the 0.2.1 core still activates it — a
-  # pin that misses the range is not a start failure, it kills the plugin on an
-  # unknown API and leaves the interface English (see references/shell-ui-locale.md).
+  # range would silently change what a release delivers. 0.4.22 is the newest
+  # release and its dsh-settings peer names `>=0.2.2-0 <0.2.3-0`, i.e. the line
+  # this bundle carries. Its Cordis peer stays at `~4.0.4 || ~4.0.5` while the
+  # 0.2.2 runtime carries Cordis 4.1.0 — that peer the host gate does not read,
+  # but the Russian interface is exactly what silently falls back to English when
+  # such a mismatch bites (references/shell-ui-locale.md), so it is checked on a
+  # real first run, not by the manifest.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.4.5"
+    spec: "@goodandready/dsh-russian-lang@0.4.22"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.7, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора
@@ -185,6 +197,10 @@ sources:
   # unpacked into a project on demand by dsh-1c-project-properties, which
   # rewrites the source-repository paths to the project-local ones the header of
   # each file expects. The desktop never reads this payload itself.
+  # Наши собственные правила едут НЕ этим payload, а внутри плагина параметров
+  # (playbook/ в его пакете): второй копии правил в каталоге быть не должно.
+  # Этот набор — необязательная добавка: разворачивается только при включённом
+  # флажке «Добавить правила comol» в окне проекта, и рассчитан на MCP-серверы comol.
   # Pinned to a commit, not `#main`: a floating ref would hand two installs of the
   # same build different rulesets. `version` feeds the catalog fingerprint: bump
   # it (or let the tree digest change) or an existing install keeps its old copy.
@@ -212,8 +228,8 @@ sources:
     from: remote
     id: git
     name: git
-    version: 2.56.0.3
-    url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.3/MinGit-2.56.0.3-busybox-64-bit.zip
+    version: 2.56.0.4
+    url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-busybox-64-bit.zip
 
   # uv ставит Python-инструменты при первой раскатке каталога. Нужен потому, что часть
   # возможностей 1С — Python-пакеты, а не бинарники: у rlm-bsl-index (индекс кода) отдельного
@@ -225,8 +241,8 @@ sources:
     from: remote
     id: uv
     name: uv
-    version: 0.13.5
-    url: https://github.com/astral-sh/uv/releases/download/0.13.5/uv-x86_64-pc-windows-msvc.zip
+    version: 0.13.7
+    url: https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip
   # Ставится тем же uv в $DSH_HOME/rlm-tools-bsl/{tool,bin,python} — ровно туда, где плагин
   # dsh-rlm-tools-bsl ищет команду индекса, поэтому сам он уже ничего не докачивает.
   - kind: python
