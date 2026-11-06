@@ -26,6 +26,9 @@ declare class MountLedger {
     private readonly entries;
     /** 释放后待结算的 dispose：只收不 await，见文件头「已知缺口」。 */
     private pending;
+    private readonly disposing;
+    private trackDisposal;
+    waitForRelease(key: string): Promise<void>;
     /** 记账并**发起**装载：先查键再装，撞键当场抛（早失败 + 判词点名键）。 */
     mount(key: string, module: OfficialPluginModule, config: unknown): LedgerEntry;
     get(key: string): LedgerEntry | undefined;

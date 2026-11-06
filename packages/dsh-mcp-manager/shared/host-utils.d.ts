@@ -8,21 +8,86 @@ import type { IncomingMessage, ServerResponse } from "node:http";
  */
 export interface LoopbackOptions {
     allowCrossSiteNoCors?: boolean;
+    /**
+     * 非回环请求的官方认证源。必须每次请求现取 `ctx.connection`，不得缓存 service 实例。
+     * 未提供、读取失败或 connection 已卸载时由 routeFenceRejection fail-closed。
+     */
+    remoteAdmission?: RemoteAdmissionSource;
+    /** 长连接请求的官方 peer admission；仅 SSE/流式 route 使用。 */
+    remotePeerAdmission?: RemotePeerAdmissionSource;
+}
+/** 官方 `ctx.connection.requestRejection()` 的最小结果面。 */
+export type RemoteAdmissionRejection = 401 | 403 | undefined;
+/** 一次非回环请求的官方 admission；`undefined` 表示 Host/Origin 与凭据均已通过。 */
+export type RemoteAdmission = (request: IncomingMessage) => RemoteAdmissionRejection;
+/** admission 的动态来源；每次 HTTP 请求调用一次，使 connection 替换或卸载立即生效。 */
+export type RemoteAdmissionSource = () => RemoteAdmission | undefined;
+/**
+ * 官方 `PeerScope` 中本层绑定长连接所需的最小公开面。rc.1 的 PeerScope.ctx 是随 Peer
+ * dispose 的 Cordis Context；这里只保留 `effect`，不持有认证材料，也不复制认证算法。
+ */
+export interface RemotePeerScope {
+    readonly ctx: {
+        effect(execute: () => () => void, label?: string): unknown;
+    };
+}
+/** 官方 `connection.admit()` 的成功/拒绝结果。 */
+export type RemotePeerAdmissionResult = {
+    readonly peer: RemotePeerScope;
+} | {
+    readonly rejection: 401 | 403;
+};
+/** 一次非回环长连接请求的官方 admission。 */
+export type RemotePeerAdmission = (request: IncomingMessage) => RemotePeerAdmissionResult;
+/** peer admission 的动态来源；同样必须在每次连接请求时重新读取 connection。 */
+export type RemotePeerAdmissionSource = () => RemotePeerAdmission | undefined;
+/** cordis Context 的最小读取面；`strict: false` 是面向可选服务探测的官方调用形态。 */
+export interface ConnectionLookupContext {
+    get(name: string, strict?: boolean): unknown;
 }
 export declare function isLoopbackRequest(request: IncomingMessage, options?: LoopbackOptions): boolean;
 /**
- * Loopback + 方法白名单低阶路由守卫。
+ * 从当前 Context 建立动态 admission 源。
  *
- * **对本守卫的执行顺序**：非 loopback → 403；方法不在白名单 → 405；否则放行
- * （403 先于 405）。该顺序仅对**套本守卫的端点**成立——个别端点（如
+ * 闭包只保留 Context；每次请求重新 `get("connection", false)`，不缓存 connection 或方法。
+ */
+export declare function liveConnectionAdmission(ctx: ConnectionLookupContext): RemoteAdmissionSource;
+/** 从当前 Context 建立长连接 peer admission 源，成功结果保留官方 PeerScope。 */
+export declare function liveConnectionPeerAdmission(ctx: ConnectionLookupContext): RemotePeerAdmissionSource;
+/**
+ * 长连接请求认证：loopback 仍走旧快路径且不绑定 connection Peer；非回环必须从
+ * 当前官方 connection admission 拿到 PeerScope，供调用方注册 peer.ctx.effect()。
+ */
+export declare function admitLongLivedRequest(request: IncomingMessage, options?: LoopbackOptions): {
+    readonly peer?: RemotePeerScope;
+} | {
+    readonly rejection: 401 | 403;
+};
+/**
+ * 把长连接清理登记到官方 PeerScope 的 ctx.effect；Peer 释放/connection 卸载时自动执行。
+ * 返回的 disposer 供客户端先断开时注销 effect，重复调用由 Cordis 保持幂等。
+ */
+export declare function bindPeerLifecycle(peer: RemotePeerScope, cleanup: () => void, label: string): () => void;
+/**
+ * 路由认证裁决：回环快路径保持原样，非回环交给官方 connection admission。
+ *
+ * 非回环路径中，source/service/method 缺失、抛错或返回未知值一律 403。`undefined`
+ * 只来自当前官方 admission，表示 Host/Origin 与浏览器/API 凭据均已通过。
+ */
+export declare function routeFenceRejection(request: IncomingMessage, options?: LoopbackOptions): RemoteAdmissionRejection;
+/**
+ * 路由认证 + 方法白名单低阶守卫。
+ *
+ * **对本守卫的执行顺序**：回环快路径；非回环走官方 connection admission，
+ * 401/403 原样返回；认证通过后才检查方法，方法不在白名单 → 405。该顺序仅对
+ * **套本守卫的端点**成立——个别端点（如
  * mcp-manager /config）是端点级方法分流先于 loopback 的刻意例外，不适用。
  *
  * @param req - Node http 请求对象。
  * @param res - 响应对象。
  * @param methods - 允许的 HTTP 方法白名单。
  * @param loopbackOptions - 透传给
- *   isLoopbackRequest 的可选判定参数（#549：仅 serve 资源路由放行
- *   cross-site no-cors 子资源时使用；其余路由不得传）。
+ *   isLoopbackRequest 的可选判定参数；`remoteAdmission` 只在非回环路径启用。
  * @returns 是否放行（true 时调用方继续处理请求）。
  */
 export declare function guardLoopbackMethod(req: IncomingMessage, res: ServerResponse, methods: string[], loopbackOptions?: LoopbackOptions): boolean;

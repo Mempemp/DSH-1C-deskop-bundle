@@ -234,9 +234,12 @@ window.__ModuleLoader__.load({
         panelOpener: void 0,
         activeTab: "servers",
         servers: [],
+        pending: /* @__PURE__ */ new Map(),
         counts: {},
+        refreshError: void 0,
         editingName: void 0,
         editing: void 0,
+        editingGeneration: void 0,
         formName: void 0,
         formScope: void 0,
         formTransport: void 0,
@@ -252,6 +255,7 @@ window.__ModuleLoader__.load({
         floatOpen: false,
         currentCwd: void 0,
         sessionResolved: false,
+        sessionGeneration: 0,
         warnedUnknownSession: false,
         unknownSessionFrames: 0,
         projectRoot: void 0,
@@ -267,7 +271,40 @@ window.__ModuleLoader__.load({
       };
     }
 
+    // ../../shared/client/i18n.js
+    var t = function(key) {
+      return key;
+    };
+    function bindLocale(locale, ns) {
+      if (locale && typeof locale.bind === "function") {
+        t = locale.bind(ns);
+      }
+    }
+
     // src/client/core/api.ts
+    function assertActionSession(state, scope, generation) {
+      if (state.sessionGeneration !== generation || scope === "project" && (!state.sessionResolved || !state.currentCwd)) {
+        throw new Error(t("sessionUnavailable"));
+      }
+    }
+    function serverKey(server) {
+      return JSON.stringify([server.scope, server.name]);
+    }
+    async function submitConnection(server, state, actions, kind, submit) {
+      const key = serverKey(server);
+      if (state.pending.has(key)) return;
+      const pending = { kind };
+      const generation = state.sessionGeneration;
+      state.pending.set(key, pending);
+      actions.render?.();
+      try {
+        await submit();
+      } finally {
+        if (state.sessionGeneration === generation) await actions.refresh(true);
+        if (state.pending.get(key) === pending) state.pending.delete(key);
+        actions.render?.();
+      }
+    }
     function toolDisableServerKey(server, state) {
       if (server.scope === "global") return `@@global/${server.name}`;
       const root = state.projectRoot;
@@ -275,7 +312,11 @@ window.__ModuleLoader__.load({
       return `@${root}/${server.name}`;
     }
     function cwdQueryOf(state) {
-      return typeof state.currentCwd === "string" && state.currentCwd !== "" ? `&cwd=${encodeURIComponent(state.currentCwd)}` : "";
+      return state.sessionResolved ? `&cwd=${encodeURIComponent(state.currentCwd ?? "")}` : "";
+    }
+    function serversUrlOf(state) {
+      if (!state.sessionResolved) return void 0;
+      return `${state.API.servers}?cwd=${encodeURIComponent(state.currentCwd ?? "")}`;
     }
     function resumeBodyOf(state) {
       if (!state.sessionResolved) return void 0;
@@ -338,16 +379,6 @@ window.__ModuleLoader__.load({
       return node;
     }
 
-    // ../../shared/client/i18n.js
-    var t = function(key) {
-      return key;
-    };
-    function bindLocale(locale, ns) {
-      if (locale && typeof locale.bind === "function") {
-        t = locale.bind(ns);
-      }
-    }
-
     // src/client/core/i18n.ts
     function tStatus(status) {
       return STATUS_TEXT[status] !== void 0 ? t(STATUS_TEXT[status]) : status;
@@ -378,8 +409,8 @@ window.__ModuleLoader__.load({
       const label = el("label", { class: "dm-tool" });
       const input = el("input", { type: "checkbox", checked: disabled });
       input.addEventListener("change", () => {
-        const serverKey = toolDisableServerKey(server, state);
-        if (serverKey === void 0) {
+        const serverKey2 = toolDisableServerKey(server, state);
+        if (serverKey2 === void 0) {
           input.checked = !input.checked;
           console.warn("[dsh-mcp-manager] projectRoot 缺失，跳过 tool-disable（非法 @/name 防御）");
           return;
@@ -388,7 +419,7 @@ window.__ModuleLoader__.load({
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            server: serverKey,
+            server: serverKey2,
             tool,
             disabled: input.checked
           })
@@ -427,32 +458,46 @@ window.__ModuleLoader__.load({
         body: JSON.stringify({ enabled })
       };
     }
-    function postThenRefresh(state, actions, url) {
-      return async () => {
-        await api(url, { method: "POST" });
-        await actions.refresh();
-      };
-    }
     function statusActions(server, state, actions, scopeQuery, cwdQuery) {
       const name = encodeURIComponent(server.name);
+      const generation = state.sessionGeneration;
+      if (server.status === "connecting" || server.status === "reconnecting") {
+        return [
+          {
+            label: t("disconnect"),
+            primary: false,
+            run: () => submitConnection(
+              server,
+              state,
+              actions,
+              "disconnect",
+              () => api(`${state.API.disconnect}?name=${name}${scopeQuery}${cwdQuery}`, { method: "POST" })
+            )
+          }
+        ];
+      }
       if (server.status === "connected") {
         return [
           {
             label: t("disconnect"),
             primary: false,
-            run: postThenRefresh(
+            run: () => submitConnection(
+              server,
               state,
               actions,
-              `${state.API.disconnect}?name=${name}${scopeQuery}${cwdQuery}`
+              "disconnect",
+              () => api(`${state.API.disconnect}?name=${name}${scopeQuery}${cwdQuery}`, { method: "POST" })
             )
           },
           {
             label: t("reconnect"),
             primary: false,
-            run: postThenRefresh(
+            run: () => submitConnection(
+              server,
               state,
               actions,
-              `${state.API.reconnect}?name=${name}${scopeQuery}${cwdQuery}`
+              "connect",
+              () => api(`${state.API.reconnect}?name=${name}${scopeQuery}${cwdQuery}`, { method: "POST" })
             )
           }
         ];
@@ -462,13 +507,13 @@ window.__ModuleLoader__.load({
           {
             label: t("enableAndConnect"),
             primary: true,
-            run: async () => {
-              await api(`${state.API.servers}?name=${name}${scopeQuery}`, jsonPatchInit(true));
-              await api(`${state.API.connect}?name=${name}${scopeQuery}${cwdQuery}`, {
-                method: "POST"
-              });
-              await actions.refresh();
-            }
+            run: () => submitConnection(server, state, actions, "connect", async () => {
+              assertActionSession(state, server.scope, generation);
+              await api(
+                `${state.API.servers}?name=${name}${scopeQuery}${cwdQuery}`,
+                jsonPatchInit(true)
+              );
+            })
           }
         ];
       }
@@ -476,38 +521,49 @@ window.__ModuleLoader__.load({
         {
           label: t("connect"),
           primary: true,
-          run: postThenRefresh(
+          run: () => submitConnection(
+            server,
             state,
             actions,
-            `${state.API.connect}?name=${name}${scopeQuery}${cwdQuery}`
+            "connect",
+            () => api(`${state.API.connect}?name=${name}${scopeQuery}${cwdQuery}`, { method: "POST" })
           )
         }
       ];
     }
     function disableAction(server, state, actions, scopeQuery, cwdQuery) {
       const name = encodeURIComponent(server.name);
+      const generation = state.sessionGeneration;
       return {
         label: t("disable"),
         primary: false,
-        run: async () => {
+        run: () => submitConnection(server, state, actions, "disconnect", async () => {
+          assertActionSession(state, server.scope, generation);
           await api(
             `${state.API.servers}?name=${name}${scopeQuery}${cwdQuery}`,
             jsonPatchInit(false)
           );
-          if (state.editingName === server.name) actions.resetForm();
-          await actions.refresh();
-        }
+          if (state.sessionGeneration === generation && state.editingName === server.name)
+            actions.resetForm();
+        })
       };
     }
     function deleteAction(server, state, actions, scopeQuery) {
       const name = encodeURIComponent(server.name);
+      const cwdQuery = cwdQueryOf(state);
+      const generation = state.sessionGeneration;
       return {
         label: t("delete"),
         primary: false,
         danger: true,
         run: async () => {
           if (!window.confirm(t("confirmDelete", { name: server.name }))) return;
-          await api(`${state.API.servers}?name=${name}${scopeQuery}`, { method: "DELETE" });
+          if (state.sessionGeneration !== generation || server.scope === "project" && (!state.sessionResolved || !state.currentCwd)) {
+            throw new Error(t("sessionUnavailable"));
+          }
+          await api(`${state.API.servers}?name=${name}${scopeQuery}${cwdQuery}`, {
+            method: "DELETE"
+          });
           if (state.editingName === server.name) actions.resetForm();
           await actions.refresh();
         }
@@ -554,8 +610,10 @@ window.__ModuleLoader__.load({
     }
     function renderServer(server, state, actions, opts = { tools: true }) {
       const article = el("article", { class: serverCardClass(server) });
+      const pending = state.pending.get(serverKey(server))?.kind;
       const toolCount = Array.isArray(server.tools) ? server.tools.length : 0;
       article.appendChild(serverCardHeader(server, toolCount));
+      renderPendingBadge(article, server, pending);
       article.appendChild(el("div", { class: "dm-endpoint", text: endpointOf(server) }));
       if (server.error !== void 0 && server.error !== "") {
         article.appendChild(el("div", { class: "dm-err", text: server.error }));
@@ -580,8 +638,19 @@ window.__ModuleLoader__.load({
         actionButton(remove.label, remove.run, remove.primary, remove.danger === true)
       );
       actionsEl.children[actionsEl.children.length - 1].disabled = busy;
+      disablePendingActions(actionsEl, pending);
       article.appendChild(actionsEl);
       return article;
+    }
+    function renderPendingBadge(article, server, pending) {
+      if (pending === void 0) return;
+      const badge = article.querySelector(".dm-st-" + server.status);
+      if (badge !== null)
+        badge.textContent = t(pending === "connect" ? "stConnecting" : "stDisconnecting");
+    }
+    function disablePendingActions(actionsEl, pending) {
+      if (pending === void 0) return;
+      for (const button of actionsEl.querySelectorAll("button")) button.disabled = true;
     }
     function renderServers(state, actions) {
       if (state.bodyEl === void 0) return;
@@ -701,6 +770,7 @@ window.__ModuleLoader__.load({
     }
     function resetForm(state) {
       state.editingName = void 0;
+      state.editingGeneration = void 0;
       state.editing = void 0;
       if (state.formName === void 0) return;
       state.formName.value = "";
@@ -764,6 +834,7 @@ window.__ModuleLoader__.load({
     }
     async function saveForm(state, actions) {
       const server = readForm(state);
+      const generation = state.sessionGeneration;
       try {
         const payload = {
           ...server,
@@ -778,6 +849,7 @@ window.__ModuleLoader__.load({
         if (urlIsProjection) delete payload.url;
         stripProjectionTables(payload);
         if (!await performSaveRequest(state, server, payload)) return;
+        if (state.sessionGeneration !== generation) return;
         resetForm(state);
         await actions.refresh();
       } catch (error) {
@@ -809,8 +881,13 @@ window.__ModuleLoader__.load({
         return true;
       }
       if (isEditing(state)) {
+        assertActionSession(
+          state,
+          formScopeValue(state),
+          state.editingGeneration ?? state.sessionGeneration
+        );
         const query = `name=${encodeURIComponent(state.editingName ?? "")}&scope=${formScopeValue(state)}`;
-        await api(`${state.API.servers}?${query}`, {
+        await api(`${state.API.servers}?${query}${cwdQueryOf(state)}`, {
           ...jsonWriteInit(payload),
           method: "PATCH"
         });
@@ -821,6 +898,7 @@ window.__ModuleLoader__.load({
     }
     function beginEdit(state, actions, server) {
       state.editingName = server.name;
+      state.editingGeneration = state.sessionGeneration;
       state.editing = server;
       actions.switchTab("quick");
       fillForm(state, server);
@@ -1089,8 +1167,8 @@ window.__ModuleLoader__.load({
         dataset: { dshMcpTool: tool }
       });
       input.addEventListener("change", () => {
-        const serverKey = toolDisableServerKey(server, state);
-        if (serverKey === void 0) {
+        const serverKey2 = toolDisableServerKey(server, state);
+        if (serverKey2 === void 0) {
           input.checked = !input.checked;
           console.warn("[dsh-mcp-manager] projectRoot 缺失，跳过 tool-disable（非法 @/name 防御）");
           return;
@@ -1099,7 +1177,7 @@ window.__ModuleLoader__.load({
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            server: serverKey,
+            server: serverKey2,
             tool,
             disabled: input.checked
           })
@@ -1133,7 +1211,7 @@ window.__ModuleLoader__.load({
     function primaryRowAction(server, state, cwdQuery) {
       const query = `name=${encodeURIComponent(server.name)}&scope=${server.scope}${cwdQuery}`;
       const className = floatActionClass(server);
-      if (server.status === "connected") {
+      if (server.status === "connected" || server.status === "connecting" || server.status === "reconnecting") {
         return {
           className,
           label: t("disconnect"),
@@ -1164,7 +1242,7 @@ window.__ModuleLoader__.load({
       return {
         className: "dm-float-action",
         label: t("disable"),
-        url: `${state.API.servers}?name=${encodeURIComponent(server.name)}&scope=${server.scope}`,
+        url: `${state.API.servers}?name=${encodeURIComponent(server.name)}&scope=${server.scope}${cwdQueryOf(state)}`,
         method: "PATCH",
         tag: "disable",
         body: JSON.stringify({ enabled: false })
@@ -1178,16 +1256,35 @@ window.__ModuleLoader__.load({
         body: action.body
       };
     }
-    function rowActionButton(action, actions) {
+    function rowActionButton(action, server, state, actions) {
       const button = el("button", { class: action.className });
       button.textContent = action.label;
+      button.disabled = state.pending.has(serverKey(server));
+      const generation = state.sessionGeneration;
       button.addEventListener("click", () => {
-        void api(action.url, rowRequestInit(action)).then(() => actions.refresh()).catch((error) => console.warn(`[dsh-mcp-manager] ${action.tag} failed:`, error));
+        const submit = () => {
+          if (action.tag === "enable" || action.tag === "disable")
+            assertActionSession(state, server.scope, generation);
+          return api(action.url, rowRequestInit(action));
+        };
+        const request = submitConnection(
+          server,
+          state,
+          actions,
+          action.tag === "connect" || action.tag === "enable" ? "connect" : "disconnect",
+          submit
+        );
+        void request.catch(
+          (error) => window.alert(
+            t("actionFail", { msg: error instanceof Error ? error.message : String(error) })
+          )
+        );
       });
       return button;
     }
     function renderFloatRow(server, state, actions, opts = { tools: true }) {
-      const failed = server.status === "failed" || server.status === "reconnecting";
+      const failed = isAttentionStatus(server);
+      const pending = state.pending.get(serverKey(server))?.kind;
       const row = el("div", {
         class: `dm-float-row${failed ? " dm-float-row--fail" : ""}${opts.stagger !== void 0 ? " dm-stagger" : ""}`
       });
@@ -1200,20 +1297,30 @@ window.__ModuleLoader__.load({
       row.appendChild(
         el("span", {
           class: "dm-float-meta",
-          text: pangu(t("serverMeta", { status: tStatus(server.status), tools }))
+          text: pangu(t("serverMeta", { status: pendingStatus(server, pending), tools }))
         })
       );
       const actionsEl = el("div", { class: "dm-float-actions" });
       actionsEl.appendChild(
-        rowActionButton(primaryRowAction(server, state, cwdQueryOf(state)), actions)
+        rowActionButton(primaryRowAction(server, state, cwdQueryOf(state)), server, state, actions)
       );
       if (server.status !== "disabled") {
-        actionsEl.appendChild(rowActionButton(disableRowAction(server, state), actions));
+        actionsEl.appendChild(rowActionButton(disableRowAction(server, state), server, state, actions));
       }
       row.appendChild(actionsEl);
+      appendServerError(row, server);
       if (opts.tools)
         row.appendChild(renderFloatTools(server, state, actions, opts.openTools ?? /* @__PURE__ */ new Set()));
       return row;
+    }
+    function appendServerError(row, server) {
+      if (server.error) row.appendChild(el("div", { class: "dm-err", text: server.error }));
+    }
+    function pendingStatus(server, pending) {
+      return pending === void 0 ? tStatus(server.status) : t(pending === "connect" ? "stConnecting" : "stDisconnecting");
+    }
+    function isAttentionStatus(server) {
+      return server.status === "failed" || server.status === "reconnecting";
     }
     function renderFloatHealth(state) {
       const connected = state.counts.connected ?? 0;
@@ -1317,6 +1424,11 @@ window.__ModuleLoader__.load({
       const headText = el("div", { class: "dm-float-head-text" });
       headText.appendChild(el("div", { class: "dm-float-title", text: floatProjectName(state) }));
       headText.appendChild(renderFloatHealth(state));
+      if (state.refreshError !== void 0) {
+        headText.appendChild(
+          el("div", { class: "dm-err", text: t("loadFail", { msg: state.refreshError }) })
+        );
+      }
       head.appendChild(headText);
       head.appendChild(
         el("button", { text: t("floatManage"), onclick: () => openMainPanel(state, actions) })
@@ -1625,14 +1737,21 @@ window.__ModuleLoader__.load({
     }
 
     // src/client/float/panel.ts
-    var inflight;
+    var inflight = /* @__PURE__ */ new WeakMap();
     var keydownCleanups = /* @__PURE__ */ new WeakMap();
-    function refresh(state, actions) {
-      if (inflight !== void 0) return inflight;
-      inflight = doRefresh(state, actions).finally(() => {
-        inflight = void 0;
+    function refresh(state, actions, fresh = false) {
+      const current = inflight.get(state);
+      const generation = state.sessionGeneration ?? 0;
+      if (current !== void 0 && current.generation === generation) {
+        if (fresh) return current.promise.then(() => refresh(state, actions));
+        return current.promise;
+      }
+      const request = { generation, promise: Promise.resolve(false) };
+      request.promise = doRefresh(state, actions, generation).finally(() => {
+        if (inflight.get(state) === request) inflight.delete(state);
       });
-      return inflight;
+      inflight.set(state, request);
+      return request.promise;
     }
     function countsSummaryText(state) {
       const parts = [];
@@ -1661,28 +1780,37 @@ window.__ModuleLoader__.load({
       }
       countsEl.textContent = summary;
     }
-    async function doRefresh(state, actions) {
+    async function doRefresh(state, actions, generation) {
+      const url = serversUrlOf(state);
+      if (url === void 0) return false;
       try {
-        const payload = await api(state.API.servers);
+        const payload = await api(url);
+        if ((state.sessionGeneration ?? 0) !== generation) return false;
         state.servers = payload.servers ?? [];
         state.counts = payload.counts ?? {};
         state.projectRoot = payload.projectRoot;
-        renderPill(state);
-        if (state.floatOpen) renderFloatPanel(state, actions);
-        renderCountsBadge(state);
-        if (state.bodyEl !== void 0 && state.activeTab === "servers") renderServers(state, actions);
+        state.refreshError = void 0;
+        renderState(state, actions);
         return true;
       } catch (error) {
-        if (state.bodyEl !== void 0 && state.activeTab === "servers") {
+        if ((state.sessionGeneration ?? 0) !== generation) return false;
+        state.refreshError = error instanceof Error ? error.message : String(error);
+        renderState(state, actions);
+        return false;
+      }
+    }
+    function renderState(state, actions) {
+      renderPill(state);
+      if (state.floatOpen) renderFloatPanel(state, actions);
+      renderCountsBadge(state);
+      if (state.bodyEl !== void 0 && state.activeTab === "servers") {
+        if (state.refreshError === void 0) renderServers(state, actions);
+        else {
           state.bodyEl.textContent = "";
           state.bodyEl.appendChild(
-            el("div", {
-              class: "dm-status",
-              text: t("loadFail", { msg: error instanceof Error ? error.message : String(error) })
-            })
+            el("div", { class: "dm-status", text: t("loadFail", { msg: state.refreshError }) })
           );
         }
-        return false;
       }
     }
     function switchTab(state, actions, tab) {
@@ -1823,6 +1951,15 @@ window.__ModuleLoader__.load({
         "[dsh-mcp-manager] 读不到当前会话（官方 sessions.list 快照无 mainView 行）：项目级 MCP 暂不绑定。未知不等于无项目，故不向宿主发送清空。"
       );
     }
+    function clearPending(state, actions) {
+      state.sessionGeneration = (state.sessionGeneration ?? 0) + 1;
+      state.pending?.clear();
+      state.servers = [];
+      state.counts = {};
+      state.projectRoot = void 0;
+      state.refreshError = void 0;
+      actions.render?.();
+    }
     function bindSession(ctx, state, actions) {
       const list = ctx.sessions?.list;
       if (list === void 0) return () => {
@@ -1834,6 +1971,7 @@ window.__ModuleLoader__.load({
         if (read.kind === "unknown") {
           state.currentCwd = void 0;
           state.sessionResolved = false;
+          if (prevResolved) clearPending(state, actions);
           state.unknownSessionFrames += 1;
           state.updateFloatState?.();
           if (prevResolved || state.unknownSessionFrames >= 2) warnUnknownOnce(state);
@@ -1845,11 +1983,15 @@ window.__ModuleLoader__.load({
         state.warnedUnknownSession = false;
         state.updateFloatState?.();
         if (prevResolved && read.cwd === prevCwd) return;
+        clearPending(state, actions);
+        const generation = state.sessionGeneration;
         void api(state.API.session, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ cwd: typeof read.cwd === "string" ? read.cwd : "" })
-        }).then(() => actions.refresh()).catch(() => {
+        }).then(() => {
+          if (state.sessionGeneration === generation) return actions.refresh();
+        }).catch(() => {
         });
       };
       sync();
@@ -1976,6 +2118,8 @@ window.__ModuleLoader__.load({
       // 状态（constants.ts 状态表共用）
       stConnected: "运行中",
       stConnecting: "连接中",
+      stDisconnecting: "断开中",
+      sessionUnavailable: "当前项目会话已变化或不可用，请刷新后重试",
       stReconnecting: "重连中",
       stStopped: "未连接",
       stDisabled: "已停用",
@@ -2075,6 +2219,8 @@ window.__ModuleLoader__.load({
     var en = {
       stConnected: "Running",
       stConnecting: "Connecting",
+      stDisconnecting: "Disconnecting",
+      sessionUnavailable: "The current project session changed or is unavailable; refresh and try again",
       stReconnecting: "Reconnecting",
       stStopped: "Disconnected",
       stDisabled: "Disabled",
@@ -2172,7 +2318,8 @@ window.__ModuleLoader__.load({
     function apply(ctx) {
       const state = createState();
       const actions = {
-        refresh: () => refresh(state, actions),
+        refresh: (fresh) => refresh(state, actions, fresh),
+        render: () => renderState(state, actions),
         switchTab: (tab) => switchTab(state, actions, tab),
         close: () => close(state),
         showPanel: () => showPanel(state, actions),
@@ -2331,7 +2478,11 @@ window.__ModuleLoader__.load({
         const maybeRecoverSession = () => {
           const now = Date.now();
           if (now - lastRecoverAt < 1e4) return;
-          void api(state.API.servers).then((payload) => {
+          const url = serversUrlOf(state);
+          if (url === void 0) return;
+          const generation = state.sessionGeneration;
+          void api(url).then((payload) => {
+            if (state.sessionGeneration !== generation) return;
             if (payload?.projectRoot !== void 0) return;
             const cwd = state.currentCwd;
             if (typeof cwd !== "string" || cwd === "") return;

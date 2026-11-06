@@ -4,6 +4,11 @@
  * только apply(), поэтому к бандлу дописывается экспорт таблиц текста и полученный
  * файл импортируется — так проверяется настоящая сборка, а не её исходник.
  *
+ * 0.2.11 вынес тела уведомлений в каталог LOCALE_TEXT и переименовал помощники:
+ * NOTIFY_KINDS — это уже getNotifyKinds("zh"), а формат длительности —
+ * formatDurationForLocale(ms, locale). Названий инструментов в тексте больше нет:
+ * prettyToolName в апстриме возвращает имя инструмента как есть.
+ *
  * Запуск: node test/fixtures/dsh-notifier-ru-render.mjs <путь к lib/index.js>
  */
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
@@ -17,7 +22,7 @@ const dir = await mkdtemp(path.join(tmpdir(), 'dsh-notifier-ru-render-'))
 const file = path.join(dir, 'index.mjs')
 await writeFile(
   file,
-  `${source}\nexport { NOTIFY_KINDS, TOOL_LABELS, TEST_NOTIFICATION, formatDuration };\n`,
+  `${source}\nexport { NOTIFY_KINDS, TEST_NOTIFICATION, formatDurationForLocale };\n`,
   'utf8'
 )
 
@@ -42,8 +47,7 @@ process.stdout.write(
     {
       kinds,
       test: { title: mod.TEST_NOTIFICATION.title, body: mod.TEST_NOTIFICATION.body },
-      duration: mod.formatDuration(3725000),
-      tools: mod.TOOL_LABELS
+      duration: mod.formatDurationForLocale(3725000, "zh")
     },
     null,
     1

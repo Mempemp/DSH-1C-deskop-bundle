@@ -21,27 +21,42 @@ export const HOST_DELTAS = [
       '    webServerPort: () => ctx.webServer.port,'
   ],
   // 2. StreamHub: кадр goto-session (не попадает в replay: since() фильтрует notify).
+  //    Якорь — конец метода publish: комментарий над since() в 0.2.11 поменялся,
+  //    а вставлять метод между чужим комментарием и since() нельзя.
   [
-    '  /** 序号大于 `since` 的帧, 按序. */\n  since(value) {',
-    '  /** Клик по тосту → клиент переключает UI на сессию уведомления. */\n' +
+    '    this.hub.broadcast(encode(event));\n  }',
+    '    this.hub.broadcast(encode(event));\n  }\n' +
+      '  /** Клик по тосту → клиент переключает UI на сессию уведомления. */\n' +
       '  publishGoto(sessionId) {\n' +
       '    if (!this.installed)\n' +
       '      return;\n' +
       '    this.seq += 1;\n' +
       '    this.hub.broadcast(encode({ type: "goto-session", seq: this.seq, sessionId, ts: Date.now() }));\n' +
-      '  }\n' +
-      '  /** 序号大于 `since` 的帧, 按序. */\n  since(value) {'
+      '  }'
   ],
-  // 3. Роут /api/dsh-notifier/goto рядом с /events (loopback-защита — в registerEndpoints).
+  // 3. Роут /api/dsh-notifier/goto рядом с /events. Забор loopback/peer — общий:
+  //    registerEndpoints в 0.2.11 оборачивает каждый роут через remote.fence.
   [
     '      {\n' +
       '        path: "/api/dsh-notifier/events",\n' +
-      '        methods: { GET: (req, res) => streamHub.handle(req, res) }\n' +
+      '        methods: {\n' +
+      '          GET: (req, res) => {\n' +
+      '            const rejection = streamHub.handle(req, res, deps.remote);\n' +
+      '            if (rejection !== void 0)\n' +
+      '              sendRouteRefusal(res, rejection);\n' +
+      '          }\n' +
+      '        }\n' +
       '      }\n' +
       '    ];',
     '      {\n' +
       '        path: "/api/dsh-notifier/events",\n' +
-      '        methods: { GET: (req, res) => streamHub.handle(req, res) }\n' +
+      '        methods: {\n' +
+      '          GET: (req, res) => {\n' +
+      '            const rejection = streamHub.handle(req, res, deps.remote);\n' +
+      '            if (rejection !== void 0)\n' +
+      '              sendRouteRefusal(res, rejection);\n' +
+      '          }\n' +
+      '        }\n' +
       '      },\n' +
       '      {\n' +
       '        path: "/api/dsh-notifier/goto",\n' +
@@ -56,9 +71,10 @@ export const HOST_DELTAS = [
   ],
   // 4. ApiService.install: пишем runtime.json с фактическим адресом API для goto.ps1.
   [
-    '    this.disposers.push(...registerEndpoints(deps.register, endpoints, deps.logger), deps.frames.onFrame((payload) => streamHub.publish(payload)));',
-    '    this.disposers.push(...registerEndpoints(deps.register, endpoints, deps.logger), deps.frames.onFrame((payload) => streamHub.publish(payload)));\n' +
-      '    writeTextAtomic(notifierFile("runtime.json"), JSON.stringify({ apiBase: `http://127.0.0.1:${deps.webServerPort()}` }));'
+    '    this.disposers = [...routes, ...frames];\n  }',
+    '    this.disposers = [...routes, ...frames];\n' +
+      '    writeTextAtomic(notifierFile("runtime.json"), JSON.stringify({ apiBase: `http://127.0.0.1:${deps.webServerPort()}` }));\n' +
+      '  }'
   ],
   // 5. assemble: проброс webServerPort в installApi.
   [
@@ -88,12 +104,12 @@ export const HOST_DELTAS = [
     '  return render("question", {\n    sessionId: agentSessionId(request.agent),\n    taskTitle: title.found ? title.title : void 0,'
   ],
   [
-    '  return render(outcome.kind, { taskTitle: outcome.taskTitle, durationMs: outcome.durationMs });',
-    '  return render(outcome.kind, { sessionId: agentSessionId(payload.agent), taskTitle: outcome.taskTitle, durationMs: outcome.durationMs });'
+    '  return render(outcome.kind, { taskTitle: outcome.taskTitle, durationMs: outcome.durationMs }, locale);',
+    '  return render(outcome.kind, { sessionId: agentSessionId(payload.agent), taskTitle: outcome.taskTitle, durationMs: outcome.durationMs }, locale);'
   ],
   [
-    '  return render("turn-end", { turn: outcome.turn, taskTitle: outcome.taskTitle });',
-    '  return render("turn-end", { sessionId: agentSessionId(payload.agent), turn: outcome.turn, taskTitle: outcome.taskTitle });'
+    '  return render("turn-end", { turn: outcome.turn, taskTitle: outcome.taskTitle }, locale);',
+    '  return render("turn-end", { sessionId: agentSessionId(payload.agent), turn: outcome.turn, taskTitle: outcome.taskTitle }, locale);'
   ],
   [
     '  return render("error", {\n    message: payload.error,',
@@ -277,8 +293,8 @@ export const TOAST_DELTAS = [
 
 // Маркеры для --check: дельта либо применилась целиком, либо генерация упала.
 export const FEATURE_MARKERS = {
-  'lib/index.js': ['publishGoto', '/api/dsh-notifier/goto', 'runtime.json', 'sessionId: agentSessionId', 'session: options.session', 'sessionId: frame.sessionId', 'notifyHelperPath', 'dsh-notify-helper.exe'],
-  'lib/client.js': ['"goto-session"', 'ctx.uiWorkspace.openSession', '"uiWorkspace"', 'uiWorkspaceRef.current.openSession'],
+  'lib/index.js': ['publishGoto', '/api/dsh-notifier/goto', 'runtime.json', 'sessionId: agentSessionId', 'session: options.session', 'sessionId: frame.sessionId', 'notifyHelperPath', 'dsh-notify-helper.exe', 'systemCanToast', 'mutedByNative'],
+  'lib/client.js': ['"goto-session"', 'ctx.uiWorkspace.openSession', '"uiWorkspace"', 'uiWorkspaceRef.current.openSession', 'bannerIcon', '.dn-banner-main', '--dsw-alias-toast-bg', 'Перейти в сессию'],
   'lib/server/channels/impl/system/toast.ps1': ['$launchUrl', 'dsh-notify://goto/', 'dsh-notify', 'dsh-notify-helper.exe'],
   'lib/server/goto.ps1': ['dsh-notify://goto/', 'api/dsh-notifier/goto', 'dsh://open']
 };

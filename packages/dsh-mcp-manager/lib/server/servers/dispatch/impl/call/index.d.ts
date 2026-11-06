@@ -2,22 +2,39 @@
  * dsh-mcp-manager — servers/dispatch/impl/call/index.ts：ws_mcp_call 执行器（原
  * connection/runtime/middleware.ts:583-772 的搬迁；路由/封装分支与错误文案口径不变）。
  *
- * 为什么远端分支走 ctx.tools.execute（#767 S1-4d）：换引擎后官方运行时只导出
- * `Config / apply / inject / name`，底层 client 不外露，「拿一个 client 去 callTool」这条路
- * 不再存在。转发按设计 §5.3：合成子调用 id、透传 parent、喂 `value` 给既有投影。
+ * 远端分支的 0.2.2-rc.1 路径：经 `ctx.loader.import` 取得宿主公开的 nested
+ * `ToolExecutionPipeline`，以精确注册名与受控 source 合成子调用，并保留真实
+ * agent / toolSet / rootCallId / parent / signal。官方结果的 `value` 继续喂既有投影；
+ * nested definition 已物化的图片内容优先复用，缺少物化信号时才回落到 A+ 诊断准入。
  *
  * 为什么全部入参显式化：原实现依赖 McpMiddleware 的 this（units / disabledTools /
  * allServers / 转发登记表），搬进新域后这些状态仍归中间层持有，只能按引用递入；本域不落第二份。
  */
-import type { ToolDefinition, ToolExecutionInput } from "@deepseek-ai/dsh-tools";
+import type { Context } from "@deepseek-ai/cordis";
+import type { ToolDefinition, ToolExecutionInput, ToolExecutionResult, ToolRunContext } from "@deepseek-ai/dsh-tools";
 import type { ServerState } from "../../../../../shared/interface.js";
-import type { DispatchCallInput } from "../../deps.js";
+import type { DispatchCallInput, ToolExecutionResultLike } from "../../deps.js";
+type NestedModelContent = Extract<ToolExecutionResult, {
+    isError: false;
+}>["content"];
+export interface NestedExecutionHooks {
+    deferContext?: ToolRunContext["deferContext"];
+    concludeTurn?: ToolRunContext["concludeTurn"];
+    /** 本次 nested dispatch 的 opaque parent 仍在中间层转发登记表中。 */
+    isParentActive?: () => boolean;
+    /** 官方 definition 已持久化并物化的模型面内容；只在对应外层执行仍存活时交回。 */
+    onModelContent?: (content: NestedModelContent) => void;
+}
+/** 旧导出签名里的 agent 是 unknown；执行域只接受可承载运行时身份的对象。 */
+export declare function nestedExecutionAgent(value: unknown): NonNullable<ToolExecutionInput["agent"]> | undefined;
+/** 完成一次共享生命周期调用，并把嵌套结果附加的上下文/结束语义交还外层执行。 */
+export declare function executeNestedTool(ctx: Context, input: ToolExecutionInput, hooks: NestedExecutionHooks): Promise<ToolExecutionResultLike>;
 /** dispatch 域的连接条目（经 input.units 取值，不另持连接表；结构约束写法——
  * 直接索引泛型 U 会 TS2536，故先收窄到含 connections 形态再取）。 */
 type CallEntry = DispatchCallInput["units"] extends ReadonlyMap<string, infer U> ? U extends {
     connections: Map<string, infer V>;
 } ? V : never : never;
-/** 远端子调用入参：合成 callId、透传可选字段，并**不带 agent**。 */
+/** 远端子调用入参：合成 callId，并完整保留调用者 nested pipeline identity。 */
 export declare function remoteExecutionInput(input: DispatchCallInput, id: string, tool: string, args: unknown): ToolExecutionInput;
 /** 未就绪三归因（次序承重）：用户禁用 > 后台重连中 > 其余未就绪。 */
 export declare function notReadyError(fullName: string, status: ServerState | undefined, userDisabled: boolean): Error;

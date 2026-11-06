@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises'
 import { projectRoot } from './patch-path'
 
 /**
- * Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.10 держит очередь записи
+ * Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.12 держит очередь записи
  * каталога инструментов в памяти. Тест гоняет **код из собранного бандла**, а не
  * копию логики: функции вырезаются из `lib/index.js` и вызываются с подменённым
  * диском. Иначе проверка ничего не говорит о том, что поедет в установщике.
@@ -284,7 +284,7 @@ describe('dsh-mcp-manager: очередь записи каталога не у�
     expect(directory.persistSlots.size).toBe(0)
   })
 
-  it('едет в сборке локальной редакцией с тем же именем и версией', async () => {
+  it('едет в сборке локальной редакцией с тем же именем', async () => {
     const flavor = parseYaml(await readFile(path.join(projectRoot, 'installer-flavor.yml'), 'utf8')) as {
       sources: { kind?: string; from?: string; path?: string }[]
     }
@@ -293,8 +293,9 @@ describe('dsh-mcp-manager: очередь записи каталога не у�
       kind: 'plugin',
       from: 'local'
     })
-    // Имя и версию не меняем: на них держатся $DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json,
-    // сид каталога и профили пользователей.
+    // Имя не меняем: на нём держатся $DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json,
+    // сид каталога и профили пользователей. Версия своя — 0.2.12, чтобы пересборку
+    // было видно отдельно от опубликованной 0.2.11.
     const manifest = JSON.parse(readFileSync(path.join(packageRoot, 'package.json'), 'utf8')) as {
       name: string
       version: string
@@ -302,8 +303,15 @@ describe('dsh-mcp-manager: очередь записи каталога не у�
     }
 
     expect(manifest.name).toBe('@wingsky-1/dsh-mcp-manager')
-    expect(manifest.version).toBe('0.2.10')
-    expect(manifest.peerDependencies['@deepseek-ai/dsh-tools']).toBe('0.2.1-rc.2')
-    expect(readFileSync(bundlePath, 'utf8')).not.toContain('writeChains')
+    expect(manifest.version).toBe('0.2.12')
+    // Пиры — ровно та линия ядра, с которой едет сборка: иначе гейт хоста
+    // (plugin-compatibility) отвергает плагин целиком и панель MCP исчезает.
+    expect(manifest.peerDependencies['@deepseek-ai/cordis']).toBe('4.1.0')
+    expect(manifest.peerDependencies['@deepseek-ai/dsh-tools']).toBe('0.2.2-rc.1')
+    const bundle = readFileSync(bundlePath, 'utf8')
+    expect(bundle).not.toContain('writeChains')
+    // Лестница апгрейда закрывается нашей версией: без этого diagnoseGap на каждом
+    // старте плагина предупреждает, что хранилище отстало от версии пакета.
+    expect(bundle).toContain('{ fromVersion: "0.2.11", targetVersion: "0.2.12", run: tickUpgradeVersion }')
   })
 })

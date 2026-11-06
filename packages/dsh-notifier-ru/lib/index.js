@@ -7367,43 +7367,6 @@ var require_dist = __commonJS({
   }
 });
 
-// ../../shared/loopback.js
-function isLoopbackPeerAddress(request) {
-  const address = request.socket?.remoteAddress;
-  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
-}
-function loopbackHostUrlOf(request) {
-  const host = request.headers.host;
-  if (typeof host !== "string") return void 0;
-  let hostUrl;
-  try {
-    hostUrl = new URL(`http://${host}`);
-  } catch {
-    return void 0;
-  }
-  if (hostUrl.hostname !== "127.0.0.1" && hostUrl.hostname !== "localhost" && hostUrl.hostname !== "[::1]") {
-    return void 0;
-  }
-  return hostUrl;
-}
-function crossSiteRequestAllowed(request, options) {
-  if (request.headers["sec-fetch-site"] !== "cross-site") return true;
-  return options.allowCrossSiteNoCors === true && request.headers["sec-fetch-mode"] === "no-cors";
-}
-function isLoopbackRequest(request, options = {}) {
-  if (!isLoopbackPeerAddress(request)) return false;
-  const hostUrl = loopbackHostUrlOf(request);
-  if (hostUrl === void 0) return false;
-  if (!crossSiteRequestAllowed(request, options)) return false;
-  const origin = request.headers.origin;
-  if (origin === void 0) return true;
-  try {
-    return new URL(origin).host === hostUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 // lib/shared/tones.js
 var FOLLOW_SYSTEM_TONE = "default";
 var TONES = {
@@ -7520,7 +7483,7 @@ var WEBHOOK_DEFAULT_TEMPLATES = {
   raw: '{\n  "event": "{{kind}}",\n  "title": "{{title}}",\n  "body": "{{message}}",\n  "severity": "{{severity}}",\n  "ts": {{ts}}\n}'
 };
 var WEBHOOK_PRIORITY = {
-  ntfy: { failure: "urgent", warning: "high", success: "low", info: "default" },
+  ntfy: { failure: "5", warning: "4", success: "2", info: "3" },
   gotify: { failure: "9", warning: "7", success: "3", info: "3" },
   raw: { failure: "failure", warning: "warning", success: "success", info: "info" }
 };
@@ -7531,6 +7494,14 @@ function deliveryPresetOf(preset) {
 
 // lib/shared/reason-codes.js
 var REASON_LEGACY = "reasonLegacy";
+var SOUND_WARNING_CODES = [
+  "reasonSkipEnvironment",
+  "reasonSystemSoundFailed",
+  "reasonSystemToneUnwritable"
+];
+function isSoundWarningCode(code) {
+  return SOUND_WARNING_CODES.includes(code);
+}
 
 // lib/shared/quiet.js
 var QUIET_WINDOWS_LIMIT = 5;
@@ -7564,6 +7535,8 @@ function inWindowMinutes(minutes, start, end) {
 var REFUSAL_CODES = {
   /** 非回环来源 (含 Host 头不是回环): 回环围栏拒绝. */
   FORBIDDEN_LOOPBACK: "FORBIDDEN_LOOPBACK",
+  /** 非回环调用未通过官方 connection 的 cookie / API peer 认证. */
+  UNAUTHORIZED: "UNAUTHORIZED",
   /** 方法不在端点的方法表里: 方法围栏拒绝. */
   METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED"
 };
@@ -7613,6 +7586,77 @@ function createDisposerStack() {
   };
 }
 
+// lib/shared/config-schema.js
+var BARK_LEVELS = ["active", "timeSensitive", "passive", "critical"];
+var BARK_KNOWN_KEYS = [
+  "id",
+  "type",
+  "enabled",
+  "name",
+  "baseUrl",
+  "deviceKey",
+  "level",
+  "levels",
+  "group",
+  "sound",
+  "icon",
+  "url",
+  "badge",
+  "timeoutMs"
+];
+var WEBHOOK_KNOWN_KEYS = [
+  "id",
+  "type",
+  "enabled",
+  "name",
+  "url",
+  "preset",
+  "auth",
+  "token",
+  "username",
+  "password",
+  "headerName",
+  "headerValue",
+  "template",
+  "headers",
+  "timeoutSec"
+];
+var REQUIRED_KEYS = {
+  bark: ["baseUrl", "deviceKey"],
+  webhook: ["url"]
+};
+var VALUE_DOMAIN_REQUIRED_KEYS = {
+  webhook: ["auth"]
+};
+var HISTORY_MAX_AGE_DAYS_LIMIT = 3650;
+var BARK_TIMEOUT_MS_LIMIT = 6e5;
+var WEBHOOK_TEMPLATE_MAX_CHARS = 8192;
+var BARK_LEVELS_LIMIT = 64;
+var WEBHOOK_TIMEOUT = {
+  min: 1,
+  max: 60,
+  default: 10
+};
+var CHANNEL_SECRET_FIELDS = {
+  bark: ["deviceKey"],
+  webhook: ["token", "password", "headerValue"],
+  // 内置频道没有任何凭据字段; 它们在表里必须出现 (Record 强制穷尽), 值就是空清单.
+  browser: [],
+  system: []
+};
+var DEFAULTS = {
+  notifyAsk: true,
+  notifyQuestion: true,
+  notifyTaskDone: true,
+  notifySubagentDone: false,
+  notifyTaskError: true,
+  notifyTurnEnd: false,
+  quietHours: { enabled: false, windows: [{ start: "22:00", end: "08:00" }] },
+  kindRoutes: {},
+  allowKinds: [],
+  historyMaxAgeDays: 0
+};
+
 // lib/server/api/impl/route/index.js
 function sendJson(res, status, body, headers = {}) {
   res.writeHead(status, {
@@ -7628,15 +7672,33 @@ function sendFailure(res, status, failure, headers = {}) {
 function sendRefused(res, status, code, reason2, headers = {}) {
   sendJson(res, status, { error: reason2, code, status }, headers);
 }
-function registerEndpoints(register, endpoints, logger) {
+function sendRouteRefusal(res, rejection) {
+  sendRefused(res, rejection, rejection === 401 ? REFUSAL_CODES.UNAUTHORIZED : REFUSAL_CODES.FORBIDDEN_LOOPBACK, rejection === 401 ? "unauthorized" : "forbidden: loopback-only");
+}
+function registerEndpoints(register, endpoints, logger, remote) {
   const disposers = [];
+  try {
+    registerAll(register, endpoints, logger, disposers, remote);
+  } catch (error) {
+    for (const dispose of disposers.splice(0).reverse()) {
+      try {
+        dispose();
+      } catch {
+      }
+    }
+    throw error;
+  }
+  return disposers;
+}
+function registerAll(register, endpoints, logger, disposers, remote) {
   for (const endpoint of endpoints) {
     disposers.push(register({
       kind: "exact",
       path: endpoint.path,
       handler: (req, res) => {
-        if (!isLoopbackRequest(req)) {
-          sendRefused(res, 403, REFUSAL_CODES.FORBIDDEN_LOOPBACK, "forbidden: loopback-only");
+        const rejection = remote.fence(req);
+        if (rejection !== void 0) {
+          sendRouteRefusal(res, rejection);
           return;
         }
         const handle = endpoint.methods[req.method ?? ""];
@@ -7659,7 +7721,6 @@ function registerEndpoints(register, endpoints, logger) {
       }
     }));
   }
-  return disposers;
 }
 function reportFailure(res, logger, reason2) {
   logger.warn(`dsh-notifier: сбой обработки браузерной точки — ${reason2}`);
@@ -7677,25 +7738,162 @@ var JournalEndpoints = class {
   read = async (_req, res) => {
     sendJson(res, 200, { ok: true, records: await this.stores.readHistory() });
   };
-  /** DELETE /history: 清空, 返回被清空条数 (键名 `removed` 是客户端锁定的契约). */
+  /**
+   * DELETE /history: 清空, 返回被清空条数 (键名 `removed` 是客户端锁定的契约).
+   *
+   * 落盘失败回 503 而不是让它抛出去 (#1016 残留 1): 抛错经 `route` 的失败出口转成 500, 
+   * 且 `error` 字段是 Node 错误原文 (带 errno 与绝对路径), 与 issue 验收«errno/路径不外送»
+   * 直接冲突.端点层只回答«成没成 + 成了几条».
+   */
   clear = async (_req, res) => {
-    sendJson(res, 200, { ok: true, removed: await this.stores.clearHistory() });
+    respond(res, await this.stores.clearHistory());
   };
   /** GET /status: 各频道最近一次投递终态. */
   readStatus = async (_req, res) => {
     sendJson(res, 200, { ok: true, channels: await this.stores.readStatus() });
   };
 };
+function respond(res, result) {
+  if (result.ok) {
+    sendJson(res, 200, { ok: true, removed: result.removed });
+    return;
+  }
+  sendFailure(res, 503, { error: "служба истории недоступна", code: "history-unavailable" });
+}
 
 // ../../shared/host-utils.js
 import { Buffer as Buffer2 } from "node:buffer";
+function isLoopbackPeerAddress(request) {
+  const address = request.socket?.remoteAddress;
+  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
+}
+function loopbackHostUrlOf(request) {
+  const host = request.headers.host;
+  if (typeof host !== "string")
+    return void 0;
+  let hostUrl;
+  try {
+    hostUrl = new URL(`http://${host}`);
+  } catch {
+    return void 0;
+  }
+  if (hostUrl.hostname !== "127.0.0.1" && hostUrl.hostname !== "localhost" && hostUrl.hostname !== "[::1]") {
+    return void 0;
+  }
+  return hostUrl;
+}
+function crossSiteRequestAllowed(request, options) {
+  if (request.headers["sec-fetch-site"] !== "cross-site")
+    return true;
+  return options.allowCrossSiteNoCors === true && request.headers["sec-fetch-mode"] === "no-cors";
+}
+function isLoopbackRequest(request, options = {}) {
+  if (!isLoopbackPeerAddress(request))
+    return false;
+  const hostUrl = loopbackHostUrlOf(request);
+  if (hostUrl === void 0)
+    return false;
+  if (!crossSiteRequestAllowed(request, options))
+    return false;
+  const origin = request.headers.origin;
+  if (origin === void 0)
+    return true;
+  try {
+    return new URL(origin).host === hostUrl.host;
+  } catch {
+    return false;
+  }
+}
+function liveConnectionAdmission(ctx) {
+  return () => {
+    const connection = ctx.get("connection", false);
+    if (connection === null || typeof connection !== "object" || !("requestRejection" in connection) || typeof connection.requestRejection !== "function") {
+      return void 0;
+    }
+    const requestRejection = connection.requestRejection;
+    return (request) => requestRejection.call(connection, request);
+  };
+}
+function isRemotePeerScope(value) {
+  return value !== null && typeof value === "object" && "ctx" in value && value.ctx !== null && typeof value.ctx === "object" && "effect" in value.ctx && typeof value.ctx.effect === "function";
+}
+function currentRemoteSource(source) {
+  try {
+    return source?.();
+  } catch {
+    return void 0;
+  }
+}
+function normalizeRemoteRejection(value) {
+  if (value === void 0)
+    return void 0;
+  return value === 401 || value === 403 ? value : 403;
+}
+function normalizePeerAdmissionResult(value) {
+  if (value !== null && typeof value === "object") {
+    if ("peer" in value && isRemotePeerScope(value.peer))
+      return { peer: value.peer };
+    if ("rejection" in value && (value.rejection === 401 || value.rejection === 403)) {
+      return { rejection: value.rejection };
+    }
+  }
+  return { rejection: 403 };
+}
+function liveConnectionPeerAdmission(ctx) {
+  return () => {
+    const connection = ctx.get("connection", false);
+    if (connection === null || typeof connection !== "object" || !("admit" in connection) || typeof connection.admit !== "function") {
+      return void 0;
+    }
+    const admit = connection.admit;
+    return (request) => normalizePeerAdmissionResult(admit.call(connection, request));
+  };
+}
+function admitLongLivedRequest(request, options = {}) {
+  if (isLoopbackPeerAddress(request)) {
+    return isLoopbackRequest(request, options) ? {} : { rejection: 403 };
+  }
+  const admission = currentRemoteSource(options.remotePeerAdmission);
+  if (typeof admission !== "function")
+    return { rejection: 403 };
+  try {
+    return normalizePeerAdmissionResult(admission(request));
+  } catch {
+    return { rejection: 403 };
+  }
+}
+function bindPeerLifecycle(peer, cleanup, label) {
+  const dispose = peer.ctx.effect(() => () => cleanup(), label);
+  let disposed = false;
+  return () => {
+    if (disposed)
+      return;
+    disposed = true;
+    if (typeof dispose === "function")
+      void dispose();
+  };
+}
+function routeFenceRejection(request, options = {}) {
+  if (isLoopbackPeerAddress(request)) {
+    return isLoopbackRequest(request, options) ? void 0 : 403;
+  }
+  const admission = currentRemoteSource(options.remoteAdmission);
+  if (typeof admission !== "function")
+    return 403;
+  try {
+    return normalizeRemoteRejection(admission(request));
+  } catch {
+    return 403;
+  }
+}
 async function readJsonBodyOutcome(req, limit = 2 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
   try {
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > limit) return { kind: "invalid", reason: "too-large" };
+      if (size > limit)
+        return { kind: "invalid", reason: "too-large" };
       chunks.push(chunk);
     }
   } catch {
@@ -7707,7 +7905,8 @@ async function readJsonBodyOutcome(req, limit = 2 * 1024 * 1024) {
   } catch {
     return { kind: "invalid", reason: "unreadable" };
   }
-  if (text.trim() === "") return { kind: "absent" };
+  if (text.trim() === "")
+    return { kind: "absent" };
   let parsed;
   try {
     parsed = JSON.parse(text);
@@ -7763,10 +7962,10 @@ var KindsEndpoints = class {
       sendFailure(res, 404, { code: "not-found", details: `незарегистрированный динамический вид: ${kind}` });
       return;
     }
-    respond(res, this.kinds, await this.kinds.confirmKind(kind, confirmed));
+    respond2(res, this.kinds, await this.kinds.confirmKind(kind, confirmed));
   };
 };
-function respond(res, kinds, result) {
+function respond2(res, kinds, result) {
   if (result.ok) {
     sendJson(res, 200, { ok: true, kinds: kinds.listKinds(), revision: result.view.revision });
     return;
@@ -7817,13 +8016,16 @@ function createSseHub(options) {
     return state.stalledAt !== void 0 && t - state.stalledAt >= stalledTimeoutMs;
   }
   function isExpiredIdle(state, t) {
-    if (maxAgeMs <= 0) return false;
-    if (t - state.registeredAt < maxAgeMs) return false;
+    if (maxAgeMs <= 0)
+      return false;
+    if (t - state.registeredAt < maxAgeMs)
+      return false;
     return t - state.lastWriteAt > idleTimeoutMs;
   }
   function writeFrame(res, text, activity = true) {
     const state = conns.get(res);
-    if (state === void 0) return false;
+    if (state === void 0)
+      return false;
     if (res.destroyed || res.writableEnded) {
       evict(res, "destroyed");
       return false;
@@ -7833,16 +8035,19 @@ function createSseHub(options) {
       written = res.write(text) !== false;
     } catch {
       state.failStreak += 1;
-      if (state.failStreak >= MAX_WRITE_FAILS) evict(res, "error");
+      if (state.failStreak >= MAX_WRITE_FAILS)
+        evict(res, "error");
       return false;
     }
     if (written) {
-      if (activity) state.lastWriteAt = Date.now();
+      if (activity)
+        state.lastWriteAt = Date.now();
       state.stalledAt = void 0;
       state.failStreak = 0;
       return true;
     }
-    if (state.stalledAt === void 0) state.stalledAt = Date.now();
+    if (state.stalledAt === void 0)
+      state.stalledAt = Date.now();
     return false;
   }
   function register(res) {
@@ -7854,6 +8059,9 @@ function createSseHub(options) {
       res.socket?.setKeepAlive?.(true, 6e4);
     } catch {
     }
+  }
+  function unregister(res) {
+    evict(res, "close");
   }
   function broadcast(text) {
     for (const [res] of conns) {
@@ -7879,9 +8087,11 @@ function createSseHub(options) {
     return out;
   }
   function dispose() {
-    if (heartbeatTimer !== void 0) clearInterval(heartbeatTimer);
+    if (heartbeatTimer !== void 0)
+      clearInterval(heartbeatTimer);
     heartbeatTimer = void 0;
-    for (const [res] of [...conns]) evict(res, "dispose");
+    for (const [res] of [...conns])
+      evict(res, "dispose");
   }
   function heartbeatTick() {
     const t = Date.now();
@@ -7905,6 +8115,7 @@ function createSseHub(options) {
   heartbeatTimer.unref?.();
   return {
     register,
+    unregister,
     broadcast,
     size,
     evictStats: evictStatsCopy,
@@ -7915,11 +8126,50 @@ function createSseHub(options) {
 
 // lib/server/shared/file-io.js
 import { randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmod, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+var FILE_MODE = 384;
+var DIR_MODE = 448;
+var writeChains = /* @__PURE__ */ new Map();
 function temporaryNameFor(file) {
   return `${file}.tmp-${process.pid}.${Date.now().toString(36)}.${randomBytes(6).toString("hex")}.tmp`;
+}
+async function ensureDir(dir) {
+  const created = await mkdir(dir, { recursive: true });
+  if (created === void 0) {
+    try {
+      await chmod(dir, (await stat(dir)).mode & DIR_MODE);
+    } catch {
+    }
+    return;
+  }
+  await chmod(dir, DIR_MODE).catch(() => void 0);
+}
+async function writeOnce(file, text) {
+  await ensureDir(dirname(file));
+  const temporary = temporaryNameFor(file);
+  try {
+    await writeFile(temporary, text, { encoding: "utf8", mode: FILE_MODE });
+    await rename(temporary, file);
+  } catch (cause) {
+    await rm(temporary, { force: true }).catch(() => void 0);
+    throw cause;
+  }
+}
+async function writeTextAtomic(file, text) {
+  const previous = writeChains.get(file) ?? Promise.resolve();
+  const next = previous.then(() => writeOnce(file, text), () => writeOnce(file, text));
+  writeChains.set(file, next);
+  try {
+    await next;
+    return { ok: true };
+  } catch (cause) {
+    return { ok: false, reason: cause instanceof Error ? cause.message : "не удалось записать" };
+  } finally {
+    if (writeChains.get(file) === next)
+      writeChains.delete(file);
+  }
 }
 function readTextFileSync(file) {
   try {
@@ -7928,25 +8178,25 @@ function readTextFileSync(file) {
     return { ok: false };
   }
 }
-async function writeTextAtomic(file, text) {
-  const temporary = temporaryNameFor(file);
+function ensureDirSync(dir) {
+  const created = mkdirSync(dir, { recursive: true });
   try {
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(temporary, text, "utf8");
-    await rename(temporary, file);
-    return { ok: true };
-  } catch (cause) {
-    return { ok: false, reason: cause instanceof Error ? cause.message : "не удалось записать" };
+    chmodSync(dir, created === void 0 ? statSync(dir).mode & DIR_MODE : DIR_MODE);
+  } catch {
   }
 }
 function writeTextAtomicSync(file, text) {
   const temporary = temporaryNameFor(file);
   try {
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(temporary, text, "utf8");
+    ensureDirSync(dirname(file));
+    writeFileSync(temporary, text, { encoding: "utf8", mode: FILE_MODE });
     renameSync(temporary, file);
     return { ok: true };
   } catch (cause) {
+    try {
+      rmSync(temporary, { force: true });
+    } catch {
+    }
     return { ok: false, reason: cause instanceof Error ? cause.message : "не удалось записать" };
   }
 }
@@ -7982,6 +8232,14 @@ function normalizeReason(value) {
 }
 function legacyFrom(value) {
   return value === "" ? void 0 : { code: REASON_LEGACY, detail: value };
+}
+function normalizeSoundWarning(value, max = 300) {
+  const normalized = normalizeReason(value);
+  if (normalized === void 0)
+    return void 0;
+  if (!isSoundWarningCode(normalized.code))
+    return void 0;
+  return clampReasonDetail(normalized, max);
 }
 function projectReason(code, source) {
   const normalized = { code };
@@ -8083,6 +8341,8 @@ var UNINSTALLED = {
 var UNINSTALLED_HUB = {
   register: () => {
   },
+  unregister: () => {
+  },
   broadcast: () => {
   },
   size: () => 0,
@@ -8098,6 +8358,11 @@ var UNINSTALLED_HUB = {
   dispose: () => {
   }
 };
+var REAL_BUILD = {
+  open(file) {
+    return { seq: readSeq(file), hub: createSseHub({ heartbeatMs: HEARTBEAT_MS }) };
+  }
+};
 var StreamHub = class {
   /** 是否已装配; 单例实例重复装配是编程错误, 当场暴露. */
   installed = false;
@@ -8111,16 +8376,24 @@ var StreamHub = class {
   replay = [];
   /** 序号落盘位置: DSH home 由环境决定, 进程内不变, 故随实例一次性定下. */
   file = notifierFile(SEQ_FILE_NAME);
-  /** 装配: 读回上次的序号, 建起连接表与心跳. */
+  /** 建面端口: 进程事实的边界, 默认就是真实建面 (换端口走 `installStreamBuild`). */
+  build = REAL_BUILD;
+  /**
+   * 装配: 读回上次的序号, 建起连接表与心跳.**建面抛错即整单失败**, 本块自己不留半装配——
+   * 唯一的复位面是 `release()`, 由调用方在回滚里调.
+   */
   install(deps) {
     if (this.installed)
       throw new Error("dsh-notifier: поток api собирается один раз");
     this.installed = true;
     this.deps = deps;
-    this.seq = readSeq(this.file);
-    this.hub = createSseHub({
-      heartbeatMs: HEARTBEAT_MS
-    });
+    const opened = this.build.open(this.file);
+    this.seq = opened.seq;
+    this.hub = opened.hub;
+  }
+  /** 换掉建面端口 (只给测试注入失败面用; 生产不调——默认值就是真实建面). */
+  useBuild(port) {
+    this.build = port;
   }
   /** 卸载: 停心跳, 关连接, 忘掉缓冲.序号留在盘上, 下次接着数. */
   release() {
@@ -8140,11 +8413,40 @@ var StreamHub = class {
     return this.hub.evictStats();
   }
   /** GET /events: 接上一条 SSE 连接, 并回放 `?since` 之后的帧. */
-  handle(req, res) {
+  handle(req, res, remote) {
     if (!this.installed) {
       res.writeHead(503);
       res.end();
-      return;
+      return void 0;
+    }
+    const admission = remote.admitStream(req);
+    if ("rejection" in admission)
+      return admission.rejection;
+    let closed = false;
+    let peerEnded = false;
+    let disposePeer;
+    const closeStream = () => {
+      if (closed)
+        return;
+      closed = true;
+      this.hub.unregister(res);
+    };
+    res.on("close", () => {
+      closeStream();
+      const dispose = disposePeer;
+      disposePeer = void 0;
+      if (!peerEnded)
+        dispose?.();
+    });
+    if (admission.peer !== void 0) {
+      try {
+        disposePeer = remote.bindPeer(admission.peer, () => {
+          peerEnded = true;
+          closeStream();
+        }, "dsh-notifier: raw SSE bound to admitted Peer");
+      } catch {
+        return 403;
+      }
     }
     res.writeHead(200, {
       "content-type": "text/event-stream; charset=utf-8",
@@ -8157,6 +8459,7 @@ var StreamHub = class {
     for (const event of this.since(sinceOf(req)))
       res.write(encode(event));
     this.hub.register(res);
+    return void 0;
   }
   /**
    * 广播一条通知帧: 翻成线协议 → 编号 → 入缓冲 → 落序号 → 推给所有连接.翻译 (`body`→`message`, 
@@ -8226,11 +8529,18 @@ function readSeq(file) {
 var streamHub = new StreamHub();
 
 // lib/server/api/impl/probe/dry-run/type.js
-var TEST_NOTIFICATION = {
-  kind: "test",
-  title: "DSH: тестовое уведомление",
-  body: "Цепочка уведомлений работает (тест из настроек плагина)"
-};
+function testNotification(locale) {
+  return locale === "en" ? {
+    kind: "test",
+    title: "DSH: Test notification",
+    body: "Notifications are working (sent using the test button)"
+  } : {
+    kind: "test",
+    title: "DSH: тестовое уведомление",
+    body: "Цепочка уведомлений работает (тест из настроек плагина)"
+  };
+}
+var TEST_NOTIFICATION = testNotification("zh");
 var DRY_RUN_BUDGET_MS = 15e3;
 var DRY_RUN_MAX_INFLIGHT = 2;
 var DryRunInputError = class extends Error {
@@ -8272,11 +8582,13 @@ async function executeDryRun(deps, channelId, draft) {
   if (channel === void 0) {
     throw new DryRunInputError("в draft.channels нет полной записи для channelId: " + channelId);
   }
-  const message = deps.pipeline.finalizeRequest({ ...TEST_NOTIFICATION }, Date.now());
+  const locale = deps.readLocale?.() ?? "zh";
+  const message = deps.pipeline.finalizeRequest(testNotification(locale), Date.now());
   const target = buildTarget(deps.pipeline, channel);
   const delivery = await deps.channels.dryRunTarget(target, message);
-  if (delivery.status === "ok")
-    return { ok: true, channelId, status: "ok" };
+  if (delivery.status === "ok") {
+    return delivery.soundWarning === void 0 ? { ok: true, channelId, status: "ok" } : { ok: true, channelId, status: "ok", soundWarning: toReason(delivery.soundWarning) };
+  }
   return { ok: true, channelId, status: delivery.status, reason: toReason(delivery.reason) };
 }
 function buildTarget(pipeline, channel) {
@@ -8350,15 +8662,17 @@ var ProbeEndpoints = class {
   channels;
   logger;
   config;
+  readLocale;
   /** 能力自检的共享缓存.两条路由共用同一次探测: 探测会起子进程, 每请求各探一次就是拿用户机器当靶场. */
   hostCapabilities;
   /** dry-run 并发门: 实例字段 (与真实投递的节奏表相互独立, 见 DryRunGate). */
   dryRunGate = new DryRunGate();
-  constructor(pipeline, channels, logger, config) {
+  constructor(pipeline, channels, logger, config, readLocale = () => "zh") {
     this.pipeline = pipeline;
     this.channels = channels;
     this.logger = logger;
     this.config = config;
+    this.readLocale = readLocale;
   }
   /**
    * 取 (必要时首次发起)能力自检.
@@ -8406,7 +8720,8 @@ var ProbeEndpoints = class {
       await this.testDraft(res, channelId, body.draft);
       return;
     }
-    this.pipeline.submit(channelId === void 0 ? TEST_NOTIFICATION : { ...TEST_NOTIFICATION, onlyChannel: channelId });
+    const notification = testNotification(this.readLocale());
+    this.pipeline.submit(channelId === void 0 ? notification : { ...notification, onlyChannel: channelId });
     sendJson(res, 200, { ok: true, sseConnections: streamHub.size() });
   };
   /**
@@ -8434,7 +8749,12 @@ var ProbeEndpoints = class {
       return;
     }
     try {
-      const result = await withDryRunBudget(executeDryRun({ config: this.config, pipeline: this.pipeline, channels: this.channels }, channelId, draft));
+      const result = await withDryRunBudget(executeDryRun({
+        config: this.config,
+        pipeline: this.pipeline,
+        channels: this.channels,
+        readLocale: this.readLocale
+      }, channelId, draft));
       sendJson(res, 200, result);
     } catch (cause) {
       if (cause instanceof DryRunInputError) {
@@ -8526,7 +8846,7 @@ var SettingsEndpoints = class {
     const patch = body.patch;
     const revision = body.expectedRevision;
     if (revision === void 0) {
-      respond2(res, await this.config.writeConfig(patch));
+      respond3(res, await this.config.writeConfig(patch));
       return;
     }
     if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
@@ -8536,7 +8856,7 @@ var SettingsEndpoints = class {
       });
       return;
     }
-    respond2(res, await this.config.writeConfig(patch, revision));
+    respond3(res, await this.config.writeConfig(patch, revision));
   };
 };
 function isPatch(value) {
@@ -8544,7 +8864,7 @@ function isPatch(value) {
     return false;
   return Object.keys(value).length > 0;
 }
-function respond2(res, result) {
+function respond3(res, result) {
   if (result.ok) {
     sendJson(res, 200, { ok: true, user: result.view.user, revision: result.view.revision });
     return;
@@ -8566,15 +8886,22 @@ var ApiService = class {
   installed = false;
   /** 摘除器: 路由与帧订阅混在一起, 卸载时逐个调用. */
   disposers = [];
-  /** 装配: 挂路由, 接帧. */
+  /**
+   * 装配: 挂路由, 接帧.**中途抛错整单回滚**: 建面抛错时一条路由都还没挂, 注册第 N 条抛错时前 N-1 条
+   *  已挂在宿主上, 帧订阅抛错时 8 条路由全都挂在宿主上——各种情况的摘除器都得当场摘干净, 
+   *  不能随异常一起丢失 (见下方两张局部表).
+   *
+   *  **这是结构性收口, 不是修一处已经发生的线上故障**: 装的三步今天都找不到可达抛点 (建面的真实
+   *  实现只建 Map + setInterval, 四个端点构造只存字段), 所以下面那段回滚在生产上一条也走不到.
+   *  写它是为了«任一步将来开始抛错»时边界已经就位; 判据由注入建面端口的那条用例撑着
+   *   (`test/unit/api/service.test.ts` 的«建面失败»一条), 不靠今天能复现.
+   */
   install(deps) {
     if (this.installed)
       throw new Error("dsh-notifier: домен api собирается один раз");
-    this.installed = true;
-    streamHub.install({ logger: deps.logger });
     const settings = new SettingsEndpoints(deps.config);
     const journal = new JournalEndpoints(deps.stores);
-    const probe = new ProbeEndpoints(deps.pipeline, deps.channels, deps.logger, deps.config);
+    const probe = new ProbeEndpoints(deps.pipeline, deps.channels, deps.logger, deps.config, deps.readLocale);
     const kinds = new KindsEndpoints(deps.kinds);
     const endpoints = [
       { path: "/api/dsh-notifier/config", methods: { GET: settings.read, PUT: settings.write } },
@@ -8587,7 +8914,13 @@ var ApiService = class {
       // 包一层而不是裸传 streamHub.handle: 那个方法要用 this, 裸传会在回调时丢掉.
       {
         path: "/api/dsh-notifier/events",
-        methods: { GET: (req, res) => streamHub.handle(req, res) }
+        methods: {
+          GET: (req, res) => {
+            const rejection = streamHub.handle(req, res, deps.remote);
+            if (rejection !== void 0)
+              sendRouteRefusal(res, rejection);
+          }
+        }
       },
       {
         path: "/api/dsh-notifier/goto",
@@ -8599,18 +8932,44 @@ var ApiService = class {
         } }
       }
     ];
-    this.disposers.push(...registerEndpoints(deps.register, endpoints, deps.logger), deps.frames.onFrame((payload) => streamHub.publish(payload)));
+    const routes = [];
+    const frames = [];
+    try {
+      this.installed = true;
+      streamHub.install({ logger: deps.logger });
+      routes.push(...registerEndpoints(deps.register, endpoints, deps.logger, deps.remote));
+      frames.push(deps.frames.onFrame((payload) => streamHub.publish(payload)));
+    } catch (error) {
+      disposeAll([...routes, ...frames]);
+      streamHub.release();
+      this.installed = false;
+      throw error;
+    }
+    this.disposers = [...routes, ...frames];
     writeTextAtomic(notifierFile("runtime.json"), JSON.stringify({ apiBase: `http://127.0.0.1:${deps.webServerPort()}` }));
   }
-  /** 卸载: 摘路由, 退订帧, 停掉流.重复调用无害——卸载链可能走到不止一次. */
+  /** 卸载: 摘路由, 退订帧, 停掉流.**先摘空, 逆序, 逐项隔离**——一条摘除器抛错就跳出循环的写法, 
+   *  等于把其余路由与帧订阅永久留在宿主上 (实测 8 条只摘 3 条, 帧订阅 0 条, 连 streamHub.release()
+   *  都没跑到), 而 `installed` 卡在 true 还会让二次装配撞上«api 域只能装配一次».
+   *  重复调用无害: 摘出来的是空表 (卸载链可能走到不止一次). */
   release() {
-    for (const dispose of this.disposers)
-      dispose();
-    this.disposers = [];
-    streamHub.release();
-    this.installed = false;
+    const pending = this.disposers.splice(0);
+    try {
+      disposeAll(pending);
+    } finally {
+      streamHub.release();
+      this.installed = false;
+    }
   }
 };
+function disposeAll(disposers) {
+  for (const dispose of [...disposers].reverse()) {
+    try {
+      dispose();
+    } catch {
+    }
+  }
+}
 var apiService = new ApiService();
 
 // lib/server/api/interface.js
@@ -8642,6 +9001,24 @@ var displayCaps = {
 var FAILURE_REASON_MAX = 300;
 var RESPONSE_DETAIL_MAX = 200;
 
+// lib/server/channels/impl/deliver/url-gate.js
+var REJECTED = "доставка отклонена: ";
+function admitDeliveryUrl(raw) {
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return { ok: false, cause: REJECTED + "не удалось разобрать URL" };
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { ok: false, cause: REJECTED + "разрешены только http(s), отклонено " + url.protocol };
+  }
+  if (url.username !== "" || url.password !== "") {
+    return { ok: false, cause: REJECTED + "в URL нельзя встраивать userinfo (учётные данные только в заголовках)" };
+  }
+  return { ok: true };
+}
+
 // lib/server/channels/impl/bark/index.js
 var BARK_TIMEOUT_MS = 1e4;
 var SEVERITY_LEVEL = {
@@ -8652,10 +9029,28 @@ var SEVERITY_LEVEL = {
 };
 var defaultFetch = (url, init) => globalThis.fetch(url, init);
 async function sendBark(target, message, fetchImpl = defaultFetch) {
+  const pushUrl = pushUrlOf(target.baseUrl);
+  const admitted = admitDeliveryUrl(pushUrl);
+  if (!admitted.ok) {
+    return failed("reasonBarkRequestFailed", { detail: admitted.cause }, false);
+  }
+  return pushOnce(target, message, pushUrl, fetchImpl);
+}
+function pushUrlOf(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return baseUrl;
+  }
+  url.pathname = url.pathname.replace(/\/+$/, "") + "/push";
+  return url.toString();
+}
+async function pushOnce(target, message, pushUrl, fetchImpl) {
   const body = barkBodyOf(target, message);
   let response;
   try {
-    response = await fetchImpl(`${target.baseUrl}/push`, {
+    response = await fetchImpl(pushUrl, {
       method: "POST",
       headers: { "content-type": "application/json; charset=utf-8" },
       body: JSON.stringify(body),
@@ -8687,7 +9082,6 @@ function isBarkRejected(parsed) {
 }
 function barkBodyOf(target, message) {
   const body = {
-    ...target.extras,
     device_key: target.deviceKey,
     title: truncateCodePoints(message.title, displayCaps.bark.titleMax),
     body: truncateCodePoints(message.body, displayCaps.bark.bodyMax)
@@ -8759,7 +9153,7 @@ function sendBrowser(target, message) {
 
 // lib/server/channels/impl/system/deps.js
 import { execFile, spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync as readFileSync2, rmSync, unlinkSync, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync as readFileSync2, rmSync as rmSync2, unlinkSync, writeFileSync as writeFileSync2 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
 function spawnChild(command, options) {
@@ -8776,8 +9170,13 @@ function spawnChild(command, options) {
     onError(handler) {
       child.on("error", handler);
     },
-    kill() {
-      child.kill();
+    kill(signal) {
+      child.kill(signal);
+    },
+    unref() {
+      child.unref();
+      const stderr = child.stderr;
+      stderr?.unref?.();
     }
   };
 }
@@ -8933,7 +9332,7 @@ var RealToneTemps = class {
     if (dir === void 0)
       return;
     try {
-      rmSync(dir, { recursive: true, force: true });
+      rmSync2(dir, { recursive: true, force: true });
     } catch {
     }
   }
@@ -9053,7 +9452,7 @@ var LINUX_PLAYERS = [
     probeArgs: [["-version"], ["-h"]],
     // 四个参数都必需: `-hide_banner`/`-loglevel error` 压噪声, `-nodisp` 禁开窗口
     //  (缺它实测 exit 0 但只报 `Failed to create window or renderer`, 根本不出声), 
-    // `-autoexit` 播完即退 (缺它进程不退出, 只能等 8 秒兜底杀)
+    // `-autoexit` 播完即退 (缺它进程不退出, 只能等 9 秒硬结算)
     fileArgs: (file) => ["-hide_banner", "-loglevel", "error", "-nodisp", "-autoexit", file],
     needsServer: false,
     fatalMarkers: FATAL_MARKERS
@@ -9218,7 +9617,9 @@ function releaseSoundTemps() {
 
 // lib/server/channels/impl/system/index.js
 var PROBE_TIMEOUT_MS = 3e3;
-var KILL_TIMEOUT_MS = 8e3;
+var TERM_MS = 7e3;
+var KILL_MS = 8500;
+var HARD_DEADLINE_MS = 9e3;
 var STDERR_TAIL_MAX = 512;
 var STDERR_LOG_MAX = 300;
 async function probePlatform(toastScript) {
@@ -9297,7 +9698,21 @@ function buildSoundCommands(probe, file) {
   if (probe.platform === "darwin")
     return [{ command: ["afplay", file] }];
   if (probe.platform === "win32") {
-    const play = "$p=$args[0]; (New-Object System.Media.SoundPlayer $p).PlaySync()";
+    const pathData = Buffer.from(file, "utf8").toString("base64");
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      "try {",
+      `  $p = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${pathData}'))`,
+      "  $player = New-Object System.Media.SoundPlayer $p",
+      "  $player.Load()",
+      "  $player.PlaySync()",
+      "  exit 0",
+      "} catch {",
+      "  [Console]::Error.WriteLine($_.Exception.Message)",
+      "  exit 1",
+      "}"
+    ].join("\n");
+    const encodedScript = Buffer.from(script, "utf16le").toString("base64");
     return [
       {
         command: [
@@ -9306,9 +9721,8 @@ function buildSoundCommands(probe, file) {
           "-NonInteractive",
           "-ExecutionPolicy",
           "Bypass",
-          "-Command",
-          play,
-          file
+          "-EncodedCommand",
+          encodedScript
         ]
       }
     ];
@@ -9348,20 +9762,30 @@ function run(command) {
         stderrTail += chunk.toString("utf8");
     });
     let settled2 = false;
+    const timers = [];
     const settle = (outcome) => {
       if (settled2)
         return;
       settled2 = true;
-      clearTimeout(killer);
+      for (const timer of timers.splice(0))
+        clearTimeout(timer);
       resolve({ outcome, stderr: stderrTail });
     };
-    const killer = setTimeout(() => {
+    const tryKill = (signal) => {
       try {
-        child.kill();
+        child.kill(signal);
       } catch {
       }
+    };
+    timers.push(setTimeout(() => tryKill("SIGTERM"), TERM_MS));
+    timers.push(setTimeout(() => tryKill("SIGKILL"), KILL_MS));
+    timers.push(setTimeout(() => {
       settle({ kind: "timeout" });
-    }, KILL_TIMEOUT_MS);
+      try {
+        child.unref();
+      } catch {
+      }
+    }, HARD_DEADLINE_MS));
     child.onExit((exit) => settle(exit.exited ? { kind: "exit", code: exit.code } : { kind: "killed" }));
     child.onError((cause) => settle({ kind: "spawn-error", cause: cause.message }));
   });
@@ -9436,13 +9860,19 @@ async function runSoundOnly(prep, target, probe) {
   const played = await playChain(prep, target);
   return played.ok ? delivered() : failed2("reasonSystemSoundFailed", { bin: chainBin(prep.commands) }, played.detail);
 }
-function handleUnreadyPrepWithPopup(prep, pop, popRan, popOk, target, probe) {
+function handleUnreadyPrepWithPopup(prep, pop, popRan, popOk, target, probe, selfPlay) {
   if (!popRan) {
     return prep.kind === "unwritable" ? unwritableSound(target, prep.cause) : unexecutable(target, probe);
   }
-  if (prep.kind === "unwritable")
+  if (prep.kind === "unwritable") {
     target.logger.warn(toneUnwritableWarn(prep.cause));
-  return popOk ? delivered() : failed2("reasonSystemPopupFailed", { bin: commandNameOf(pop) });
+    return popOk ? delivered(warned("reasonSystemToneUnwritable", { detail: prep.cause })) : failed2("reasonSystemPopupFailed", { bin: commandNameOf(pop) });
+  }
+  if (!selfPlay)
+    return popOk ? delivered() : failed2("reasonSystemPopupFailed", { bin: commandNameOf(pop) });
+  if (popOk)
+    return delivered(warned("reasonSkipEnvironment"));
+  return failed2("reasonSystemPopupFailed", { bin: commandNameOf(pop) });
 }
 function finishPopupWithSound(prep, pop, popRan, popOk, played, target, probe) {
   if (!popRan && toastScriptMissing(probe))
@@ -9451,6 +9881,9 @@ function finishPopupWithSound(prep, pop, popRan, popOk, played, target, probe) {
     return failed2("reasonSystemPopupFailed", { bin: commandNameOf(pop) });
   if (!played.ok && !popRan) {
     return failed2("reasonSystemSoundFailed", { bin: chainBin(prep.commands) }, played.detail);
+  }
+  if (!played.ok) {
+    return delivered(warned("reasonSystemSoundFailed", played.detail === "" ? { params: { bin: chainBin(prep.commands) } } : { params: { bin: chainBin(prep.commands) }, detail: played.detail }));
   }
   return delivered();
 }
@@ -9467,7 +9900,7 @@ async function sendSystem(target, message) {
   const popRan = pop.length > 0;
   const popOk = popRan ? await runCommand(pop, target.logger) : true;
   if (prep.kind !== "ready") {
-    return handleUnreadyPrepWithPopup(prep, pop, popRan, popOk, target, probe);
+    return handleUnreadyPrepWithPopup(prep, pop, popRan, popOk, target, probe, selfPlay);
   }
   const played = await playChain(prep, target);
   return finishPopupWithSound(prep, pop, popRan, popOk, played, target, probe);
@@ -9513,8 +9946,11 @@ function commandNameOf(command) {
 function toneOf(sound) {
   return typeof sound === "string" ? sound : FOLLOW_SYSTEM_TONE;
 }
-function delivered() {
-  return { status: "ok", stage: "delivered" };
+function delivered(soundWarning) {
+  return soundWarning === void 0 ? { status: "ok", stage: "delivered" } : { status: "ok", stage: "delivered", soundWarning };
+}
+function warned(code, extra) {
+  return clampReasonDetail(reason(code, extra), 300);
 }
 function failed2(code, params, detail) {
   const extra = {};
@@ -9531,9 +9967,6 @@ function failed2(code, params, detail) {
 }
 
 // lib/server/channels/impl/webhook/index.js
-var MIN_TIMEOUT_SEC = 1;
-var MAX_TIMEOUT_SEC = 60;
-var DEFAULT_TIMEOUT_SEC = 10;
 var TOKEN_RE = /\{\{\s*(title|message|kind|severity|priority|source)\s*\}\}/g;
 function priorityFor(preset, severity) {
   const mapped = severity !== void 0 && Object.hasOwn(WEBHOOK_PRIORITY[preset], severity) ? WEBHOOK_PRIORITY[preset][severity] : void 0;
@@ -9551,14 +9984,170 @@ function renderWebhookBody(template, preset, vars) {
     const reason2 = cause instanceof Error ? cause.message : String(cause);
     throw new Error(`шаблон webhook — не корректный JSON: ${reason2}`);
   }
-  return JSON.stringify(renderTree(tree, {
+  const rendered = renderTree(tree, {
     title: vars.title,
     message: vars.message,
     kind: vars.kind,
     severity: vars.severity ?? "",
     priority: priorityFor(preset, vars.severity),
     source: ""
-  }));
+  });
+  return JSON.stringify(preset === "ntfy" ? normalizeNtfyTree(rendered) : rendered);
+}
+var NTFY_PRIORITY_NAMES = {
+  min: 1,
+  low: 2,
+  default: 3,
+  high: 4,
+  urgent: 5,
+  max: 5
+};
+function ntfyPriorityValue(value) {
+  if (typeof value === "number") {
+    if (Number.isInteger(value) && value >= 1 && value <= 5)
+      return value;
+    throw new Error(`ntfy: недопустимый priority — ${String(value)} (нужно число 1..5)`);
+  }
+  if (typeof value !== "string")
+    throw new Error("ntfy: недопустимый priority — нужно число 1..5");
+  const text = value.trim();
+  if (/^\d+$/.test(text)) {
+    const numeric = Number.parseInt(text, 10);
+    if (numeric >= 1 && numeric <= 5)
+      return numeric;
+    throw new Error(`ntfy: недопустимый priority — ${value} (нужно число 1..5)`);
+  }
+  const named = text.toLowerCase();
+  if (!Object.hasOwn(NTFY_PRIORITY_NAMES, named))
+    throw new Error(`ntfy: недопустимый priority — ${value} (нужно число 1..5)`);
+  return NTFY_PRIORITY_NAMES[named];
+}
+function normalizeNtfyTree(node) {
+  if (typeof node !== "object")
+    return node;
+  if (node === null)
+    return node;
+  if (Array.isArray(node))
+    return node;
+  const record = node;
+  if (!Object.hasOwn(record, "priority"))
+    return node;
+  if (record.priority === null) {
+    delete record.priority;
+    return node;
+  }
+  record.priority = ntfyPriorityValue(record.priority);
+  return node;
+}
+var NTFY_TOPIC_RE = /^[A-Za-z0-9_-]{1,64}$/;
+function isPlaceholderTopic(value) {
+  return value === "" || value === "<topic>" || value.includes("{{") || value.includes("}}");
+}
+function decodeTopicSegment(segment) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+function readNtfyTopic(record) {
+  if (record.topic === void 0)
+    return void 0;
+  if (typeof record.topic !== "string")
+    throw new Error("ntfy: body.topic должен быть строкой");
+  if (isPlaceholderTopic(record.topic))
+    return void 0;
+  if (!NTFY_TOPIC_RE.test(record.topic)) {
+    throw new Error(`ntfy: недопустимый topic — ${record.topic} (только буквы, цифры, _ и -, 1..64 символа)`);
+  }
+  return record.topic;
+}
+function splitNtfyUrl(rawUrl) {
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return void 0;
+  }
+  return { origin: url.origin, pathname: url.pathname, query: url.search };
+}
+function rawSegments(pathname) {
+  return pathname.split("/").filter((part) => part.length > 0);
+}
+function publishWithTopic(parts, topic, rawUrl, bodyText) {
+  const raws = rawSegments(parts.pathname);
+  if (raws.length === 0)
+    return { ok: true, url: rawUrl, body: bodyText };
+  const lastRaw = raws[raws.length - 1];
+  if (decodeTopicSegment(lastRaw) !== topic) {
+    if (parts.pathname.endsWith("/"))
+      return { ok: true, url: rawUrl, body: bodyText };
+    return {
+      ok: false,
+      cause: `ntfy: последний сегмент URL "${decodeTopicSegment(lastRaw)}" не совпадает с topic шаблона "${topic}" (JSON отправляется на корень службы); используйте корневой адрес или один и тот же topic`
+    };
+  }
+  if (parts.pathname.endsWith("/"))
+    return { ok: true, url: rawUrl, body: bodyText };
+  const cut = parts.pathname.slice(0, parts.pathname.length - lastRaw.length) || "/";
+  return { ok: true, url: parts.origin + cut + parts.query, body: bodyText };
+}
+function publishWithoutTopic(parts, record) {
+  const raws = rawSegments(parts.pathname);
+  if (raws.length === 0) {
+    return {
+      ok: false,
+      cause: "ntfy: нет пригодного topic (topic шаблона пуст или остался заглушкой <topic>, а из корневого адреса его не извлечь); впишите настоящий topic в шаблон"
+    };
+  }
+  if (parts.pathname.endsWith("/")) {
+    return {
+      ok: false,
+      cause: "ntfy: в шаблоне нет topic, а URL кончается на / — нельзя однозначно понять, это корень с префиксом или адрес темы; впишите настоящий topic в шаблон"
+    };
+  }
+  if (raws.length > 1) {
+    return {
+      ok: false,
+      cause: "ntfy: topic шаблона пуст или остался заглушкой, а путь URL состоит из нескольких сегментов — topic не извлечь однозначно (префикс самохостинга не угадываем); используйте корневой адрес службы и впишите настоящий topic в шаблон"
+    };
+  }
+  const extracted = decodeTopicSegment(raws[0]);
+  if (!NTFY_TOPIC_RE.test(extracted)) {
+    return {
+      ok: false,
+      cause: `ntfy: недопустимый topic в последнем сегменте URL — ${extracted} (только буквы, цифры, _ и -, 1..64 символа)`
+    };
+  }
+  record.topic = extracted;
+  return { ok: true, url: parts.origin + "/" + parts.query, body: JSON.stringify(record) };
+}
+function resolveNtfyPublish(rawUrl, bodyText) {
+  let payload;
+  try {
+    payload = JSON.parse(bodyText);
+  } catch {
+    return { ok: false, cause: "ntfy: body — не корректный объект JSON" };
+  }
+  if (typeof payload !== "object")
+    return { ok: false, cause: "ntfy: верхний уровень body должен быть объектом JSON" };
+  if (payload === null)
+    return { ok: false, cause: "ntfy: верхний уровень body должен быть объектом JSON" };
+  if (Array.isArray(payload))
+    return { ok: false, cause: "ntfy: верхний уровень body должен быть объектом JSON" };
+  const record = payload;
+  let topic;
+  try {
+    topic = readNtfyTopic(record);
+  } catch (cause) {
+    return { ok: false, cause: errorDetail(cause) };
+  }
+  const parts = splitNtfyUrl(rawUrl);
+  if (parts === void 0)
+    return { ok: false, cause: "ntfy: не удалось разобрать URL" };
+  if (topic !== void 0)
+    return publishWithTopic(parts, topic, rawUrl, bodyText);
+  return publishWithoutTopic(parts, record);
 }
 function renderTree(node, values) {
   if (typeof node === "string") {
@@ -9576,6 +10165,9 @@ function renderTree(node, values) {
 }
 var defaultFetch2 = (url, init) => globalThis.fetch(url, init);
 async function sendWebhook(target, message, fetchImpl = defaultFetch2) {
+  const admitted = admitDeliveryUrl(target.url);
+  if (!admitted.ok)
+    return failed3("reasonWebhookRequestFailed", { detail: admitted.cause });
   let body;
   try {
     body = renderWebhookBody(target.template ?? "", target.preset, {
@@ -9586,23 +10178,26 @@ async function sendWebhook(target, message, fetchImpl = defaultFetch2) {
       ts: message.ts
     });
   } catch (cause) {
-    const detail = cause instanceof Error ? cause.message : String(cause);
-    return failed3("reasonWebhookTemplateInvalid", { detail });
+    return failed3("reasonWebhookTemplateInvalid", { detail: errorDetail(cause) });
   }
+  const published = publishTargetOf(target, body);
+  if (published.failure !== void 0)
+    return published.failure;
+  body = published.body;
+  const publishUrl = published.url;
   const headers = { ...target.headers };
   setHeader(headers, "content-type", "application/json; charset=utf-8");
   applyAuthHeader(headers, target.auth);
   let response;
   try {
-    response = await fetchImpl(target.url, {
+    response = await fetchImpl(publishUrl, {
       method: "POST",
       headers,
       body,
       signal: AbortSignal.timeout(clampTimeoutSec(target.timeoutSec) * 1e3)
     });
   } catch (cause) {
-    const detail = cause instanceof Error ? cause.message : String(cause);
-    return failed3("reasonWebhookRequestFailed", { detail });
+    return failed3("reasonWebhookRequestFailed", { detail: errorDetail(cause) });
   }
   if (!response.ok) {
     let detail = "";
@@ -9635,8 +10230,32 @@ function setHeader(headers, name2, value) {
 }
 function clampTimeoutSec(value) {
   if (typeof value !== "number" || !Number.isFinite(value))
-    return DEFAULT_TIMEOUT_SEC;
-  return Math.min(MAX_TIMEOUT_SEC, Math.max(MIN_TIMEOUT_SEC, Math.round(value)));
+    return WEBHOOK_TIMEOUT.default;
+  return Math.min(WEBHOOK_TIMEOUT.max, Math.max(WEBHOOK_TIMEOUT.min, Math.round(value)));
+}
+function errorDetail(cause) {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+function publishTargetOf(target, body) {
+  if (target.preset !== "ntfy")
+    return { url: target.url, body };
+  const resolved = resolveNtfyPublish(target.url, body);
+  if (!resolved.ok) {
+    return {
+      url: target.url,
+      body,
+      failure: failed3("reasonWebhookTemplateInvalid", { detail: resolved.cause })
+    };
+  }
+  const readmitted = admitDeliveryUrl(resolved.url);
+  if (!readmitted.ok) {
+    return {
+      url: target.url,
+      body,
+      failure: failed3("reasonWebhookRequestFailed", { detail: readmitted.cause })
+    };
+  }
+  return { url: resolved.url, body: resolved.body };
 }
 function failed3(code, options = {}) {
   return {
@@ -10198,11 +10817,13 @@ function realTransport(url, ip, family, init) {
       reject2(cause instanceof Error ? cause : new Error(String(cause)));
     };
     const lib = url.protocol === "https:" ? https : http;
-    const req = lib.request(url, {
+    const requestOptions = {
       method: init.method,
       headers: init.headers,
+      autoSelectFamily: false,
       lookup: (_host, _options, callback) => callback(null, ip, family)
-    }, (res) => {
+    };
+    const req = lib.request(url, requestOptions, (res) => {
       const location = res.headers.location;
       if (typeof res.statusCode === "number" && REDIRECT_STATUS.has(res.statusCode) && typeof location === "string") {
         res.resume();
@@ -10311,8 +10932,16 @@ function dryRunFetch(target, ports) {
   });
 }
 function settled(result) {
-  if (result.status === "ok")
-    return result;
+  if (result.status === "ok") {
+    if (result.soundWarning === void 0)
+      return result;
+    const warning = normalizeSoundWarning(result.soundWarning, FAILURE_REASON_MAX);
+    if (warning === void 0) {
+      const { soundWarning: _dropped, ...rest } = result;
+      return rest;
+    }
+    return { ...result, soundWarning: warning };
+  }
   const normalized = normalizeReason(clampReasonDetail(result.reason, FAILURE_REASON_MAX));
   if (normalized === void 0)
     return result;
@@ -10347,26 +10976,29 @@ import { createHash } from "node:crypto";
 
 // lib/server/config/impl/model/index.js
 var DEFAULT_CONFIG = {
-  notifyAsk: true,
-  notifyQuestion: true,
-  notifyTaskDone: true,
-  notifySubagentDone: false,
-  notifyTaskError: true,
-  notifyTurnEnd: false,
+  notifyAsk: DEFAULTS.notifyAsk,
+  notifyQuestion: DEFAULTS.notifyQuestion,
+  notifyTaskDone: DEFAULTS.notifyTaskDone,
+  notifySubagentDone: DEFAULTS.notifySubagentDone,
+  notifyTaskError: DEFAULTS.notifyTaskError,
+  notifyTurnEnd: DEFAULTS.notifyTurnEnd,
   // 渠道形态只有一处表达: 下面两条内置条目.0.2.3 的顶层渠道键在升级时被搬进条目并删除.
-  quietHours: { enabled: false, windows: [{ start: "22:00", end: "08:00" }] },
-  // 内置频道恒在场且恒在最前: 默认表就带它们, 读面物化才有«与默认表逐字一致»的比对基准.
+  quietHours: {
+    enabled: DEFAULTS.quietHours.enabled,
+    windows: DEFAULTS.quietHours.windows.map((w) => ({ ...w }))
+  },
+  // 内置频道恒在场且恒在最前: 默认表就带它们, 投递投影据此物化; 0.2.9 形态清理负责把磁盘上
+  // 残缺的内置条目补成同一份形态 (判据在 upgrade/steps.test.ts 的«与默认表逐字一致»).
   channels: [
     { type: "browser", id: "browser", enabled: true, popup: true, sound: true, whenVisible: false },
     { type: "system", id: "system", enabled: true, popup: true, sound: true }
   ],
-  kindRoutes: {},
-  allowKinds: [],
-  historyMaxAgeDays: 0
+  kindRoutes: { ...DEFAULTS.kindRoutes },
+  allowKinds: [...DEFAULTS.allowKinds],
+  historyMaxAgeDays: DEFAULTS.historyMaxAgeDays
 };
 
 // lib/server/config/impl/input/index.js
-var BARK_LEVELS = ["active", "timeSensitive", "passive", "critical"];
 var BARK_RESERVED_KEYS = ["device_key", "device_keys", "ciphertext"];
 var WEBHOOK_RESERVED_KEYS = [
   "auth_token",
@@ -10377,39 +11009,6 @@ var WEBHOOK_RESERVED_KEYS = [
   "client_secret",
   "secret",
   "password_hash"
-];
-var BARK_KNOWN_KEYS = [
-  "id",
-  "type",
-  "enabled",
-  "name",
-  "baseUrl",
-  "deviceKey",
-  "level",
-  "levels",
-  "group",
-  "sound",
-  "icon",
-  "url",
-  "badge",
-  "timeoutMs"
-];
-var WEBHOOK_KNOWN_KEYS = [
-  "id",
-  "type",
-  "enabled",
-  "name",
-  "url",
-  "preset",
-  "auth",
-  "token",
-  "username",
-  "password",
-  "headerName",
-  "headerValue",
-  "template",
-  "headers",
-  "timeoutSec"
 ];
 var CONFIG_KEYS = Object.keys(DEFAULT_CONFIG);
 var BOOLEAN_KEYS = [
@@ -10434,8 +11033,9 @@ var RETIRED_KEYS = {
   maxConnections: CONNECTION_CAP_REMOVED_HINT
 };
 var COUNT_LIMITS = {
-  historyMaxAgeDays: 3650
+  historyMaxAgeDays: HISTORY_MAX_AGE_DAYS_LIMIT
 };
+var UNSAFE_KEYS = ["__proto__", "constructor", "prototype"];
 function parseJsonObject(text) {
   try {
     const parsed = JSON.parse(text);
@@ -10446,8 +11046,8 @@ function parseJsonObject(text) {
 }
 function normalizeConfig(input) {
   const fallback = DEFAULT_CONFIG;
-  const browser = asBrowserChannel(builtinRaw(input.channels, "browser"), input);
-  const system = asSystemChannel(builtinRaw(input.channels, "system"), input);
+  const browser = asBrowserChannel(builtinRaw(input.channels, "browser"));
+  const system = asSystemChannel(builtinRaw(input.channels, "system"));
   return {
     notifyAsk: asBoolean(input.notifyAsk, fallback.notifyAsk),
     notifyQuestion: asBoolean(input.notifyQuestion, fallback.notifyQuestion),
@@ -10462,22 +11062,45 @@ function normalizeConfig(input) {
     historyMaxAgeDays: asCount(input.historyMaxAgeDays, fallback.historyMaxAgeDays, COUNT_LIMITS.historyMaxAgeDays)
   };
 }
-function validateSettings(raw) {
+function validateSettingsWithMerge(raw, merged) {
+  return verdictOf(raw, merged);
+}
+function verdictOf(raw, mergedChannels) {
   for (const [key, value] of Object.entries(raw)) {
     if (value === void 0)
+      continue;
+    if (UNSAFE_KEYS.includes(key))
       continue;
     const retiredHint = Object.hasOwn(RETIRED_KEYS, key) ? RETIRED_KEYS[key] : void 0;
     if (retiredHint !== void 0)
       return reject(key, retiredHint);
     if (!CONFIG_KEYS.includes(key))
-      continue;
-    const verdict = validateOne(key, value);
+      return reject(key, key + " — неизвестный ключ конфигурации, удалите его или проверьте написание");
+    const verdict = validateOne(key, value, key === "channels" ? mergedChannels : void 0);
     if (!verdict.ok)
       return verdict;
   }
   return { ok: true };
 }
-function validateOne(key, raw) {
+function sameValue(left, right) {
+  if (left === right)
+    return true;
+  if (left === void 0 || right === void 0)
+    return false;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length)
+      return false;
+    return left.every((item, index) => sameValue(item, right[index]));
+  }
+  if (isRecord(left) && isRecord(right)) {
+    const leftKeys = Object.keys(left);
+    if (leftKeys.length !== Object.keys(right).length)
+      return false;
+    return leftKeys.every((key) => Object.hasOwn(right, key) && sameValue(left[key], right[key]));
+  }
+  return false;
+}
+function validateOne(key, raw, mergedChannels) {
   if (BOOLEAN_KEYS.includes(key))
     return requireBoolean(key, raw);
   const limit = COUNT_LIMITS[key];
@@ -10486,12 +11109,15 @@ function validateOne(key, raw) {
   if (key === "quietHours")
     return validateQuietHours(raw);
   if (key === "channels")
-    return validateChannels(raw);
+    return validateMergedChannels(raw, mergedChannels);
   if (key === "kindRoutes")
     return validateKindRoutes(raw);
   if (key === "allowKinds")
     return requireStringArray(key, raw);
   return { ok: true };
+}
+function validateMergedChannels(raw, merged) {
+  return validateChannels(merged?.channels ?? raw, merged?.inherited, merged?.preexisting);
 }
 function requireBoolean(key, raw) {
   return typeof raw === "boolean" ? { ok: true } : reject(key, "требуется true или false");
@@ -10543,15 +11169,36 @@ function validateQuietWindow(item, index) {
     return reject("quietHours", "windows[" + index + "].start и windows[" + index + "].end не могут совпадать");
   return { ok: true };
 }
-function validateChannels(raw) {
+function validateChannels(raw, inherited, preexisting) {
   if (!Array.isArray(raw))
     return reject("channels", "требуется массив");
-  for (const item of raw) {
-    const verdict = validateChannel(item);
+  for (const [index, item] of raw.entries()) {
+    const verdict = validateChannel(item, inherited?.[index], preexisting?.[index]);
     if (!verdict.ok)
       return verdict;
   }
+  const unique = requireUniqueIdentities(raw);
+  if (!unique.ok)
+    return unique;
   return requireBuiltinsPresent(raw);
+}
+function requireUniqueIdentities(list) {
+  const firstSeenAt = /* @__PURE__ */ new Map();
+  for (const [index, item] of list.entries()) {
+    if (!isRecord(item))
+      continue;
+    const identity = identityOfChannel(item);
+    const seenAt = firstSeenAt.get(identity);
+    if (seenAt !== void 0) {
+      return reject("channels", `записи ${seenAt + 1} и ${index + 1} описывают один и тот же канал ${identity}: канал может быть только один, удалите лишнюю запись и сохраните`);
+    }
+    firstSeenAt.set(identity, index);
+  }
+  return { ok: true };
+}
+function identityOfChannel(item) {
+  const type = typeof item.type === "string" ? item.type : "";
+  return typeof item.id === "string" && item.id !== "" ? item.id : type;
 }
 function requireBuiltinsPresent(list) {
   const types = /* @__PURE__ */ new Set();
@@ -10566,7 +11213,7 @@ function requireBuiltinsPresent(list) {
   }
   return { ok: true };
 }
-function validateChannel(raw) {
+function validateChannel(raw, inherited, preexisting) {
   if (!isRecord(raw))
     return reject("channels", "элемент канала должен быть объектом");
   if (raw.type === "browser" || raw.type === "system")
@@ -10574,9 +11221,9 @@ function validateChannel(raw) {
   if (typeof raw.id !== "string" || raw.id === "")
     return reject("channels", "у канала отсутствует id");
   if (raw.type === "bark")
-    return validateBarkChannel(raw, raw.id);
+    return validateBarkChannel(raw, raw.id, inherited, preexisting);
   if (raw.type === "webhook")
-    return validateWebhookChannel(raw, raw.id);
+    return validateWebhookChannel(raw, raw.id, inherited, preexisting);
   return reject("channels", "тип канала должен быть bark, webhook, browser или system");
 }
 function validateBuiltinChannel(raw, type) {
@@ -10589,33 +11236,39 @@ function validateBuiltinChannel(raw, type) {
   }
   return raw.sound === void 0 ? { ok: true } : requireSoundSetting("channels", raw.sound);
 }
-function validateBarkChannel(raw, id) {
-  if (typeof raw.baseUrl !== "string" || raw.baseUrl === "")
-    return reject("channels", `у канала bark ${id} отсутствует baseUrl`);
-  if (typeof raw.deviceKey !== "string" || raw.deviceKey === "")
-    return reject("channels", `у канала bark ${id} отсутствует deviceKey`);
-  if (raw.level !== void 0 && !isMember(raw.level, BARK_LEVELS))
+function validateBarkChannel(raw, id, inherited, preexisting) {
+  const missing = firstMissing(raw, REQUIRED_KEYS.bark, preexisting);
+  if (missing !== void 0)
+    return reject("channels", `у канала bark ${id} отсутствует ${missing}`);
+  if (isEdited(inherited, "level") && raw.level !== void 0 && !isMember(raw.level, BARK_LEVELS))
     return reject("channels", `у канала bark ${id} недопустимый level`);
-  return validateExtras(raw, id, BARK_KNOWN_KEYS, BARK_RESERVED_KEYS, "bark");
+  if (isEdited(inherited, "levels") && isRecord(raw.levels) && Object.keys(raw.levels).length > BARK_LEVELS_LIMIT) {
+    return reject("channels", `у канала bark ${id} не более ${BARK_LEVELS_LIMIT} уровней`);
+  }
+  return validateKnownKeys(raw, id, inherited, BARK_KNOWN_KEYS, BARK_RESERVED_KEYS, "bark");
 }
-function validateWebhookChannel(raw, id) {
-  if (typeof raw.url !== "string" || raw.url === "")
-    return reject("channels", `у канала webhook ${id} отсутствует url`);
+function validateWebhookChannel(raw, id, inherited, preexisting) {
+  const missing = firstMissing(raw, REQUIRED_KEYS.webhook, preexisting);
+  if (missing !== void 0)
+    return reject("channels", `у канала webhook ${id} отсутствует ${missing}`);
   if (!isMember(raw.auth, WEBHOOK_AUTHS))
     return reject("channels", `у канала webhook ${id} недопустимая auth`);
-  if (raw.preset !== void 0 && !isMember(raw.preset, WEBHOOK_PRESETS))
+  if (isEdited(inherited, "preset") && raw.preset !== void 0 && !isMember(raw.preset, WEBHOOK_PRESETS))
     return reject("channels", `у канала webhook ${id} недопустимый preset`);
-  return validateExtras(raw, id, WEBHOOK_KNOWN_KEYS, WEBHOOK_RESERVED_KEYS, "webhook");
+  if (isEdited(inherited, "template") && typeof raw.template === "string" && raw.template.length > WEBHOOK_TEMPLATE_MAX_CHARS) {
+    return reject("channels", `у канала webhook ${id} шаблон не длиннее ${WEBHOOK_TEMPLATE_MAX_CHARS} символов`);
+  }
+  return validateKnownKeys(raw, id, inherited, WEBHOOK_KNOWN_KEYS, WEBHOOK_RESERVED_KEYS, "webhook");
 }
-function validateExtras(raw, id, known, reserved, kindLabel) {
+function validateKnownKeys(raw, id, inherited, known, reserved, kindLabel) {
   for (const key of Object.keys(raw)) {
     if (known.includes(key))
       continue;
+    if (!isEdited(inherited, key))
+      continue;
     if (reserved.includes(key))
       return reject("channels", `${kindLabel}: у канала ${id} поле ${key} зарезервировано — учётные данные только в известных полях`);
-    const value = raw[key];
-    if (typeof value !== "string" && typeof value !== "number")
-      return reject("channels", `${kindLabel}: у канала ${id} поле ${key} может быть только строкой или числом`);
+    return reject("channels", `${kindLabel}: у канала ${id} поле ${key} неизвестно — удалите его или проверьте написание`);
   }
   return { ok: true };
 }
@@ -10648,8 +11301,23 @@ function sanitizeSettings(raw) {
 function isRecord(raw) {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 }
+function isEdited(inherited, field) {
+  return inherited === void 0 || !inherited.has(field);
+}
 function isMember(raw, allowed2) {
   return typeof raw === "string" && allowed2.some((item) => item === raw);
+}
+function isDeliveredRequired(value) {
+  return typeof value === "string" && value !== "";
+}
+function firstMissing(raw, keys, preexisting) {
+  for (const key of keys) {
+    if (preexisting?.has(key) === true)
+      continue;
+    if (!isDeliveredRequired(raw[key]))
+      return key;
+  }
+  return void 0;
 }
 function isStringArray(raw) {
   return Array.isArray(raw) && raw.every((item) => typeof item === "string");
@@ -10668,9 +11336,6 @@ function asSound(raw, fallback) {
     return raw;
   return isSoundId(raw) ? raw : fallback;
 }
-function legacySound(legacy, fallback) {
-  return typeof legacy === "boolean" ? legacy : fallback;
-}
 function asStrings(raw) {
   return Array.isArray(raw) ? raw.filter((item) => typeof item === "string") : [];
 }
@@ -10680,7 +11345,7 @@ function asQuietHours(raw, fallback) {
   const enabled = asBoolean(raw.enabled, fallback.enabled);
   const allowKinds = asStrings(raw.allowKinds);
   if (!Array.isArray(raw.windows)) {
-    return { enabled, windows: legacyWindows(raw, fallback), allowKinds };
+    return { enabled, windows: [], allowKinds };
   }
   const windows = [];
   for (const item of raw.windows) {
@@ -10698,12 +11363,6 @@ function copyQuietHours(fallback) {
   if (fallback.allowKinds !== void 0)
     copied.allowKinds = [...fallback.allowKinds];
   return copied;
-}
-function legacyWindows(raw, fallback) {
-  const window = asQuietWindow({ start: raw.start, end: raw.end });
-  if (window !== null)
-    return [window];
-  return fallback.windows.map((item) => ({ ...item }));
 }
 function asQuietWindow(raw) {
   if (!isRecord(raw))
@@ -10729,7 +11388,14 @@ function outboundChannels(raw) {
   const channels = [];
   if (!Array.isArray(raw))
     return channels;
+  const seen = /* @__PURE__ */ new Set();
   for (const item of raw) {
+    if (isRecord(item)) {
+      const identity = identityOfChannel(item);
+      if (seen.has(identity))
+        continue;
+      seen.add(identity);
+    }
     const read = asChannel(item);
     if (read.ok)
       channels.push(read.channel);
@@ -10745,27 +11411,27 @@ function builtinRaw(raw, type) {
   }
   return void 0;
 }
-function asBrowserChannel(raw, input) {
+function asBrowserChannel(raw) {
   const fallback = builtinDefault("browser");
   const source = raw ?? {};
   return {
     type: "browser",
     id: "browser",
-    enabled: asBoolean(source.enabled, asBoolean(input.browserEnabled, fallback.enabled)),
-    popup: asBoolean(source.popup, asBoolean(input.browserNotify, fallback.popup)),
-    sound: asSound(source.sound, outletSoundOf(input, input.browserSound, fallback.sound)),
-    whenVisible: asBoolean(source.whenVisible, asBoolean(input.notifyWhenVisible, fallback.whenVisible))
+    enabled: asBoolean(source.enabled, fallback.enabled),
+    popup: asBoolean(source.popup, fallback.popup),
+    sound: asSound(source.sound, fallback.sound),
+    whenVisible: asBoolean(source.whenVisible, fallback.whenVisible)
   };
 }
-function asSystemChannel(raw, input) {
+function asSystemChannel(raw) {
   const fallback = builtinDefault("system");
   const source = raw ?? {};
   return {
     type: "system",
     id: "system",
-    enabled: asBoolean(source.enabled, asBoolean(input.systemEnabled, fallback.enabled)),
-    popup: asBoolean(source.popup, asBoolean(input.systemNotify, fallback.popup)),
-    sound: asSound(source.sound, outletSoundOf(input, input.systemSound, fallback.sound))
+    enabled: asBoolean(source.enabled, fallback.enabled),
+    popup: asBoolean(source.popup, fallback.popup),
+    sound: asSound(source.sound, fallback.sound)
   };
 }
 function builtinDefault(type) {
@@ -10774,11 +11440,6 @@ function builtinDefault(type) {
       return channel;
   }
   throw new Error(`dsh-notifier: в настройках по умолчанию нет встроенного канала ${type}`);
-}
-function outletSoundOf(input, outlet, fallback) {
-  if (outlet !== void 0)
-    return asSound(outlet, fallback);
-  return legacySound(input.notifySound, fallback);
 }
 function asChannel(raw) {
   if (!isRecord(raw))
@@ -10808,28 +11469,14 @@ function asBarkChannel(raw, id) {
     sound: asString(raw.sound, ""),
     icon: asString(raw.icon, ""),
     url: asString(raw.url, ""),
-    timeoutMs: asCount(raw.timeoutMs, 0, 6e5),
+    timeoutMs: asCount(raw.timeoutMs, 0, BARK_TIMEOUT_MS_LIMIT),
     levels: asLevels(raw.levels)
   };
   if (isMember(raw.level, BARK_LEVELS))
     channel.level = raw.level;
   if (typeof raw.badge === "number")
     channel.badge = raw.badge;
-  const extras = extrasOf(raw, BARK_KNOWN_KEYS, BARK_RESERVED_KEYS);
-  if (Object.keys(extras).length > 0)
-    channel.extras = extras;
   return { ok: true, channel };
-}
-function extrasOf(raw, known, reserved) {
-  const extras = {};
-  for (const key of Object.keys(raw)) {
-    if (known.includes(key) || reserved.includes(key))
-      continue;
-    const value = raw[key];
-    if (typeof value === "string" || typeof value === "number")
-      extras[key] = value;
-  }
-  return extras;
 }
 function asLevels(raw) {
   const levels = {};
@@ -10863,9 +11510,6 @@ function asWebhookChannel(raw, id) {
     headers: asHeaders(raw.headers),
     timeoutSec: asCount(raw.timeoutSec, 0, 600)
   };
-  const extras = extrasOf(raw, WEBHOOK_KNOWN_KEYS, WEBHOOK_RESERVED_KEYS);
-  if (Object.keys(extras).length > 0)
-    channel.extras = extras;
   return { ok: true, channel };
 }
 function asHeaders(raw) {
@@ -10880,23 +11524,194 @@ function asHeaders(raw) {
   return headers;
 }
 
-// lib/server/config/impl/redact/index.js
+// lib/server/config/impl/service/merge.js
 var SECRET_MASK = "********";
-var CHANNEL_SECRET_FIELDS = {
-  bark: ["deviceKey"],
-  webhook: ["token", "password", "headerValue"],
-  // 内置频道没有任何凭据字段; 它们在表里必须出现 (Record 强制穷尽), 值就是空清单.
-  browser: [],
-  system: []
-};
-function redactConfig(value) {
-  const copy = structuredClone(value);
-  const channels = copy.channels;
-  if (!Array.isArray(channels))
-    return copy;
-  copy.channels = channels.map(maskChannel);
-  return copy;
+var IDENTITY_KEYS = ["id", "type"];
+var NEW_CHANNEL_MASK_HINT = "для нового канала нельзя отправлять маску — впишите настоящие учётные данные";
+var RESIDUAL_MASK_HINT = "в черновике осталась невосстановленная маска (следы смены типа канала или имени) — впишите настоящие учётные данные";
+var EMPTY = /* @__PURE__ */ new Set();
+function secretFieldsOfType(type) {
+  if (type === "bark" || type === "webhook")
+    return CHANNEL_SECRET_FIELDS[type];
+  return NO_SECRET_FIELDS;
 }
+var NO_SECRET_FIELDS = [];
+var ALL_SECRET_FIELDS = new Set(Object.values(CHANNEL_SECRET_FIELDS).flat());
+function mergeChannels(incoming, stored) {
+  if (!Array.isArray(incoming)) {
+    return { ok: true, channels: incoming, inherited: [], preexisting: [] };
+  }
+  const storedById = indexById(stored);
+  const channels = [];
+  const inherited = [];
+  const preexisting = [];
+  let masked;
+  for (const item of incoming) {
+    const read = mergeEntry(item, storedById);
+    if (!read.ok) {
+      if (read.rank === void 0)
+        return { ok: false, error: read.error };
+      if (masked === void 0 || read.rank < masked.rank)
+        masked = { rank: read.rank, error: read.error };
+      continue;
+    }
+    channels.push(read.channel);
+    inherited.push(read.inherited);
+    preexisting.push(read.preexisting);
+  }
+  if (masked !== void 0)
+    return { ok: false, error: masked.error };
+  return { ok: true, channels, inherited, preexisting };
+}
+function mergeEntry(item, storedById) {
+  if (!isRecord2(item))
+    return { ok: true, channel: item, inherited: EMPTY, preexisting: EMPTY };
+  const id = typeof item.id === "string" ? item.id : "";
+  const base = sameKindBase(item, id, storedById);
+  const merged = base === void 0 ? {} : { ...base };
+  const inherited = inheritedKeys(base, item);
+  const required = requiredKeysOf(item.type);
+  const state = { merged, inherited, masked: void 0, rejected: void 0 };
+  for (const [key, value] of Object.entries(item)) {
+    if (!applyField(key, value, base, required, item.type, id, state)) {
+      if (state.rejected === void 0)
+        throw new Error("applyField вернул false, но текст отказа не записан");
+      return { ok: false, error: state.rejected };
+    }
+  }
+  if (state.masked !== void 0) {
+    return { ok: false, error: state.masked.error, rank: state.masked.rank };
+  }
+  return {
+    ok: true,
+    channel: merged,
+    inherited,
+    preexisting: preexistingGaps(base, merged, item.type)
+  };
+}
+function applyField(key, value, base, required, type, id, state) {
+  const verdict = fieldVerdict(key, value, base, required, type, id);
+  if (verdict.kind === "reject") {
+    if (verdict.rank === void 0) {
+      state.rejected = verdict.error;
+      return false;
+    }
+    if (state.masked === void 0 || verdict.rank < state.masked.rank) {
+      state.masked = { rank: verdict.rank, error: verdict.error };
+    }
+    return true;
+  }
+  if (verdict.kind === "drop") {
+    delete state.merged[key];
+    return true;
+  }
+  if (verdict.kind === "keep") {
+    state.inherited.add(key);
+    return true;
+  }
+  state.merged[key] = value;
+  if (base !== void 0 && sameValue(value, base[key]))
+    state.inherited.add(key);
+  return true;
+}
+function sameKindBase(item, id, storedById) {
+  if (id === "")
+    return void 0;
+  const previous = storedById.get(id);
+  if (previous === void 0 || previous.type !== item.type)
+    return void 0;
+  return previous;
+}
+function inheritedKeys(base, item) {
+  const inherited = /* @__PURE__ */ new Set();
+  if (base === void 0)
+    return inherited;
+  for (const key of Object.keys(base)) {
+    if (!Object.hasOwn(item, key))
+      inherited.add(key);
+  }
+  return inherited;
+}
+var KEEP = { kind: "keep" };
+var DROP = { kind: "drop" };
+var WRITE = { kind: "write" };
+function fieldVerdict(key, value, base, required, type, id) {
+  if (value === void 0)
+    return KEEP;
+  if (value === SECRET_MASK) {
+    if (secretFieldsOfType(type).includes(key)) {
+      if (base !== void 0 && Object.hasOwn(base, key))
+        return KEEP;
+      return { kind: "reject", rank: 0, error: { key: "channels", hint: NEW_CHANNEL_MASK_HINT } };
+    }
+    if (ALL_SECRET_FIELDS.has(key)) {
+      return { kind: "reject", rank: 1, error: { key: "channels", hint: RESIDUAL_MASK_HINT } };
+    }
+    return WRITE;
+  }
+  if (value === null || value === "") {
+    if (required.includes(key))
+      return { kind: "reject", error: rejectDeletable(type, id, key) };
+    return DROP;
+  }
+  return WRITE;
+}
+function requiredKeysOf(type) {
+  if (typeof type !== "string")
+    return IDENTITY_KEYS;
+  return [
+    ...IDENTITY_KEYS,
+    ...REQUIRED_KEYS[type] ?? NO_REQUIRED_KEYS,
+    ...VALUE_DOMAIN_REQUIRED_KEYS[type] ?? NO_REQUIRED_KEYS
+  ];
+}
+var NO_REQUIRED_KEYS = [];
+function rejectDeletable(type, id, key) {
+  const label = typeof type === "string" && type !== "" ? type : "экземпляр";
+  const subject = id === "" ? "" : ` ${id}`;
+  return { key: "channels", hint: `у канала ${label}${subject} поле ${key} обязательно, его нельзя удалить` };
+}
+function preexistingGaps(base, merged, type) {
+  if (base === void 0)
+    return EMPTY;
+  const gaps = /* @__PURE__ */ new Set();
+  for (const key of deliveredRequiredKeys(type)) {
+    if (isDeliveredRequired(merged[key]))
+      continue;
+    if (isDeliveredRequired(base[key]))
+      continue;
+    gaps.add(key);
+  }
+  return gaps;
+}
+function deliveredRequiredKeys(type) {
+  if (type !== "bark" && type !== "webhook")
+    return NO_REQUIRED;
+  return REQUIRED_KEYS[type];
+}
+var NO_REQUIRED = [];
+function indexById(list) {
+  const index = /* @__PURE__ */ new Map();
+  if (!Array.isArray(list))
+    return index;
+  for (const item of list) {
+    if (!isRecord2(item))
+      continue;
+    const id = item.id;
+    if (typeof id !== "string" || id === "")
+      continue;
+    if (!index.has(id))
+      index.set(id, item);
+  }
+  return index;
+}
+function isRecord2(raw) {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
+}
+
+// lib/server/config/impl/redact/index.js
+var SECRET_MASK2 = "********";
+var SECRET_FIELDS = CHANNEL_SECRET_FIELDS;
 function redactStored(stored) {
   const masked = {};
   for (const [key, value] of Object.entries(stored)) {
@@ -10918,17 +11733,17 @@ function unmaskChannels(patchChannels, userChannels) {
   return { ok: true, channels: restored };
 }
 function maskChannel(channel) {
-  if (!isRecord2(channel))
+  if (!isRecord3(channel))
     return channel;
   const masked = { ...channel };
-  for (const field of secretFieldsOfType(channel.type)) {
-    if (typeof masked[field] === "string")
-      masked[field] = SECRET_MASK;
+  for (const field of secretFieldsOfType2(channel.type)) {
+    if (typeof masked[field] === "string" && masked[field] !== "")
+      masked[field] = SECRET_MASK2;
   }
   return masked;
 }
 function unmaskChannel(patch, existing) {
-  if (!isRecord2(patch))
+  if (!isRecord3(patch))
     return { ok: true, channel: patch };
   const masked = secretFieldsOf(patch);
   if (masked.length === 0)
@@ -10945,20 +11760,20 @@ function unmaskChannel(patch, existing) {
   }
   return { ok: true, channel: restored };
 }
-function secretFieldsOfType(type) {
+function secretFieldsOfType2(type) {
   if (type === "bark" || type === "webhook")
-    return CHANNEL_SECRET_FIELDS[type];
+    return SECRET_FIELDS[type];
   return [];
 }
 function secretFieldsOf(patch) {
-  return secretFieldsOfType(patch.type).filter((field) => patch[field] === SECRET_MASK);
+  return secretFieldsOfType2(patch.type).filter((field) => patch[field] === SECRET_MASK2);
 }
 function hasResidualMask(channel) {
-  if (!isRecord2(channel))
+  if (!isRecord3(channel))
     return false;
-  for (const fields of Object.values(CHANNEL_SECRET_FIELDS)) {
+  for (const fields of Object.values(SECRET_FIELDS)) {
     for (const field of fields) {
-      if (channel[field] === SECRET_MASK)
+      if (channel[field] === SECRET_MASK2)
         return true;
     }
   }
@@ -10968,7 +11783,7 @@ function findById(existing, id) {
   if (id === "")
     return { ok: false };
   for (const item of existing) {
-    if (isRecord2(item) && item.id === id)
+    if (isRecord3(item) && item.id === id)
       return { ok: true, channel: item };
   }
   return { ok: false };
@@ -10977,13 +11792,22 @@ function idOf(patch) {
   const id = patch.id;
   return typeof id === "string" ? id : "";
 }
-function isRecord2(raw) {
+function isRecord3(raw) {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 }
 
+// lib/server/config/impl/service/view.js
+var VIEW_KEYS = Object.keys(DEFAULT_CONFIG);
+function projectForView(stored) {
+  const picked = {};
+  for (const key of VIEW_KEYS) {
+    const onDisk = stored[key];
+    picked[key] = onDisk === void 0 ? DEFAULT_CONFIG[key] : onDisk;
+  }
+  return redactStored(picked);
+}
+
 // lib/server/config/impl/service/index.js
-var NEW_CHANNEL_MASK_HINT = "для нового канала нельзя отправлять маску — впишите настоящие учётные данные";
-var UNSAFE_KEYS = ["__proto__", "constructor", "prototype"];
 var UNINSTALLED2 = { logger: { warn: () => {
 } } };
 var NOOP = () => {
@@ -10999,8 +11823,10 @@ var ConfigStore = class {
   stored = {};
   /** 用户层 (净化后): 写面做掩码还原, 视图做回显都要它. */
   user = {};
-  /** 生效设置: 用户层归一化后的形态, 读面直接给它. */
+  /** 生效设置 (**投递投影**): 归一化补过默认值, 收敛过越界, **不外发**——`current()` 拿它. */
   effective = DEFAULT_CONFIG;
+  /** 视图投影 (**外发**): 键子集 + 原样 + 掩码, **不补默认值**.与投递投影是两份数据, 见 view 模块的文件头. */
+  viewConfig = {};
   /** 用户层修订号 (内容摘要): 乐观并发的比较依据. */
   revision = 0;
   /** 写队列尾: 新写挂在它后面, «读-改-写»不会交错. */
@@ -11020,7 +11846,9 @@ var ConfigStore = class {
     this.deps = UNINSTALLED2;
     this.adopt({});
   }
-  /** 当前生效设置 (含明文凭据; 不外发). */
+  /** 当前生效设置 (**投递投影**: 补过默认值, 收敛过越界; 含明文凭据, **不外发**).
+   *
+   *  pipeline / sdk / stores / dry-run 全靠它, 故它一行不改地继续喂 `normalizeConfig` 的结果. */
   current() {
     return this.effective;
   }
@@ -11032,36 +11860,65 @@ var ConfigStore = class {
       user: redactStored(this.stored),
       revision: this.revision,
       writable: true,
-      effective: redactConfig(this.effective)
+      // 视图投影**不是**投递投影 (#1016 S3): 外发的是«磁盘原样 + 掩码», 补出来的默认值与被钳过的
+      // 越界值留在域内.两者混用会让一次无关保存把磁盘形态改写成读面的实现——见 view 模块的文件头.
+      effective: this.viewConfig
     };
   }
   /**
-   * 写: 掩码还原 → 校验 → 合并 → 落盘 → 刷新快照.
+   * 写: 整段挂进写队列, 队列内完成按字段合并 (含掩码还原)→ 校验 → 落盘 → 刷新快照.
    *
-   * 顺序不可换: 掩码不是合法密钥值, 未还原就被校验拦死; 校验早于落盘, 否则非法值会先写进文件.
-   * 校验与合并之间不净化: 陌生键是透传保留的, 一次保存不该把它们抹掉.0.2.3 的顶层渠道键已由
-   * upgrade 域在装配期搬走, 写面收到它们会被校验直接拒 (退役键清单), 不在这里做二次翻译.
+   * 为什么不把合并与校验留在队列外: 两者都要读存量 (合并沿用哪些键, 判据据此决定重判哪些), 
+   * 队列外读到的存量会被并发的另一次写抽走.详见 `apply` 的注释.
+   *
+   * `apply` 必须**直调 commit, 不得再 enqueue**: enqueue 同步把 tail 设成 result.then(...), 
+   * task 内再 enqueue 就是等自己刚挂上去的 tail——那个 tail 排在自己后面, 自己不返回它就不 resolve.
+   * 故 apply 与 commit 之间不经队列, 是**结构上**写死的, 不靠调用方记得.
    */
   async write(patch, expectedRevision) {
-    const restored = this.restoreSecrets(patch);
-    if (!restored.ok) {
-      return {
-        ok: false,
-        reason: "invalid",
-        error: { key: "channels", hint: NEW_CHANNEL_MASK_HINT }
-      };
-    }
-    const verdict = validateSettings(restored.patch);
+    return this.enqueue(() => this.apply(patch, expectedRevision));
+  }
+  /**
+   * 一次写的全过程: 按字段合并 (含掩码还原)→ 校验合并结果 → 落盘 → 刷新快照.
+   *
+   * **整段在写队列内**, 合并与校验都算在内 (issue #1016 批次 B).原来还原与校验在队列外, 
+   * 于是它们读到的存量是«入队那一刻»的: 并发的两次写里, 后一次会用前一次落盘**之前**的
+   * 用户层去还原掩码, 判定«原样带回», 基线跟着另一次写漂走.把它们移进队列后, 合并, 判据
+   * 三者看到的是同一份存量快照.
+   *
+   * 顺序不可换 (#1016 S2): 合并必须**先于**校验——判据审的是合并后的条目, 而«删键之后必填键
+   * 此刻为空»这条判据只有合并之后才问得出; 校验必须早于落盘, 否则非法值会先写进文件.掩码在
+   * 合并里解 (五态之一, 见 merge 模块), 不再有独立的还原步骤: 两条路径各解一次会让«掩码在
+   * 哪一步变成原值»有两个答案, 而判据看到的形态与落盘的形态就必须逐字一致.
+   *
+   * 校验与合并之间不净化: 磁盘上**存量**的陌生键不在提交里, 合并原样沿用, 一次保存抹不掉它们; 
+   * 而**本次提交**的陌生键由判据 400 (#1016 S2 删掉了 extras 透传面).0.2.3 的顶层渠道键已由
+   * upgrade 域在装配期搬走, 写面收到它们会被校验直接拒 (退役键清单), 不在这里做二次翻译.
+   * 合并那一侧读哪份存量 (磁盘原样, 不是 effective)由 `mergePatchChannels` 的注释交代.
+   */
+  async apply(patch, expectedRevision) {
+    const outcome = mergePatchChannels(patch.channels, this.stored);
+    if (!outcome.ok)
+      return { ok: false, reason: "invalid", error: outcome.error };
+    const verdict = validateSettingsWithMerge(patch, outcome.merged);
     if (!verdict.ok)
       return { ok: false, reason: "invalid", error: verdict.error };
-    const incoming = writableEntries(restored.patch);
-    return this.enqueue(() => this.commit(incoming, expectedRevision));
+    const subject = outcome.merged === void 0 ? patch : { ...patch, channels: outcome.merged.channels };
+    const incoming = writableEntries(subject);
+    return this.commit(incoming, expectedRevision);
   }
   /**
    * 提交: 版本比对 → 合并 → 原子落盘 → 采纳.
    *
    * 整段在写队列内执行: 比对与写入之间若能被另一次写插入, 乐观并发就形同虚设
    * ——两次写都读到同一旧版本, 都判定通过, 后写的把先写的悄悄覆盖.
+   *
+   * `expectedRevision` 与合并结果的 `inherited` **语义不同, 不许合并成一个参数**: 
+   * 前者是**内容摘要**比对, 防的是«两个客户端同时改»的丢失更新 (防的是覆盖); 
+   * 后者是**同 id 同 type 同名字段**的沿用清单, 解的是«存量非法值不该因一次无关保存被拒»的
+   * 过度拒绝 (防的是错杀).两者一个按内容断版本, 一个按字段认改动, 混在一起会让任一条判据
+   * 悄悄变成另一条: 把字段比对当版本号, 用户改一个字段就凭空冲突; 把版本号当字段比对, 
+   * 别的键变过就会让这次保存看起来«没改过».
    */
   async commit(incoming, expectedRevision) {
     if (expectedRevision !== void 0 && expectedRevision !== this.revision) {
@@ -11077,20 +11934,19 @@ var ConfigStore = class {
     this.adopt(merged);
     return { ok: true, view: this.view() };
   }
-  /** 文件内容到达: 镜像原样留下, 用户层与生效值由它派生. */
+  /**
+   * 文件内容到达: 镜像原样留下, **两份投影**由它各自派生 (#1016 S3).
+   *
+   * 这一行是«读面拆两条通道»的落点: `effective` 走归一化 (投递侧要完整形态), `viewConfig` 走
+   * 键子集投影 (外发侧要磁盘原样).两者曾共用一份数据, 于是«补出来的默认值»被当成用户存过的值
+   * 交回磁盘——见 view 模块的文件头与 `view()` 的注释.
+   */
   adopt(stored) {
     this.stored = stored;
     this.user = sanitizeSettings(stored);
     this.effective = normalizeConfig(stored);
+    this.viewConfig = projectForView(stored);
     this.revision = revisionOf(stored);
-  }
-  /** 掩码还原: patch 里等于掩码的密钥字段按 id 换回用户层原值; 只有带了频道才需要这一步. */
-  restoreSecrets(patch) {
-    const channels = patch.channels;
-    if (channels === void 0)
-      return { ok: true, patch };
-    const restored = unmaskChannels(channels, this.user.channels);
-    return restored.ok ? { ok: true, patch: { ...patch, channels: restored.channels } } : { ok: false };
   }
   /** 把一次写挂到队列尾; 前一次无论成败, 后一次都照常执行. */
   enqueue(task) {
@@ -11100,6 +11956,23 @@ var ConfigStore = class {
   }
 };
 var configStore = new ConfigStore();
+function mergePatchChannels(channels, stored) {
+  if (channels === void 0)
+    return { ok: true, merged: void 0 };
+  const merged = mergeChannels(channels, stored.channels ?? []);
+  if (!merged.ok)
+    return { ok: false, error: merged.error };
+  return {
+    ok: true,
+    // 两笔账整份带过去: 值域判据看 inherited («值原样来自存量»), «必填键在场»看 preexisting
+    //  («键的缺席本来就来自存量»).判据侧按同下标取用, 见 MergedChannelScope.
+    merged: {
+      channels: merged.channels,
+      inherited: merged.inherited,
+      preexisting: merged.preexisting
+    }
+  };
+}
 function writableEntries(patch) {
   const entries = {};
   for (const [key, value] of Object.entries(patch)) {
@@ -11129,18 +12002,12 @@ function isJsonObject(value) {
 }
 
 // lib/server/config/impl/draft/index.js
-var RESIDUAL_MASK_HINT = "в черновике осталась невосстановленная маска (следы смены типа канала или имени) — впишите настоящие учётные данные";
 function resolveDraftChannels(draft, secrets) {
-  if (!isRecord3(draft))
+  if (!isRecord4(draft))
     return fail("draft требуется объект");
   const raw = draft.channels;
   if (!Array.isArray(raw))
     return fail("draft.channels требуется массив");
-  for (const item of raw) {
-    const verdict = validateChannel(item);
-    if (!verdict.ok)
-      return fail(verdict.error.hint);
-  }
   const restored = unmaskChannels(raw, secrets);
   if (!restored.ok)
     return fail(NEW_CHANNEL_MASK_HINT);
@@ -11151,12 +12018,17 @@ function resolveDraftChannels(draft, secrets) {
     if (hasResidualMask(channel))
       return fail(RESIDUAL_MASK_HINT);
   }
+  for (const item of channels) {
+    const verdict = validateChannel(item);
+    if (!verdict.ok)
+      return fail(verdict.error.hint);
+  }
   return { ok: true, channels };
 }
 function fail(hint) {
   return { ok: false, hint };
 }
-function isRecord3(raw) {
+function isRecord4(raw) {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 }
 
@@ -11189,7 +12061,7 @@ function sessionTitleOf(agent) {
       const title = event.data.title.trim();
       if (title.length === 0)
         return { found: false };
-      return { found: true, title: title.slice(0, TITLE_LIMIT) };
+      return { found: true, title: truncateCodePoints(title, TITLE_LIMIT) };
     }
   } catch {
   }
@@ -11383,143 +12255,166 @@ function evidenceSourceOf(stale, pushed, snapshot) {
 var agentStates = new AgentStateMachine();
 
 // lib/server/events/impl/translate/catalog.js
-function formatDuration(ms) {
+var ZH = {
+  askWithTask: (task, tool) => `Задача «${task}» ждёт подтверждения (инструмент: ${tool})`,
+  askWithoutTask: (tool) => `Инструмент ${tool} ждёт подтверждения`,
+  reason: (reason2) => `Причина: ${reason2}`,
+  askFooter: "Подтвердите или отклоните в DSH",
+  questionWithTask: (task) => `Задача «${task}» ждёт вашего ответа`,
+  questionWithoutTask: "Есть вопрос — нужен ваш ответ",
+  question: (question) => `Вопрос: ${question}`,
+  questionFooter: "Ответьте в DSH",
+  doneWithTask: (task) => `Задача «${task}» выполнена`,
+  doneWithoutTask: "Фоновая задача выполнена",
+  subagentDoneWithTask: (task) => `Подзадача «${task}» выполнена`,
+  subagentDoneWithoutTask: "Подзадача выполнена",
+  duration: (duration) => `Заняло: ${duration}`,
+  hours: (value) => `${value} ч`,
+  minutes: (value) => `${value} мин`,
+  seconds: (value) => `${value} с`,
+  errorWithTask: (task) => `Ошибка при выполнении задачи «${task}»`,
+  errorWithoutTask: "Ошибка выполнения задачи",
+  errorTurn: (turn, step, message) => `Ход ${turn}${step ? `, шаг ${step}` : ""}: ${message}`,
+  errorMessage: (message) => `Ошибка: ${message}`,
+  turnEndWithTaskTurn: (task, turn) => `Задача «${task}»: ход ${turn} завершён`,
+  turnEndWithTaskWithoutTurn: (task) => `Задача «${task}»: работа завершена`,
+  turnEndWithoutTaskWithTurn: (turn) => `Ход ${turn} завершён`,
+  turnEndWithoutTaskWithoutTurn: "Работа завершена",
+  titles: {
+    ask: "DSH: нужно подтверждение",
+    question: "DSH: вопрос к вам",
+    done: "DSH: задача выполнена",
+    "subagent-done": "DSH: подзадача выполнена",
+    error: "DSH: ошибка задачи",
+    "turn-end": "DSH: ход завершён"
+  }
+};
+var EN = {
+  askWithTask: (task, tool) => `Approval needed for task "${task}" (tool "${tool}")`,
+  askWithoutTask: (tool) => `Approval needed for tool "${tool}"`,
+  reason: (reason2) => `Reason: ${reason2}`,
+  askFooter: "Confirm or deny in the DSH window",
+  questionWithTask: (task) => `Task "${task}" is waiting for your answer`,
+  questionWithoutTask: "There is a question waiting for your answer",
+  question: (question) => `Question: ${question}`,
+  questionFooter: "Answer in the DSH window",
+  doneWithTask: (task) => `Task "${task}" completed`,
+  doneWithoutTask: "Background task completed",
+  subagentDoneWithTask: (task) => `Subagent task "${task}" completed`,
+  subagentDoneWithoutTask: "Subagent task completed",
+  duration: (duration) => `Duration: ${duration}`,
+  hours: (value) => `${value}h`,
+  minutes: (value) => `${value}m`,
+  seconds: (value) => `${value}s`,
+  errorWithTask: (task) => `Task "${task}" failed`,
+  errorWithoutTask: "Task failed",
+  errorTurn: (turn, step, message) => `Turn ${turn}${step ? `, step ${step}` : ""}: ${message}`,
+  errorMessage: (message) => `Error: ${message}`,
+  turnEndWithTaskTurn: (task, turn) => `Turn ${turn} of task "${task}" completed`,
+  turnEndWithTaskWithoutTurn: (task) => `A turn of task "${task}" completed`,
+  turnEndWithoutTaskWithTurn: (turn) => `Turn ${turn} completed`,
+  turnEndWithoutTaskWithoutTurn: "Turn completed",
+  titles: {
+    ask: "DSH: Approval needed",
+    question: "DSH: Question for you",
+    done: "DSH: Task completed",
+    "subagent-done": "DSH: Subagent task completed",
+    error: "DSH: Task failed",
+    "turn-end": "DSH: Turn completed"
+  }
+};
+// DSH для 1С: английский каталог не используется — при любой локали хоста тексты русские.
+var LOCALE_TEXT = { zh: ZH, en: ZH };
+function durationParts(ms) {
   const totalSeconds = Math.max(0, Math.round(Number(ms) / 1e3));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor(totalSeconds % 3600 / 60);
-  const seconds = totalSeconds % 60;
+  return [
+    Math.floor(totalSeconds / 3600),
+    Math.floor(totalSeconds % 3600 / 60),
+    totalSeconds % 60
+  ];
+}
+function formatDurationForLocale(ms, locale) {
+  const [hours, minutes, seconds] = durationParts(ms);
   const parts = [];
+  const text = LOCALE_TEXT[locale];
   if (hours > 0)
-    parts.push(`${hours} ч`);
+    parts.push(text.hours(hours));
   if (minutes > 0)
-    parts.push(`${minutes} мин`);
+    parts.push(text.minutes(minutes));
   if (seconds > 0 || parts.length === 0)
-    parts.push(`${seconds} с`);
+    parts.push(text.seconds(seconds));
   return parts.join(" ");
 }
-var TOOL_LABELS = {
-  pwsh: "команда PowerShell",
-  bash: "команда терминала",
-  web_search: "поиск в интернете",
-  read: "чтение файла",
-  write: "запись файла",
-  edit: "правка файла",
-  grep: "поиск по содержимому файлов",
-  glob: "поиск файлов",
-  subagent: "задача субагента",
-  subagent_fork: "задача субагента",
-  ssh_exec: "выполнение по SSH",
-  ssh_upload: "загрузка файла по SSH",
-  ssh_download: "скачивание файла по SSH",
-  ssh_tunnel: "SSH-туннель",
-  ssh_cluster: "выполнение на кластере по SSH",
-  ask_user_question: "вопрос к вам",
-  todo_write: "обновление списка задач",
-  job_list: "список фоновых задач",
-  job_output: "вывод задачи",
-  job_kill: "остановка фоновой задачи",
-  workflow: "оркестрация workflow",
-  ralph: "цикл Ralph",
-  memory_add: "запись в память проекта",
-  memory_search: "поиск по памяти проекта",
-  skill: "загрузка скилла",
-  create_goal: "создание цели",
-  get_goal: "просмотр цели",
-  update_goal: "обновление цели"
-};
 function prettyToolName(name2) {
-  const text = name2 ?? "?";
-  if (Object.prototype.hasOwnProperty.call(TOOL_LABELS, text))
-    return TOOL_LABELS[text];
-  const parts = text.split("__");
-  if (parts.length >= 3 && parts[0] === "mcp") {
-    return `инструмент "${parts.slice(2).join("__")}" сервера MCP "${parts[1]}"`;
-  }
-  return text;
+  return name2 ?? "?";
 }
-var NOTIFY_KINDS = {
-  ask: {
-    title: "DSH: нужно подтверждение",
-    body: (detail) => {
-      const lines = [];
-      if (detail.taskTitle)
-        lines.push(`Задача «${detail.taskTitle}» ждёт подтверждения (инструмент: ${prettyToolName(detail.tool)})`);
-      else
-        lines.push(`Инструмент ${prettyToolName(detail.tool)} ждёт подтверждения`);
-      if (detail.reason)
-        lines.push(`Причина: ${detail.reason}`);
-      lines.push("Подтвердите или отклоните в DSH");
-      return lines.join("\n");
+function getNotifyKinds(locale) {
+  const text = LOCALE_TEXT[locale];
+  return {
+    ask: {
+      title: text.titles.ask,
+      body: (detail) => {
+        const lines = [
+          detail.taskTitle ? text.askWithTask(detail.taskTitle, prettyToolName(detail.tool)) : text.askWithoutTask(prettyToolName(detail.tool))
+        ];
+        if (detail.reason)
+          lines.push(text.reason(detail.reason));
+        lines.push(text.askFooter);
+        return lines.join("\n");
+      }
+    },
+    question: {
+      title: text.titles.question,
+      body: (detail) => {
+        const lines = [
+          detail.taskTitle ? text.questionWithTask(detail.taskTitle) : text.questionWithoutTask
+        ];
+        if (detail.question)
+          lines.push(text.question(detail.question));
+        lines.push(text.questionFooter);
+        return lines.join("\n");
+      }
+    },
+    done: {
+      title: text.titles.done,
+      body: (detail) => {
+        const title = detail.taskTitle ? text.doneWithTask(detail.taskTitle) : text.doneWithoutTask;
+        return [title, text.duration(formatDurationForLocale(detail.durationMs ?? 0, locale))].join("\n");
+      }
+    },
+    "subagent-done": {
+      title: text.titles["subagent-done"],
+      body: (detail) => {
+        const title = detail.taskTitle ? text.subagentDoneWithTask(detail.taskTitle) : text.subagentDoneWithoutTask;
+        return [title, text.duration(formatDurationForLocale(detail.durationMs ?? 0, locale))].join("\n");
+      }
+    },
+    error: {
+      title: text.titles.error,
+      body: (detail) => {
+        const lines = [
+          detail.taskTitle ? text.errorWithTask(detail.taskTitle) : text.errorWithoutTask
+        ];
+        if (detail.turn) {
+          lines.push(text.errorTurn(detail.turn, detail.step, detail.message ?? ""));
+        } else if (detail.message) {
+          lines.push(text.errorMessage(detail.message));
+        }
+        return lines.join("\n");
+      }
+    },
+    "turn-end": {
+      title: text.titles["turn-end"],
+      body: (detail) => detail.taskTitle ? detail.turn ? text.turnEndWithTaskTurn(detail.taskTitle, detail.turn) : text.turnEndWithTaskWithoutTurn(detail.taskTitle) : detail.turn ? text.turnEndWithoutTaskWithTurn(detail.turn) : text.turnEndWithoutTaskWithoutTurn
     }
-  },
-  question: {
-    title: "DSH: вопрос к вам",
-    body: (detail) => {
-      const lines = [];
-      if (detail.taskTitle)
-        lines.push(`Задача «${detail.taskTitle}» ждёт вашего ответа`);
-      else
-        lines.push("Есть вопрос — нужен ваш ответ");
-      if (detail.question)
-        lines.push(`Вопрос: ${detail.question}`);
-      lines.push("Ответьте в DSH");
-      return lines.join("\n");
-    }
-  },
-  done: {
-    title: "DSH: задача выполнена",
-    body: (detail) => {
-      const lines = [];
-      if (detail.taskTitle)
-        lines.push(`Задача «${detail.taskTitle}» выполнена`);
-      else
-        lines.push("Фоновая задача выполнена");
-      lines.push(`Заняло: ${formatDuration(detail.durationMs ?? 0)}`);
-      return lines.join("\n");
-    }
-  },
-  "subagent-done": {
-    title: "DSH: подзадача выполнена",
-    body: (detail) => {
-      const lines = [];
-      if (detail.taskTitle)
-        lines.push(`Подзадача «${detail.taskTitle}» выполнена`);
-      else
-        lines.push("Подзадача выполнена");
-      lines.push(`Заняло: ${formatDuration(detail.durationMs ?? 0)}`);
-      return lines.join("\n");
-    }
-  },
-  error: {
-    title: "DSH: ошибка задачи",
-    body: (detail) => {
-      const lines = [];
-      if (detail.taskTitle)
-        lines.push(`Ошибка при выполнении задачи «${detail.taskTitle}»`);
-      else
-        lines.push("Ошибка выполнения задачи");
-      if (detail.turn)
-        lines.push(`Раунд ${detail.turn}${detail.step ? `, шаг ${detail.step}` : ""}: ${detail.message ?? ""}`);
-      else if (detail.message)
-        lines.push(`Ошибка: ${detail.message}`);
-      return lines.join("\n");
-    }
-  },
-  "turn-end": {
-    title: "DSH: ход завершён",
-    body: (detail) => {
-      const turn = detail.turn ? `раунд ${detail.turn}` : "";
-      if (detail.taskTitle)
-        return `Задача «${detail.taskTitle}»${turn ? `, ${turn}` : ""}: работа завершена`;
-      return `${turn ? `${turn}: ` : ""}работа завершена`;
-    }
-  }
-};
+  };
+}
+var NOTIFY_KINDS = getNotifyKinds("zh");
 
 // lib/server/events/impl/translate/index.js
 var NOT_A_NOTIFICATION = { ok: false };
-function render(kind, detail) {
-  const text = NOTIFY_KINDS[kind];
+function render(kind, detail, locale = "zh") {
+  const text = getNotifyKinds(locale)[kind];
   return { ok: true, request: { kind, title: text.title, body: text.body(detail), sessionId: detail.sessionId } };
 }
 function agentSessionId(agent) {
@@ -11528,23 +12423,23 @@ function agentSessionId(agent) {
 function titleOf(agent) {
   return agent === void 0 ? { found: false } : sessionTitleOf(agent);
 }
-function translateApproval(request) {
+function translateApproval(request, locale = "zh") {
   const title = titleOf(request.agent);
   return render("ask", {
     sessionId: agentSessionId(request.agent),
     tool: request.toolName,
     taskTitle: title.found ? title.title : void 0,
     reason: request.reason
-  });
+  }, locale);
 }
-function translateUserQuestion(request) {
+function translateUserQuestion(request, locale = "zh") {
   const first = request.questions[0];
   const title = titleOf(request.agent);
   return render("question", {
     sessionId: agentSessionId(request.agent),
     taskTitle: title.found ? title.title : void 0,
     question: first !== void 0 && first.question.length > 0 ? first.question : void 0
-  });
+  }, locale);
 }
 function translateSessionEvent(sessionId, event) {
   const read = turnEndEvidenceOf(event);
@@ -11552,23 +12447,23 @@ function translateSessionEvent(sessionId, event) {
     agentStates.rememberTurnEnd(sessionId, read.evidence);
   return NOT_A_NOTIFICATION;
 }
-function translateAgentStatus(payload) {
+function translateAgentStatus(payload, locale = "zh") {
   const outcome = agentStates.observeStatus(payload);
   if (!outcome.ok)
     return NOT_A_NOTIFICATION;
-  return render(outcome.kind, { sessionId: agentSessionId(payload.agent), taskTitle: outcome.taskTitle, durationMs: outcome.durationMs });
+  return render(outcome.kind, { sessionId: agentSessionId(payload.agent), taskTitle: outcome.taskTitle, durationMs: outcome.durationMs }, locale);
 }
 function translateAgentDisposed(payload) {
   agentStates.forget(payload.agent.id);
   return NOT_A_NOTIFICATION;
 }
-function translateTurnStopping(payload) {
+function translateTurnStopping(payload, locale = "zh") {
   const outcome = agentStates.observeTurnStopping(payload);
   if (!outcome.ok)
     return NOT_A_NOTIFICATION;
-  return render("turn-end", { sessionId: agentSessionId(payload.agent), turn: outcome.turn, taskTitle: outcome.taskTitle });
+  return render("turn-end", { sessionId: agentSessionId(payload.agent), turn: outcome.turn, taskTitle: outcome.taskTitle }, locale);
 }
-function translateAgentError(payload) {
+function translateAgentError(payload, locale = "zh") {
   const title = titleOf(payload.agent);
   return render("error", {
     sessionId: agentSessionId(payload.agent),
@@ -11576,7 +12471,7 @@ function translateAgentError(payload) {
     taskTitle: title.found ? title.title : void 0,
     turn: payload.turn,
     step: payload.step
-  });
+  }, locale);
 }
 
 // lib/server/events/impl/listen/index.js
@@ -11592,16 +12487,17 @@ var EventListener = class {
     this.installed = true;
     agentStates.install({ logger: deps.logger, agents: deps.agents });
     const { events: port, pipeline } = deps;
+    const readLocale = deps.readLocale ?? (() => "zh");
     this.releases.push(
-      port.onApprovalRequest((request) => forward(pipeline, translateApproval(request))),
-      port.onUserQuestion((request) => forward(pipeline, translateUserQuestion(request))),
+      port.onApprovalRequest((request) => forward(pipeline, translateApproval(request, readLocale()))),
+      port.onUserQuestion((request) => forward(pipeline, translateUserQuestion(request, readLocale()))),
       port.onSessionEvent((sessionId, event) => forward(pipeline, translateSessionEvent(sessionId, event))),
       // agent 四个事件把官方载荷整份转给翻译: 翻出哪一类通知要看会话日志, header 与
       // turn 证据, 这些都在载荷里的 Agent 对象上, 本块不做拆分.
-      port.onAgentStatus((payload) => forward(pipeline, translateAgentStatus(payload))),
+      port.onAgentStatus((payload) => forward(pipeline, translateAgentStatus(payload, readLocale()))),
       port.onAgentDisposed((payload) => forward(pipeline, translateAgentDisposed(payload))),
-      port.onAgentTurnStopping((payload) => forward(pipeline, translateTurnStopping(payload))),
-      port.onAgentError((payload) => forward(pipeline, translateAgentError(payload)))
+      port.onAgentTurnStopping((payload) => forward(pipeline, translateTurnStopping(payload, readLocale()))),
+      port.onAgentError((payload) => forward(pipeline, translateAgentError(payload, readLocale())))
     );
   }
   /** 摘除全部订阅并卸载状态机.重复调用无害——卸载链可能走到不止一次. */
@@ -11667,13 +12563,16 @@ function deliveryOf(channelId, result) {
     return { channelId, status: "failed", reason: result.reason };
   if (result.status === "skipped")
     return { channelId, status: "skipped", reason: result.reason };
-  return { channelId, status: "ok" };
+  return result.soundWarning === void 0 ? { channelId, status: "ok" } : { channelId, status: "ok", soundWarning: result.soundWarning };
 }
 function reasonOf(cause) {
   return reasonFromCause("reasonChannelThrew", cause);
 }
 function throttled(channelId) {
   return { channelId, status: "skipped", reason: reason("reasonThrottled") };
+}
+function canceled() {
+  return { status: "skipped", reason: reason("reasonDispatchCanceled") };
 }
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -11694,10 +12593,15 @@ var Dispatcher = class {
     this.installed = true;
     this.port = port;
   }
-  /** 卸载: 放开能力面并清空全部节奏状态 (门与节流都不跨装配期存活). */
+  /** 卸载: 放开能力面, 清空全部节奏状态 (门与节流都不跨装配期存活), 
+   *  并把**还在队列里**的投递逐条结算掉.顺序不能反: `clear()` 一执行就再也取不到那些队列项. */
   release() {
     this.installed = false;
     this.port = UNINSTALLED4;
+    for (const rhythm of this.rhythms.values()) {
+      for (const queued of rhythm.queue.splice(0))
+        queued.cancel();
+    }
     this.rhythms.clear();
   }
   /** 投递: 逐目标 fail-soft (出口承诺失败是返回值), 结果与 `targets` 同序同长. */
@@ -11726,8 +12630,16 @@ var Dispatcher = class {
       });
     }
   }
-  /** 违约频道的状态写面: 状态只是观测面, 它自己违约也不能再升级为抛出——明细已经成立. */
+  /**
+   * 违约频道的状态写面: 状态只是观测面, 它自己违约也不能再升级为抛出——明细已经成立.
+   *
+   * **卸载后不写** (与 `settle` 同一条闸): 这是本块**第二条**会写频道状态的路, 出口在卸载之后
+   * 才违约 (网络层抛错常发生在这类时刻)就会走它.漏掉这一条, 模块头承诺的«不再写频道状态»
+   * 就是空话——而写面会真的落到磁盘上.
+   */
   recordFailure(port, channelId, failure) {
+    if (!this.installed)
+      return;
     try {
       port.stores.recordStatus(channelId, "failed", failure);
     } catch {
@@ -11743,7 +12655,7 @@ var Dispatcher = class {
         return throttled(routed.channelId);
       rhythm.lastAt = now;
     }
-    const result = await this.withGate(rhythm, policy.maxInflight, () => this.deliverWithRetry(port, message, routed.target, policy));
+    const result = await this.withGate(rhythm, policy.maxInflight, () => this.deliverWithRetry(port, message, routed.target, policy), () => canceled());
     return this.settle(port, routed.channelId, result);
   }
   /** 取 (必要时创建)频道的节奏状态. */
@@ -11755,8 +12667,16 @@ var Dispatcher = class {
     this.rhythms.set(channelId, fresh);
     return fresh;
   }
-  /** 在途门: 槽位满时排队等待, 队列无上限. */
-  withGate(rhythm, maxInflight, run2) {
+  /**
+   * 在途门: 槽位满时排队等待, 队列无上限.
+   *
+   * `onCanceled` 只对**队列项**有意义 (`maxInflight > 0` 才有队列, 当前只有 bark): 卸载时它把
+   * 这一条结算成 skipped, 开投永不发生.必须是 **resolve 而不是 reject**——reject 会冒给
+   * `dispatchSafely` 的 catch, 产出一条 failed 明细并再写一次频道状态, 与«卸载后不写状态»
+   * 直接矛盾; 也会让调用方看到一次根本不存在的失败.形参不叫 `canceled`: 模块里已有一个同名的
+   * 结算函数, 遮蔽它会让«这个 canceled 到底是谁»要靠读上下文才答得上来.
+   */
+  withGate(rhythm, maxInflight, run2, onCanceled) {
     if (maxInflight <= 0)
       return run2();
     return new Promise((resolve, reject2) => {
@@ -11770,26 +12690,36 @@ var Dispatcher = class {
           reject2(cause);
         });
       };
-      if (rhythm.inflight >= maxInflight)
-        rhythm.queue.push(start);
-      else
+      if (rhythm.inflight < maxInflight) {
         start();
+        return;
+      }
+      rhythm.queue.push({ start, cancel: () => resolve(onCanceled()) });
     });
   }
-  /** 让出一个在途槽位并唤醒队首. */
+  /** 让出一个在途槽位并唤醒队首 (队首是成对登记项, 走它那一半). */
   releaseSlot(rhythm) {
     rhythm.inflight -= 1;
     const next = rhythm.queue.shift();
     if (next !== void 0)
-      next();
+      next.start();
   }
-  /** 单目标投递 + 重试: 只对出口标注 `retryable` 的失败重试, 线性退避. */
+  /**
+   * 单目标投递 + 重试: 只对出口标注 `retryable` 的失败重试, 线性退避.
+   *
+   * `this.installed` 是退避闸而不只是首轮闸: 卸载后仍在退避循环里, 就是插件已经卸了还在按
+   * 节奏对外打请求 (实测 attempts 1 → 3).它在**两个时间窗**上都要判: 循环条件挡住«本次投递
+   * 在途期间被卸载», 循环体内的复查挡住«退避等待期间被卸载»——只加循环条件的话, 退避醒来
+   * 之后那次 `deliverOnce` 照样会发出去.已经在途的那一次跑完, 如实归档, 不再有下一次.
+   */
   async deliverWithRetry(port, message, target, policy) {
     let attempt = 0;
     let result = await this.deliverOnce(port, message, target);
-    while (result.status === "failed" && result.retryable && attempt < policy.maxRetries) {
+    while (result.status === "failed" && result.retryable && attempt < policy.maxRetries && this.installed) {
       attempt += 1;
       await sleep(policy.backoffMs * attempt);
+      if (!this.installed)
+        break;
       result = await this.deliverOnce(port, message, target);
     }
     return result;
@@ -11799,12 +12729,18 @@ var Dispatcher = class {
     const results = await port.channels.deliver(message, [target]);
     return results[0];
   }
-  /** 写频道状态并返回归档明细. */
+  /**
+   * 写频道状态并返回归档明细.**卸载后一律不写**: 频道状态是给还在用的界面看的观测面, 
+   *  插件卸载了就没有读者, 而写面会真的落到磁盘上 (stores 域的 `record()` 不看 installed).
+   * 归档明细照常产出——«卸载后不再写状态»不等于«把这次投递改成没发生过».
+   */
   settle(port, channelId, result) {
+    if (!this.installed)
+      return deliveryOf(channelId, result);
     if (result.status === "failed")
       port.stores.recordStatus(channelId, "failed", result.reason);
     else if (result.status === "ok")
-      port.stores.recordStatus(channelId, "ok");
+      port.stores.recordStatus(channelId, "ok", void 0, result.soundWarning);
     return deliveryOf(channelId, result);
   }
 };
@@ -11974,8 +12910,6 @@ function assignBarkOptional(target, channel) {
   if (channel.timeoutMs !== void 0 && channel.timeoutMs > 0) {
     target.timeoutMs = channel.timeoutMs;
   }
-  if (channel.extras !== void 0)
-    target.extras = channel.extras;
 }
 function assignText(target, key, value) {
   if (value.length > 0)
@@ -11998,8 +12932,6 @@ function webhookTarget(channel) {
   if (channel.timeoutSec !== void 0 && channel.timeoutSec > 0) {
     target.timeoutSec = channel.timeoutSec;
   }
-  if (channel.extras !== void 0)
-    target.extras = channel.extras;
   return target;
 }
 function assignAuth(target, channel) {
@@ -12183,7 +13115,9 @@ var KindRegistry = class {
 var kindRegistry = new KindRegistry();
 
 // lib/server/sdk/impl/service/index.js
-var DEFAULT_TITLE = "Уведомление DSH";
+function defaultTitle(locale) {
+  return "Уведомление DSH";
+}
 var NOT_INSTALLED4 = "dsh-notifier: внешний интерфейс службы ещё не собран";
 var NOTIFIER_SERVICE = "wingsky.notifier";
 var UNINSTALLED6 = {
@@ -12206,7 +13140,8 @@ var UNINSTALLED6 = {
       void kind;
       throw new Error(NOT_INSTALLED4);
     }
-  }
+  },
+  readLocale: () => "zh"
 };
 function isNamespaceQualified(value) {
   const separator = value.indexOf(":");
@@ -12231,10 +13166,12 @@ function isSendableKind(kind, pipeline) {
 }
 var HostedService = class {
   pipeline;
+  readLocale;
   /** 类型取自契约上的字面量: 改一处不改另一处是编译错误. */
   apiVersion = 2;
-  constructor(pipeline) {
+  constructor(pipeline, readLocale) {
     this.pipeline = pipeline;
+    this.readLocale = readLocale;
   }
   /** 登记一种动态通知种类.非法入参**抛错**而不是静默忽略: 静默的代价不在本插件——插件作者看到的现象是«通知没
    * 发出去», 而设置页上根本没有他那一项, 没有任何线索指向«你的 id 拼错了». */
@@ -12265,7 +13202,7 @@ var HostedService = class {
     const title = request.title;
     const submit2 = {
       kind,
-      title: typeof title === "string" && title.length > 0 ? title : DEFAULT_TITLE,
+      title: typeof title === "string" && title.length > 0 ? title : defaultTitle(this.readLocale()),
       body
     };
     const severity = request.severity;
@@ -12281,13 +13218,16 @@ var SdkService = class {
   deps = UNINSTALLED6;
   /** 摘除器: 本域挂在宿主上的东西只有服务面一件, 但按清单收口, 将来多一件不用改结构. */
   disposers = [];
+  /** 当前服务面的 locale 读取器; 释放时切回中文, 旧引用仍可安全调用. */
+  readLocale = () => "zh";
   /** 装配: 构造服务对象并交出去. */
   install(deps) {
     if (this.installed)
       throw new Error("dsh-notifier: домен sdk собирается один раз");
     this.installed = true;
     this.deps = deps;
-    this.disposers.push(deps.expose.provide(new HostedService(deps.pipeline)));
+    this.readLocale = deps.readLocale ?? (() => "zh");
+    this.disposers.push(deps.expose.provide(new HostedService(deps.pipeline, () => this.readLocale())));
   }
   /** 卸载: 把服务面从上下文上收回来.重复调用无害——卸载链可能走到不止一次. */
   release() {
@@ -12296,6 +13236,7 @@ var SdkService = class {
     this.disposers = [];
     this.installed = false;
     this.deps = UNINSTALLED6;
+    this.readLocale = () => "zh";
   }
   /** 清单: 登记项合并确认名单 (确认名单实时读设置, 不取装配期快照). */
   listKinds() {
@@ -12346,6 +13287,8 @@ __export(interface_exports5, {
 import { readFile } from "node:fs/promises";
 var HISTORY_LIMIT = 200;
 var DAY_MS = 864e5;
+var NOOP2 = () => {
+};
 var UNINSTALLED7 = {
   logger: { warn: () => {
   } },
@@ -12376,10 +13319,16 @@ var HistoryStore = class {
     this.installed = false;
     this.deps = UNINSTALLED7;
   }
-  /** 追加一条记录: 入队即返回 (不阻塞通知主流程), 失败仅经日志出口告警. */
+  /**
+   * 追加一条记录: 入队即返回 (不阻塞通知主流程), 失败仅经日志出口告警.
+   *
+   * 经 `enqueue` 而不是直接 `this.queue = this.queue.then(...)`: 直接赋值时排在本条之后的那次
+   * 写会挂在一个可能被拒绝的 promise 上, 一次失败就让此后每一条历史静默不写.与 clear 共用
+   * 入队口, 这条护栏就不必在两条写上各记得一次.
+   */
   append(entry) {
     const deps = this.deps;
-    this.queue = this.queue.then(async () => {
+    void this.enqueue(async () => {
       try {
         const lines = await this.currentLines();
         lines.push(JSON.stringify(entry));
@@ -12418,18 +13367,57 @@ var HistoryStore = class {
     records.splice(0, Math.max(0, records.length - HISTORY_LIMIT));
     return records;
   }
-  /** 清空全部记录, 返回被清空条数. */
+  /**
+   * 清空全部记录.**进写队列** (#1016 残留 1).
+   *
+   * 为什么不进队列是一条真数据竞态, 不只是顺序问题: 清空在队列外时, 一次在飞的 append 会
+   * «读旧行 → 追加新行 → 写回», 而清空恰好插在它读与写之间——清空把文件截空之后, 那一次
+   * append 用它读到的旧行把**整段旧记录原样写回**.用户看到«已清空 N 条», 刷新后记录全在.
+   * 落进同一条队列后次序唯一: 先到的 append 落完盘再清空, 后到的 append 落在清空之后.
+   *
+   * 返回两态而不是条数: 落盘失败必须让调用方**看得见** (返回裸条数时端点只能答 200, 界面提示
+   * «已清空 N 条»而文件纹丝未动).**本方法不抛错**——抛错经路由的失败出口转成 500, error
+   * 字段是 Node 错误原文 (带 errno 与绝对路径), 与 issue #1016«errno/路径不外送»直接冲突.
+   */
   async clear() {
-    let removed = 0;
-    try {
-      removed = (await readFile(this.file, "utf8")).split("\n").filter(Boolean).length;
-    } catch {
-    }
-    const written = await writeTextAtomic(this.file, "");
-    if (!written.ok) {
-      this.deps.logger.warn(`dsh-notifier: не удалось очистить историю: ${written.reason}`);
-    }
-    return removed;
+    const deps = this.deps;
+    return this.enqueue(async () => {
+      let removed = 0;
+      try {
+        removed = (await readFile(this.file, "utf8")).split("\n").filter(Boolean).length;
+      } catch {
+      }
+      const written = await writeTextAtomic(this.file, "");
+      if (!written.ok) {
+        deps.logger.warn(`dsh-notifier: не удалось очистить историю: ${written.reason}`);
+        return { ok: false, reason: "unavailable" };
+      }
+      return { ok: true, removed };
+    });
+  }
+  /**
+   * 把一次写挂到队列尾.写法照抄 config 域的同名方法.
+   *
+   * 前两条是**同一道护栏的两个冗余机制**, 各自都足以挡住«前一次抛错 ⇒ 此后每一条历史都静默不写»: 
+   * 1. `.then(task, task)`——两个分支都给同一个 task, 前一次无论成败后一次都照常执行.
+   * 2. `result.then(NOOP, NOOP)` 中和之后**赋回队列的才是它**, 于是队列上永远不挂 rejected promise.
+   *    append 的 task 自己 try/catch 住了; clear 的 task 若在兜底之外抛出 (判据推翻了«绝不抛»的
+   *    前提), 接住那次抛出的是第 1 条——第 2 条在**当前这个双分支写法下并不是**«抛出后后续写被
+   *    跳过»的原因, 那个症状要退回单分支 `.then(task)` 才成立.
+   *
+   * **正因冗余, 改掉任何一条单独看都判不出来**: 实测单独去掉第 2 条全绿, 单独退回单分支 `.then(task)`
+   * 也全绿, **两条一起去掉**才红, 且只红 `test/unit/stores/history.test.ts` 里«清空的 task 抛错后, 
+   * 紧随其后的 append 仍然落盘»那一条.这既是它们必须一起保留的理由 (少一条时行为不变, 但缓冲
+   * 归零), 也是那条判据只能断**性质**, 断不了某一条写法的原因.
+   *
+   * 3. task 内**绝不再入队**: enqueue 同步把队列设成 `result.then(...)`, task 里再入队就是等自己
+   *    刚挂上去的 tail, 而那个 tail 排在自己后面, 自己不返回它就不 resolve (死锁).config 域为
+   *    此把 apply 与 commit 之间的经队列路径在结构上写死, 这里靠同一条纪律.
+   */
+  enqueue(task) {
+    const result = this.queue.then(task, task);
+    this.queue = result.then(NOOP2, NOOP2);
+    return result;
   }
   /** 现有行: 读不到文件即空列表 (首次写入从零开始, 与读语义一致). */
   async currentLines() {
@@ -12480,7 +13468,15 @@ function normalizeDelivery(value) {
   const reason2 = normalizeReason(source.reason);
   if (reason2 !== void 0)
     delivery.reason = reason2;
+  const warning = warningOf(source);
+  if (warning !== void 0)
+    delivery.soundWarning = warning;
   return delivery;
+}
+function warningOf(source) {
+  if (source.status !== "ok")
+    return void 0;
+  return normalizeSoundWarning(source.soundWarning);
 }
 var historyStore = new HistoryStore();
 
@@ -12516,7 +13512,7 @@ var StatusStore = class {
     this.mirror = {};
   }
   /** 记录一次投递终态: 内存立即更新, 落盘延后合并 (失败仅经日志出口告警). */
-  record(channelId, status, error) {
+  record(channelId, status, error, soundWarning) {
     this.loadFromDisk();
     const prev = this.mirror[channelId];
     const entry = {
@@ -12527,6 +13523,9 @@ var StatusStore = class {
     };
     if (status === "failed" && error !== void 0) {
       entry.lastError = clampReasonDetail(error, STATUS_ERROR_LIMIT);
+    }
+    if (status === "ok" && soundWarning !== void 0) {
+      entry.lastSoundWarning = clampReasonDetail(soundWarning, STATUS_ERROR_LIMIT);
     }
     delete this.mirror[channelId];
     this.mirror[channelId] = entry;
@@ -12611,7 +13610,15 @@ function normalizeEntry2(entry) {
   const lastError = normalizeReason(source.lastError);
   if (lastError !== void 0)
     normalized.lastError = lastError;
+  const warning = warningOf2(source, normalized.lastStatus);
+  if (warning !== void 0)
+    normalized.lastSoundWarning = warning;
   return normalized;
+}
+function warningOf2(source, lastStatus) {
+  if (lastStatus !== "ok")
+    return void 0;
+  return normalizeSoundWarning(source.lastSoundWarning, STATUS_ERROR_LIMIT);
 }
 var statusStore = new StatusStore();
 
@@ -12633,23 +13640,413 @@ async function readHistory() {
 async function clearHistory() {
   return historyStore.clear();
 }
-function recordStatus(channelId, status, error) {
-  statusStore.record(channelId, status, error);
+function recordStatus(channelId, status, error, soundWarning) {
+  statusStore.record(channelId, status, error, soundWarning);
 }
 async function readStatus() {
   return statusStore.read();
 }
 
+// ../../shared/upgrade-chain.js
+import { existsSync as existsSync2, readFileSync as readFileSync3 } from "node:fs";
+import { dirname as dirname3, join as join5 } from "node:path";
+var UNKNOWN_VERSION = "0.0.0";
+var PACKAGE_ROOT_MAX_DEPTH = 8;
+function selectPendingSteps(steps, recorded) {
+  return [...steps].sort((left, right) => compareVersions(left.targetVersion, right.targetVersion)).filter((step) => compareVersions(step.fromVersion, recorded) >= 0);
+}
+function newestTargetVersion(steps) {
+  let newest = "";
+  for (const step of steps) {
+    if (newest === "" || compareVersions(step.targetVersion, newest) > 0) {
+      newest = step.targetVersion;
+    }
+  }
+  return newest;
+}
+function diagnoseGap(steps, recorded, target, label) {
+  const gap = compareVersions(recorded, target);
+  if (gap === 0)
+    return null;
+  if (gap < 0) {
+    return {
+      kind: "behind",
+      message: `${label}: версия хранилища ${recorded} ниже версии плагина ${target}, нет подходящего шага обновления`
+    };
+  }
+  const newest = newestTargetVersion(steps);
+  if (newest !== "" && compareVersions(newest, target) > 0) {
+    return {
+      kind: "ahead-of-steps",
+      message: `${label}: целевая версия цепочки ${newest} выше версии плагина ${target} (хранилище обновлено до ${recorded}) — таблица шагов не синхронизирована с package.json`
+    };
+  }
+  return {
+    kind: "downgrade",
+    message: `${label}: версия хранилища ${recorded} выше версии плагина ${target}, цепочка обновлений не откатывается`
+  };
+}
+function compareVersions(left, right) {
+  const a = parseVersion(left);
+  const b = parseVersion(right);
+  const length = Math.max(a.length, b.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (a[index] || 0) - (b[index] || 0);
+    if (difference !== 0)
+      return difference > 0 ? 1 : -1;
+  }
+  return 0;
+}
+function parseVersion(text) {
+  const core = text.split("-")[0] ?? "";
+  return core.split(".").map((part) => /^\d+$/.test(part) ? Number.parseInt(part, 10) : 0);
+}
+function packageRootFrom(fromDir) {
+  let current = fromDir;
+  for (let depth = 0; depth < PACKAGE_ROOT_MAX_DEPTH; depth += 1) {
+    if (existsSync2(join5(current, "package.json")))
+      return current;
+    const parent = dirname3(current);
+    if (parent === current)
+      return void 0;
+    current = parent;
+  }
+  return void 0;
+}
+function pluginVersion(fromDir) {
+  const root = packageRootFrom(fromDir);
+  if (root === void 0)
+    return UNKNOWN_VERSION;
+  try {
+    const parsed = JSON.parse(readFileSync3(join5(root, "package.json"), "utf8"));
+    if (typeof parsed !== "object" || parsed === null || !("version" in parsed)) {
+      return UNKNOWN_VERSION;
+    }
+    const version = parsed.version;
+    return typeof version === "string" ? version : UNKNOWN_VERSION;
+  } catch {
+    return UNKNOWN_VERSION;
+  }
+}
+async function runUpgradeChain(ports) {
+  const recorded = await ports.readScale();
+  for (const step of selectPendingSteps(ports.steps, recorded)) {
+    await applyStep(step, ports);
+  }
+  const gap = diagnoseGap(ports.steps, await ports.readScale(), ports.targetVersion, ports.label);
+  if (gap !== null)
+    ports.logger.warn(gap.message);
+}
+async function applyStep(step, ports) {
+  try {
+    await step.run(ports.deps);
+  } catch (cause) {
+    throw new Error(`${ports.label}: не удалось обновить хранилище до ${step.targetVersion} — ${reasonOf2(cause)}`, {
+      cause
+    });
+  }
+  try {
+    await ports.writeScale(step.targetVersion);
+  } catch (cause) {
+    throw new Error(`${ports.label}: не удалось записать номер версии хранилища (${step.targetVersion}) — ${reasonOf2(cause)}`, { cause });
+  }
+}
+function reasonOf2(cause) {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+function createUpgradeRunner(label, run2) {
+  let installed = false;
+  let installing = false;
+  return {
+    async install(deps) {
+      if (installed)
+        throw new Error(`${label}: домен upgrade собирается один раз`);
+      if (installing)
+        throw new Error(`${label}: домен upgrade уже собирается, параллельная сборка невозможна`);
+      installing = true;
+      try {
+        await run2(deps);
+        installed = true;
+      } finally {
+        installing = false;
+      }
+    },
+    /** 卸载: 本域没有需要释放的东西——它只写了文件; 复位标记是为了让重装走完整的链. */
+    release() {
+      installed = false;
+    }
+  };
+}
+
+// lib/server/upgrade/impl/chain/index.js
+import { dirname as dirname4 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+
+// ../../shared/upgrade-tick.js
+function tickUpgradeVersionSync() {
+}
+
+// lib/server/upgrade/impl/steps/canonical-keys.js
+var TOP_LEVEL_KEYS = [...Object.keys(DEFAULTS), "channels"];
+var CHANNEL_TYPES = Object.keys(CHANNEL_SECRET_FIELDS);
+function requiredKeysOf2(type) {
+  return REQUIRED_KEYS[type] ?? [];
+}
+function valueDomainRequiredKeysOf(type) {
+  return VALUE_DOMAIN_REQUIRED_KEYS[type] ?? [];
+}
+var OUTBOUND_FIELD_KINDS = {
+  id: "string",
+  type: "string",
+  enabled: "boolean",
+  name: "string",
+  // bark
+  baseUrl: "string",
+  deviceKey: "string",
+  level: "level",
+  levels: "stringMap",
+  group: "string",
+  sound: "string",
+  icon: "string",
+  url: "string",
+  badge: "number",
+  timeoutMs: "barkTimeout",
+  // webhook
+  preset: "preset",
+  auth: "auth",
+  token: "string",
+  username: "string",
+  password: "string",
+  headerName: "string",
+  headerValue: "string",
+  template: "string",
+  headers: "stringMap",
+  timeoutSec: "webhookTimeout"
+};
+var BUILTIN_FIELD_KINDS = {
+  type: "string",
+  id: "string",
+  enabled: "boolean",
+  popup: "boolean",
+  sound: "sound",
+  whenVisible: "boolean"
+};
+var BUILTIN_DEFAULTS = {
+  browser: {
+    type: "browser",
+    id: "browser",
+    enabled: true,
+    popup: true,
+    sound: true,
+    whenVisible: false
+  },
+  system: { type: "system", id: "system", enabled: true, popup: true, sound: true }
+};
+function migrateCanonicalKeys() {
+  const file = notifierFile(CONFIG_FILE_NAME);
+  const read = readTextFileSync(file);
+  if (!read.ok)
+    return;
+  const shaped = withCanonicalKeys(parseObject(read.text));
+  if (shaped === null)
+    return;
+  const written = writeTextAtomicSync(file, JSON.stringify(shaped, null, 2) + "\n");
+  if (!written.ok)
+    throw new Error("dsh-notifier: не удалось записать очищенный формат конфигурации — " + written.reason);
+}
+function withCanonicalKeys(stored) {
+  if (Object.keys(stored).length === 0)
+    return null;
+  const next = { ...stored };
+  const state = { touched: false };
+  cleanTopLevel(next, state);
+  cleanChannels(next, state);
+  ensureBuiltins(next, state);
+  return state.touched ? next : null;
+}
+function cleanTopLevel(stored, state) {
+  for (const key of Object.keys(stored)) {
+    if (!TOP_LEVEL_KEYS.includes(key)) {
+      delete stored[key];
+      state.touched = true;
+      continue;
+    }
+    const value = stored[key];
+    if (key === "channels") {
+      if (!Array.isArray(value))
+        drop(stored, key, state);
+      continue;
+    }
+    const expected = DEFAULTS[key];
+    if (expected === void 0 || typeof value !== typeof expected) {
+      drop(stored, key, state);
+      continue;
+    }
+    if (key === "historyMaxAgeDays" && !inCountRange(value, 0, HISTORY_MAX_AGE_DAYS_LIMIT)) {
+      drop(stored, key, state);
+    }
+  }
+}
+function cleanChannels(stored, state) {
+  const list = stored.channels;
+  if (!Array.isArray(list))
+    return;
+  const kept = [];
+  let listChanged = false;
+  for (const item of list) {
+    const cleaned = cleanEntry(item, state);
+    if (cleaned === null) {
+      listChanged = true;
+      continue;
+    }
+    if (cleaned.changed)
+      listChanged = true;
+    kept.push(cleaned.entry);
+  }
+  if (listChanged) {
+    stored.channels = kept;
+    state.touched = true;
+  }
+}
+function cleanEntry(item, state) {
+  if (!isRecord5(item))
+    return null;
+  const type = item.type;
+  if (typeof type !== "string")
+    return null;
+  if (!CHANNEL_TYPES.some((known) => known === type))
+    return null;
+  if (!hasIdentity(item, type))
+    return null;
+  const entry = { ...item };
+  const local = cleanEntryFields(entry, type);
+  if (local === null)
+    return null;
+  if (local.touched)
+    state.touched = true;
+  return { entry, changed: local.touched };
+}
+function hasIdentity(entry, type) {
+  if (isBuiltin(type))
+    return entry.id === void 0 || entry.id === type;
+  return typeof entry.id === "string" && entry.id !== "";
+}
+function cleanEntryFields(entry, type) {
+  const local = { touched: false };
+  const known = knownKeysOf(type);
+  const kinds = isBuiltin(type) ? BUILTIN_FIELD_KINDS : OUTBOUND_FIELD_KINDS;
+  const required = requiredKeysOf2(type);
+  const valueDomainRequired = valueDomainRequiredKeysOf(type);
+  for (const key of Object.keys(entry)) {
+    if (!known.includes(key)) {
+      drop(entry, key, local);
+      continue;
+    }
+    if (isFieldValueOfKind(entry[key], kinds[key]))
+      continue;
+    if (required.includes(key))
+      return null;
+    if (valueDomainRequired.includes(key)) {
+      if (entry[key] === "")
+        continue;
+      return null;
+    }
+    drop(entry, key, local);
+  }
+  return local;
+}
+function ensureBuiltins(stored, state) {
+  const list = Array.isArray(stored.channels) ? [...stored.channels] : [];
+  const local = { touched: false };
+  const present = /* @__PURE__ */ new Set();
+  for (const item of list) {
+    if (!isRecord5(item))
+      continue;
+    present.add(item.type);
+    completeBuiltinFields(item, item.type, local);
+  }
+  const missing = [];
+  for (const type of BUILTIN_CHANNEL_TYPES) {
+    if (present.has(type))
+      continue;
+    missing.push({ ...BUILTIN_DEFAULTS[type] });
+    local.touched = true;
+  }
+  if (!local.touched)
+    return;
+  stored.channels = [...missing, ...list];
+  state.touched = true;
+}
+function completeBuiltinFields(entry, type, local) {
+  const defaults = BUILTIN_DEFAULTS[type];
+  if (defaults === void 0)
+    return;
+  for (const [key, value] of Object.entries(defaults)) {
+    if (Object.hasOwn(entry, key))
+      continue;
+    entry[key] = value;
+    local.touched = true;
+  }
+}
+function knownKeysOf(type) {
+  if (type === "bark")
+    return BARK_KNOWN_KEYS;
+  if (type === "webhook")
+    return WEBHOOK_KNOWN_KEYS;
+  return Object.keys(BUILTIN_FIELD_KINDS);
+}
+function isFieldValueOfKind(value, kind) {
+  if (kind === void 0)
+    return true;
+  return FIELD_PREDICATES[kind](value);
+}
+var FIELD_PREDICATES = {
+  boolean: (value) => typeof value === "boolean",
+  string: (value) => typeof value === "string",
+  sound: (value) => typeof value === "boolean" || isSoundId(value),
+  number: (value) => typeof value === "number" && Number.isFinite(value),
+  stringMap: (value) => isRecord5(value),
+  level: (value) => isMember2(value, BARK_LEVELS),
+  auth: (value) => isMember2(value, WEBHOOK_AUTHS),
+  preset: (value) => isMember2(value, WEBHOOK_PRESETS),
+  barkTimeout: (value) => inCountRange(value, 0, BARK_TIMEOUT_MS_LIMIT),
+  webhookTimeout: (value) => inCountRange(value, WEBHOOK_TIMEOUT.min, WEBHOOK_TIMEOUT.max)
+};
+function inCountRange(value, min, max) {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+}
+function drop(stored, key, state) {
+  delete stored[key];
+  state.touched = true;
+}
+function isBuiltin(type) {
+  return type === "browser" || type === "system";
+}
+function isMember2(raw, allowed2) {
+  return typeof raw === "string" && allowed2.some((item) => item === raw);
+}
+function parseObject(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return isRecord5(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function isRecord5(raw) {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
+}
+
 // lib/server/upgrade/impl/steps/config-shape.js
-import { readFileSync as readFileSync4 } from "node:fs";
+import { readFileSync as readFileSync5 } from "node:fs";
 
 // lib/server/upgrade/impl/legacy/index.js
 var import_yaml = __toESM(require_dist(), 1);
-import { readFileSync as readFileSync3 } from "node:fs";
-import { join as join5 } from "node:path";
+import { readFileSync as readFileSync4 } from "node:fs";
+import { join as join6 } from "node:path";
 var SETTINGS_NS = "dsh-notifier";
 function formalSettingsFiles() {
-  return [join5(dshHome(), "settings.yaml.imported"), join5(dshHome(), "settings.yaml")];
+  return [join6(dshHome(), "settings.yaml.imported"), join6(dshHome(), "settings.yaml")];
 }
 var LEGACY_FILES = ["dsh-notifier.json", "dsh-notifier.json.migrated.bak"];
 var ENTRY_KEYS = [
@@ -12686,7 +14083,7 @@ function readFormalSettings() {
 function readDocumentSection(path) {
   let text;
   try {
-    text = readFileSync3(path, "utf8");
+    text = readFileSync4(path, "utf8");
   } catch (error) {
     if (isMissingFile(error))
       return void 0;
@@ -12755,7 +14152,7 @@ function readFromFile() {
     const path = legacyFile(name2);
     let text;
     try {
-      text = readFileSync3(path, "utf8");
+      text = readFileSync4(path, "utf8");
     } catch (error) {
       if (isMissingFile(error))
         continue;
@@ -12803,11 +14200,11 @@ function convert(stored) {
       continue;
     next[key] = stored[key];
   }
-  const legacySound2 = next[LEGACY_SOUND_KEY];
-  if (typeof legacySound2 === "boolean") {
+  const legacySound = next[LEGACY_SOUND_KEY];
+  if (typeof legacySound === "boolean") {
     for (const key of SOUND_KEYS) {
       if (!(key in next))
-        next[key] = legacySound2;
+        next[key] = legacySound;
     }
   }
   return next;
@@ -12845,7 +14242,7 @@ function withBuiltinChannels(stored) {
   const list = Array.isArray(stored.channels) ? stored.channels : [];
   const present = /* @__PURE__ */ new Set();
   for (const item of list) {
-    if (isRecord4(item))
+    if (isRecord6(item))
       present.add(item.type);
   }
   const missing = BUILTIN_TYPES.filter((type) => !present.has(type));
@@ -12884,7 +14281,7 @@ function firstDefined(outlet, legacy) {
 function readStoredObject(file) {
   let text;
   try {
-    text = readFileSync4(file, "utf8");
+    text = readFileSync5(file, "utf8");
   } catch (cause) {
     if (isMissingFile2(cause))
       return {};
@@ -12898,7 +14295,7 @@ function readStoredObject(file) {
     const detail = cause instanceof Error ? `: ${cause.message}` : "";
     throw new Error(`dsh-notifier: не удалось разобрать конфигурацию при смене формата — ${file}${detail}`, { cause });
   }
-  if (!isRecord4(parsed)) {
+  if (!isRecord6(parsed)) {
     throw new Error(`dsh-notifier: не удалось разобрать конфигурацию при смене формата — ${file}: верхний уровень не является обычным объектом`);
   }
   return parsed;
@@ -12906,7 +14303,7 @@ function readStoredObject(file) {
 function isMissingFile2(error) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
-function isRecord4(raw) {
+function isRecord6(raw) {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 }
 
@@ -12917,7 +14314,7 @@ function migrateQuietWindows() {
   const read = readTextFileSync(file);
   if (!read.ok)
     return;
-  const stored = parseObject(read.text);
+  const stored = parseObject2(read.text);
   const shaped = withQuietWindows(stored);
   if (shaped === null)
     return;
@@ -12927,7 +14324,7 @@ function migrateQuietWindows() {
 }
 function withQuietWindows(stored) {
   const quiet = stored.quietHours;
-  if (!isRecord5(quiet))
+  if (!isRecord7(quiet))
     return null;
   if (Array.isArray(quiet.windows)) {
     if (quiet.start === void 0 && quiet.end === void 0)
@@ -12947,20 +14344,20 @@ function withQuietWindows(stored) {
     delete next[key];
   return { ...stored, quietHours: next };
 }
-function parseObject(text) {
+function parseObject2(text) {
   try {
     const parsed = JSON.parse(text);
-    return isRecord5(parsed) ? parsed : {};
+    return isRecord7(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
-function isRecord5(raw) {
+function isRecord7(raw) {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 }
 
 // lib/server/upgrade/impl/steps/reason-shape.js
-import { readFileSync as readFileSync5 } from "node:fs";
+import { readFileSync as readFileSync6 } from "node:fs";
 function migrateReasonShape() {
   rewriteFile(notifierFile(STATUS_FILE_NAME), migrateStatusText);
   rewriteFile(notifierFile(HISTORY_FILE_NAME), migrateHistoryText);
@@ -12968,7 +14365,7 @@ function migrateReasonShape() {
 function rewriteFile(file, transform) {
   let text;
   try {
-    text = readFileSync5(file, "utf8");
+    text = readFileSync6(file, "utf8");
   } catch {
     return;
   }
@@ -12980,7 +14377,7 @@ function rewriteFile(file, transform) {
     throw new Error(`не удалось записать причины доставки: ${file} — ${written.reason}`);
 }
 function migrateStatusText(text) {
-  const table = parseObject2(text);
+  const table = parseObject3(text);
   if (table === void 0)
     return void 0;
   let changed = false;
@@ -13021,7 +14418,7 @@ function migrateHistoryText(text) {
   return changed ? lines.join("\n") : void 0;
 }
 function migrateHistoryLine(line) {
-  const entry = parseObject2(line);
+  const entry = parseObject3(line);
   if (entry === void 0)
     return void 0;
   const channels = entry.channels;
@@ -13042,7 +14439,7 @@ function migrateHistoryLine(line) {
   });
   return changed ? JSON.stringify({ ...entry, channels: rebuilt }) : void 0;
 }
-function parseObject2(text) {
+function parseObject3(text) {
   try {
     const parsed = JSON.parse(text);
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : void 0;
@@ -13052,7 +14449,7 @@ function parseObject2(text) {
 }
 
 // lib/server/upgrade/impl/steps/storage-layout.js
-import { existsSync as existsSync2, readFileSync as readFileSync6, renameSync as renameSync2 } from "node:fs";
+import { existsSync as existsSync3, readFileSync as readFileSync7, renameSync as renameSync2 } from "node:fs";
 var MIGRATED_SUFFIX = ".migrated.bak";
 var EMPTY_OBJECT = "{}\n";
 var ZERO_SEQ = "0\n";
@@ -13080,11 +14477,11 @@ function migrateStorageLayout() {
 function settleOne(entry) {
   const target = notifierFile(entry.target);
   const source = legacyFile(entry.legacy);
-  if (existsSync2(target)) {
+  if (existsSync3(target)) {
     archive(source, MIGRATED_SUFFIX);
     return;
   }
-  if (!existsSync2(source)) {
+  if (!existsSync3(source)) {
     writeTarget(target, entry.initial);
     return;
   }
@@ -13093,7 +14490,7 @@ function settleOne(entry) {
 }
 function readSource(source) {
   try {
-    return readFileSync6(source, "utf8");
+    return readFileSync7(source, "utf8");
   } catch (cause) {
     throw new Error(`старый файл хранилища недоступен для чтения: ${source}`, { cause });
   }
@@ -13104,17 +14501,13 @@ function writeTarget(target, text) {
     throw new Error(`не удалось записать файл хранилища: ${target} — ${written.reason}`);
 }
 function archive(source, suffix) {
-  if (!existsSync2(source))
+  if (!existsSync3(source))
     return;
   try {
     renameSync2(source, `${source}${suffix}`);
   } catch (cause) {
     throw new Error(`не удалось переименовать старый файл хранилища: ${source}`, { cause });
   }
-}
-
-// ../../shared/upgrade-tick.js
-function tickUpgradeVersionSync() {
 }
 
 // lib/server/upgrade/impl/steps/index.js
@@ -13126,23 +14519,31 @@ function migrateToNewLayout(deps) {
 function migrateToV026() {
   migrateQuietWindows();
 }
+function migrateToV029() {
+  migrateCanonicalKeys();
+}
 var STEPS = [
   { fromVersion: "0.2.3", targetVersion: "0.2.4", run: migrateToNewLayout },
   // 0.2.4 → 0.2.5 为空步 (客户端半区分层重构, 无形态变化): run 指共享空函数, 不再为新版本加空函数.
   { fromVersion: "0.2.4", targetVersion: "0.2.5", run: tickUpgradeVersionSync },
   { fromVersion: "0.2.5", targetVersion: "0.2.6", run: migrateToV026 },
   // 0.2.6 → 0.2.7 为空步 (本版不含 notifier 存储形态变化): run 指共享空函数.
-  { fromVersion: "0.2.6", targetVersion: "0.2.7", run: tickUpgradeVersionSync }
+  { fromVersion: "0.2.6", targetVersion: "0.2.7", run: tickUpgradeVersionSync },
+  // 0.2.7 → 0.2.8 为空步 (dsh 0.2.0-rc.2 适配, 无存储形态变化): run 指共享空函数.
+  { fromVersion: "0.2.7", targetVersion: "0.2.8", run: tickUpgradeVersionSync },
+  // 0.2.8 → 0.2.9: 配置形态清理 (#1016 S3)——读面不再兜底, 兜底搬到这里.
+  { fromVersion: "0.2.8", targetVersion: "0.2.9", run: migrateToV029 },
+  // 0.2.9 → 0.2.10 为空步 (本版无 notifier 存储形态变化): run 指共享空函数, 只推进刻度.
+  { fromVersion: "0.2.9", targetVersion: "0.2.10", run: tickUpgradeVersionSync },
+  // 0.2.10 → 0.2.11 为空步 (rc.1 适配不改变 notifier 存储形态): run 指共享空函数, 只推进刻度.
+  { fromVersion: "0.2.10", targetVersion: "0.2.11", run: tickUpgradeVersionSync }
 ];
 
 // lib/server/upgrade/impl/version/index.js
-import { readFileSync as readFileSync7 } from "node:fs";
-import { dirname as dirname3, join as join6 } from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { readFileSync as readFileSync8 } from "node:fs";
 var BASELINE_VERSION = "0.0.0";
-var UNKNOWN_VERSION = "0.0.0";
 var SUPPORTED_STORED_VERSION = /^(?:0|1)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u;
-function readStoredVersion(read = (file) => readFileSync7(file, "utf8")) {
+function readStoredVersion(read = (file) => readFileSync8(file, "utf8")) {
   let raw;
   try {
     raw = read(notifierFile(VERSION_FILE_NAME));
@@ -13165,33 +14566,6 @@ function writeStoredVersion(version) {
   return writeTextAtomicSync(notifierFile(VERSION_FILE_NAME), `${version}
 `);
 }
-function pluginVersion() {
-  try {
-    const manifest = join6(dirname3(fileURLToPath2(import.meta.url)), "..", "package.json");
-    const parsed = JSON.parse(readFileSync7(manifest, "utf8"));
-    return typeof parsed.version === "string" ? parsed.version : UNKNOWN_VERSION;
-  } catch {
-    return UNKNOWN_VERSION;
-  }
-}
-function compareVersions(left, right) {
-  const a = parseVersion(left);
-  const b = parseVersion(right);
-  const length = Math.max(a.length, b.length);
-  for (let index = 0; index < length; index += 1) {
-    const difference = (a[index] || 0) - (b[index] || 0);
-    if (difference !== 0)
-      return difference > 0 ? 1 : -1;
-  }
-  return 0;
-}
-function parseVersion(text) {
-  const parts = text.split(".");
-  if (parts.length > 3 || parts.some((part) => !/^(?:0|[1-9]\d*)$/u.test(part))) {
-    throw new Error(`dsh-notifier: неподдерживаемый номер версии: ${JSON.stringify(text)}`);
-  }
-  return parts.map((part) => Number(part));
-}
 function errorCode(cause) {
   if (typeof cause !== "object" || cause === null || !("code" in cause))
     return void 0;
@@ -13199,77 +14573,29 @@ function errorCode(cause) {
 }
 
 // lib/server/upgrade/impl/chain/index.js
-function runUpgradeChain(deps) {
-  const recorded = readStoredVersion();
-  runUpgradeSteps(pendingSteps(recorded), deps);
-  reportGap(readStoredVersion(), pluginVersion(), deps.logger);
-}
-function runUpgradeSteps(steps, deps) {
-  if (steps.length === 0)
-    return;
-  for (const step of steps)
-    runUpgradeStep(step, deps);
-  const finalVersion = steps[steps.length - 1].targetVersion;
-  const written = writeStoredVersion(finalVersion);
-  if (!written.ok) {
-    throw new Error(`dsh-notifier: не удалось записать номер версии хранилища (${finalVersion}) — ${written.reason}`);
-  }
-}
-function pendingSteps(recorded) {
-  return [...STEPS].sort((left, right) => compareVersions(left.targetVersion, right.targetVersion)).filter((step) => compareVersions(step.fromVersion, recorded) >= 0);
-}
-function runUpgradeStep(step, deps) {
-  try {
-    step.run(deps);
-  } catch (cause) {
-    throw new Error(`dsh-notifier: не удалось обновить хранилище до ${step.targetVersion} — ${cause instanceof Error ? cause.message : "неизвестная причина"}`, { cause });
-  }
-}
-function reportGap(recorded, target, logger) {
-  const gap = compareVersions(recorded, target);
-  if (gap === 0)
-    return;
-  if (gap < 0) {
-    logger.warn(`dsh-notifier: версия хранилища ${recorded} ниже версии плагина ${target}, нет подходящего шага обновления`);
-    return;
-  }
-  const newest = newestTargetVersion();
-  if (newest !== "" && compareVersions(newest, target) > 0) {
-    logger.warn(`dsh-notifier: целевая версия цепочки ${newest} выше версии плагина ${target} (хранилище обновлено до ${recorded}) — таблица шагов не синхронизирована с package.json`);
-    return;
-  }
-  logger.warn(`dsh-notifier: версия хранилища ${recorded} выше версии плагина ${target}, цепочка обновлений не откатывается`);
-}
-function newestTargetVersion() {
-  let newest = "";
-  for (const step of STEPS) {
-    if (newest === "" || compareVersions(step.targetVersion, newest) > 0)
-      newest = step.targetVersion;
-  }
-  return newest;
+var MODULE_DIR = dirname4(fileURLToPath2(import.meta.url));
+function runUpgradeChain2(deps) {
+  return runUpgradeChain({
+    label: "dsh-notifier",
+    steps: STEPS,
+    deps,
+    readScale: () => readStoredVersion(),
+    writeScale: (version) => {
+      const written = writeStoredVersion(version);
+      if (!written.ok)
+        throw new Error(written.reason);
+    },
+    targetVersion: pluginVersion(MODULE_DIR),
+    logger: deps.logger
+  });
 }
 
 // lib/server/upgrade/impl/service/index.js
-var UpgradeRunner = class {
-  /** 是否已装配; 单例实例重复装配是编程错误, 当场暴露. */
-  installed = false;
-  /** 装配: 先跑链.链在标记装配完成之前跑——它抛错时这次装配等于没发生, 宿主重试装配才有机会重跑链 (链是幂等的). */
-  install(deps) {
-    if (this.installed)
-      throw new Error("dsh-notifier: домен upgrade собирается один раз");
-    runUpgradeChain(deps);
-    this.installed = true;
-  }
-  /** 卸载: 本域没有需要释放的东西——它只写了文件. */
-  release() {
-    this.installed = false;
-  }
-};
-var upgradeRunner = new UpgradeRunner();
+var upgradeRunner = createUpgradeRunner("dsh-notifier", runUpgradeChain2);
 
 // lib/server/upgrade/interface.js
 function installUpgrade(deps) {
-  upgradeRunner.install(deps);
+  return upgradeRunner.install(deps);
 }
 function releaseUpgrade() {
   upgradeRunner.release();
@@ -13277,13 +14603,15 @@ function releaseUpgrade() {
 
 // lib/index.js
 var SETTINGS_SERVICE = "settings";
+var LOCALE_NAMESPACE = "locale";
+var LOCALE_PREFERENCE_FIELD = "preference";
 var name = "notifier";
 var inject = ["webServer", SETTINGS_SERVICE];
-function apply(ctx, config = {}) {
+async function apply(ctx, config = {}) {
   const host = bindHost(ctx);
   const stack = createDisposerStack();
   try {
-    assemble(host, config, stack);
+    await assemble(host, config, stack);
   } finally {
     stack.attach(ctx, "dsh-notifier");
   }
@@ -13311,8 +14639,15 @@ function bindHost(ctx) {
       ctx.logger.warn(`dsh-notifier: сбой обработки события хоста — ${reason2}`);
     }
   };
+  const remoteAdmission = liveConnectionAdmission(ctx);
+  const remotePeerAdmission = liveConnectionPeerAdmission(ctx);
   return {
     logger: ctx.logger,
+    remote: {
+      fence: (req) => routeFenceRejection(req, { remoteAdmission }),
+      admitStream: (req) => admitLongLivedRequest(req, { remotePeerAdmission }),
+      bindPeer: bindPeerLifecycle
+    },
     frames: new FrameBus(),
     // 依赖已由 `inject` 声明, 服务就绪才轮到本插件装配: 这里直接取用, 没有探测, 也没有迟到分支.
     legacySettings: ctx.settings,
@@ -13322,6 +14657,13 @@ function bindHost(ctx) {
     // 少了它就静默失败——`ctx.provide` 的 `(name: string, value?: any)` 重载会兜住任意字符串.
     expose: {
       provide: (service) => ctx.provide(NOTIFIER_SERVICE, service)
+    },
+    readLocale: () => {
+      const locale = ctx.settings.describe().find((descriptor) => descriptor.ns === LOCALE_NAMESPACE)?.value;
+      if (typeof locale !== "object" || locale === null)
+        return "zh";
+      const preference = locale[LOCALE_PREFERENCE_FIELD];
+      return preference === "en" ? "en" : "zh";
     },
     events: {
       // 审批事件是 waterfall: 本插件只旁观, 转发之后必须 next(), 漏掉就等于替所有人否决了
@@ -13368,9 +14710,10 @@ function bindHost(ctx) {
     }
   };
 }
-function assemble(host, config, stack) {
+async function assemble(host, config, stack) {
   stack.own(releaseSoundTemps);
-  installUpgrade({ logger: host.logger, legacySettings: host.legacySettings });
+  releaseUpgrade();
+  await installUpgrade({ logger: host.logger, legacySettings: host.legacySettings });
   stack.own(releaseUpgrade);
   installConfig({ logger: host.logger });
   stack.own(releaseConfig);
@@ -13389,13 +14732,15 @@ function assemble(host, config, stack) {
     events: host.events,
     agents: host.agents,
     logger: host.logger,
-    pipeline: interface_exports3
+    pipeline: interface_exports3,
+    readLocale: host.readLocale
   });
   stack.own(releaseEvents);
   installSdk({
     expose: host.expose,
     config: interface_exports2,
-    pipeline: interface_exports3
+    pipeline: interface_exports3,
+    readLocale: host.readLocale
   });
   stack.own(releaseSdk);
   installApi({
@@ -13403,11 +14748,13 @@ function assemble(host, config, stack) {
     webServerPort: host.webServerPort,
     frames: host.frames,
     logger: host.logger,
+    remote: host.remote,
     config: interface_exports2,
     stores: interface_exports5,
     pipeline: interface_exports3,
     kinds: interface_exports4,
-    channels: interface_exports
+    channels: interface_exports,
+    readLocale: host.readLocale
   });
   stack.own(releaseApi);
 }

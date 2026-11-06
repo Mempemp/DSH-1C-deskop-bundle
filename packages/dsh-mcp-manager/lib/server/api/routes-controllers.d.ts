@@ -8,26 +8,30 @@
  *
  * 行为约束（与拆分前逐字节等价）：
  * - 路由路径与围栏（方法白名单 / loopback 豁免）取自 shared/routes.ts 单点；
- * - loopback 围栏与 405 分流顺序不变（#473 R2：config GET 豁免 loopback，
- *   白名单外方法先于 loopback 直接 405）；
+ * - loopback 走快路径；非回环先经官方 admission，认证通过后才判 405；
  * - JSON body 字节上限沿用 readJsonBody 的默认行为（历史上那个显式上限
  *   常量 MAX_JSON_BODY_BYTES 已不存在）。
  *
  * 跨域取数一律经 apiPorts（见 deps.ts 与 impl/service），值为模块求值期绑定：
  * installApi 在包入口顶层完成，handler 内的 get() 取到的一定是装配后的能力。
  */
+import { guardLoopbackMethod } from "../../../shared/host-utils.js";
 import type { WebRoute } from "@deepseek-ai/dsh-host-webserver";
 import type { ServerResponse } from "node:http";
 import type { RoutesManager } from "../connection/interface.js";
 import type { ServerConfig } from "../config/interface.js";
 import type { McpStore } from "../store/interface.js";
+/** 路由组合根注入的官方短请求 admission；类型从已使用的公开值入口推导。 */
+export interface RouteAccess {
+    readonly remoteAdmission?: NonNullable<Parameters<typeof guardLoopbackMethod>[3]>["remoteAdmission"];
+}
 /** 控制器共享 helpers（原 makeRoutes 闭包三件套，提升为显式参数）。 */
-export interface RouteHelpers {
+export interface RouteHelpers extends RouteAccess {
     handleError(res: ServerResponse, error: unknown): void;
     scopeParam(url: URL): string;
     maybeSession(url: URL): Promise<void>;
 }
-/** UI 配置读写（GET 豁免 loopback；写操作 loopback-only，未知顶层键 400）。 */
+/** UI 配置读写（loopback 快路径；非回环先经官方 admission，之后才分方法和校体）。 */
 export declare function buildConfigRoute(manager: RoutesManager, helpers: RouteHelpers): WebRoute;
 /** 服务器集合 CRUD：GET 快照（纯读）/ POST 添加 / PATCH 更新 / DELETE 删除。 */
 export declare function buildServersRoute(manager: RoutesManager, helpers: RouteHelpers): WebRoute;

@@ -23,5 +23,5 @@ import type { ApiDeps } from "./deps.js";
 export declare function installApi(deps: ApiDeps): void;
 /** 卸载 API 层域。只复位装配标记：本域读的是外部递进来的能力，没有活资源要释放。 */
 export declare function releaseApi(): void;
-export { ROUTES, queryParam, makeRoutes, makeEventsRoute, makeHealthRoute, uiConfigChangedFrame, broadcastFrame, SSE_HEARTBEAT_MS, SSE_PING_FRAME, } from "./routes.js";
+export { ROUTES, queryParam, makeRoutes, makeRoutesWithAccess, makeEventsRoute, makeEventsRouteWithAccess, makeHealthRoute, makeHealthRouteWithAccess, uiConfigChangedFrame, broadcastFrame, SSE_HEARTBEAT_MS, SSE_PING_FRAME, } from "./routes.js";
 export type { ServerStatus } from "./impl/health/type.js";

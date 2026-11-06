@@ -56,6 +56,8 @@ export interface SseHubOptions {
 export interface SseHub {
     /** 注册一条 SSE 连接：入表 + 挂 close/error 监听。 */
     register(res: ServerResponse): void;
+    /** 立即从连接表移除并关闭；close 事件稍后到达时幂等。 */
+    unregister(res: ServerResponse): void;
     /** 向全部连接写一帧 text（调用方生成，通常经 sseData()）；判死收口在内部。 */
     broadcast(text: string): void;
     /** 当前连接数（语义 = 服务端未释放句柄数）。 */

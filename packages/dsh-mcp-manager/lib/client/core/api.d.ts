@@ -6,6 +6,10 @@
  * 仅 export 纯函数，不依赖任何状态。
  */
 import type { ApiRequestOptions, McpState, McpServerListEntry } from "./state.js";
+import type { UiActions } from "./state.js";
+export declare function assertActionSession(state: McpState, scope: string, generation: number): void;
+export declare function serverKey(server: McpServerListEntry): string;
+export declare function submitConnection(server: McpServerListEntry, state: McpState, actions: UiActions, kind: "connect" | "disconnect", submit: () => Promise<unknown>): Promise<void>;
 /**
  * tool-disable 的服务器全名形态（C6/C-DTO-4）：`@@global/<name>` 或
  * `@<绝对路径>/<name>`，与宿主 parseFullServerName 归一化一致；projectRoot
@@ -19,6 +23,8 @@ export declare function toolDisableServerKey(server: McpServerListEntry, state: 
  * 宿主 setSession 幂等短路，正常时零副作用）。空 cwd 返回空串。
  */
 export declare function cwdQueryOf(state: McpState): string;
+/** 已知空会话也必须显式携带 cwd，未知会话不可伪装为空会话。 */
+export declare function serversUrlOf(state: McpState): string | undefined;
 /**
  * resume 请求体（#1120）：本次会话 cwd 随请求固定服务端 root。
  * - 未知会话（sessionResolved=false）：回 undefined（不带 body，服务端回落既有绑定，

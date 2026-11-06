@@ -1,11 +1,11 @@
 /**
- * dsh-mcp-manager — inject/impl/image-admission/index.ts：ws_mcp_call 的 **A+ 自持图片准入**
- * （#767 笔 1b 交付物 B）。
+ * dsh-mcp-manager — inject/impl/image-admission/index.ts：ws_mcp_call 的 **A+ 图片策略与
+ * 诊断 fallback**（#767 笔 1b 交付物 B 的 0.2.2-rc.1 收口）。
  *
- * 背景：本包把远端转发改道宿主的 `ctx.tools.execute` 之后，官方执行器那次图片准入（它读
- * `exec.agent` 解模型路由）随 F4 收口一起去掉了——远端图片结果原本能落成真附件，去掉 agent 后
- * 只能退化成 `[image content]`。本模块把那次准入在本包内补回来：解模型路由 → 白名单解码 →
- * `attachments.saveImages` → 经官方 `finalizeContent` 接缝把模型面内容换成真附件块。
+ * 当前 nested 转发保留真实 `exec.agent`；官方 MCP definition 会先经 scoped attachments
+ * facade 准入并通过 `projectContent` 物化模型面。本模块仍先执行 10 张 / 每张 8 MiB 的统一
+ * 硬上限预检，再复用该官方投影，避免同一图片二次落库。custom tool 没有物化信号时，才执行
+ * 下方自持 fallback：解模型路由 → 白名单解码 → `attachments.saveImages` → `finalizeContent`。
  *
  * 判定顺序与文案**照官方 dsh-mcp-client 的 implement**（`resolveImageAdmission` /
  * `prepareImageProjection` / `imageDiagnostic`，逐字段一致，主控已逐条核实）；任何拒绝都只
@@ -26,6 +26,11 @@ export interface ImageAdmissionRequest {
     readonly agent: unknown;
     /** 待投影的**远端原始** content（必须是你 return 的那个 value 的 content，含 stale 前置提示）。 */
     readonly content: readonly unknown[];
+    /**
+     * nested 官方 MCP definition 已通过 `projectContent` 物化的模型内容。仅在远端原始 content
+     * 通过本包 count/decode 硬上限预检后复用，避免同一图片再次 `saveImages`。
+     */
+    readonly projectedContent?: readonly ModelContentBlock[];
     readonly signal: AbortSignal | undefined;
     readonly faces: ImageAdmissionFaces;
     /** 非图片块的文本化规则（接线点传 formatCallContentBlock，单一实现）。 */

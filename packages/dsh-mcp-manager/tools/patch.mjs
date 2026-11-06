@@ -1,14 +1,20 @@
 #!/usr/bin/env node
-// Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.10: сборочная копия плагина
-// плюс дельта против опубликованного апстрима.
+// Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.12: сборочная копия плагина
+// плюс дельта против опубликованного апстрима 0.2.11.
 //
 // Исходников апстрима у нас нет (он публикуется уже собранным), поэтому генератор
 // берёт опубликованный тарбол, проверяет его по контрольной сумме и по хешу
 // `lib/index.js`, применяет дельту из DELTAS и раскладывает файлы в наш пакет.
-// Всё, что не правится, копируется байт в байт — манифест, локаль, `.d.ts`,
-// лицензии: пакет остаётся тем же `@wingsky-1/dsh-mcp-manager@0.2.10`, чтобы
-// продолжать работать §DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json, сид каталога
-// и профили пользователей.
+// Всё, что не правится, копируется байт в байт — локаль, `.d.ts`, лицензии.
+//
+// Манифест — единственное место, где мы правим номер: имя
+// `@wingsky-1/dsh-mcp-manager` не меняется (на нём держатся
+// `$DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json`, сид каталога и профили
+// пользователей), а версия у нас своя — 0.2.12, чтобы пересборку можно было
+// отличить от опубликованной 0.2.11. Из-за этого в апгрейд-лестницу добавляется
+// пустой шаг 0.2.11 → 0.2.12: последняя ступень апстрима остаётся 0.2.11, и без
+// своего шага `diagnoseGap` предупреждал бы при каждом старте плагина, что
+// хранилище отстало от версии пакета.
 //
 // Запуск:  node tools/patch.mjs [--upstream <каталог|tgz>] [--out <каталог>]
 // Проверка: node tools/patch.mjs --check
@@ -31,27 +37,38 @@ import { gunzipSync } from 'node:zlib'
 
 export const UPSTREAM = {
   name: '@wingsky-1/dsh-mcp-manager',
-  version: '0.2.10',
-  integrity: 'sha512-xOOV4428/euWkj28wC68lCZOvdrYb0o8w9gHTRXp1XSiwS3tF/m9y5rZWRGbiOsfHyRWhaY30Ow7wf39IaQywg=='
+  version: '0.2.11',
+  integrity: 'sha512-GiL4LRhgDTrjLG7BBd+r7O6ecN2vWAV+0pNck2raqjNjQfd2ddBvIUiUO+u2TN6uxQRCw8ouAGXPrjKx2O7dag=='
 }
+
+/** Версия нашего пакета: та же сборка, но отличимая от опубликованной апстримом. */
+export const LOCAL_VERSION = '0.2.12'
 
 // Хеш исходного бандла апстрима: дельта применяется только к ровно этим байтам.
 export const UPSTREAM_SHA256 = {
-  'lib/index.js': '0677ff4723de9e428c57d2c083dfec010f27ecfa09680b5800705adbfaed4ef2'
+  'lib/index.js': '5c1935867430a5e90fd694f5b950586b54e8cabc3a622bb8c0e844f219da08a9'
 }
 
 // Хеш нашего результата. Пересчитывается генератором; пин держит провенанс:
 // если апстрим подменит содержимое под тем же номером версии, --check это увидит.
 export const PATCHED_SHA256 = {
-  'lib/index.js': '4dca1d42c56d9871c5d4d4223f68be29bd5895b3629e457c1d4832062222bc5c'
+  'lib/index.js': '6626103d88207fe472f68ace36da183b3c9eacf8c27b55f7181eae7874c23ac2',
+  'package.json': '944a8b471bac0562b8ba59fc6146fcb0cccf10011368a514c4fb7b8d6a0cee33'
 }
 
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Файлы апстрима, которые не едут в наш пакет: у нас свой README. */
 const DROPPED = ['README.md', 'README.en.md']
-/** Файл, который собирается из дельты, а не копируется. */
-const PATCHED = 'lib/index.js'
+
+/**
+ * Файлы, которые собираются правками, а не копируются: путь → правило.
+ * `lib/index.js` получает дельту из DELTAS, `package.json` — наш номер версии.
+ */
+const REWRITERS = new Map([
+  ['lib/index.js', (bytes) => Buffer.from(applyDeltas(bytes.toString('utf8')), 'utf8')],
+  ['package.json', setLocalVersion]
+])
 
 const OLD_WRITE_CHAINS = 'var writeChains = /* @__PURE__ */ new Map();'
 
@@ -254,13 +271,28 @@ const NEW_PERSIST_ROOT = [
   '  }'
 ].join('\n')
 
+/**
+ * Последняя ступень апстримной апгрейд-лестницы и наш пустой шаг поверх неё.
+ * Цель апстримной ступени берётся из `UPSTREAM.version`: если апстрим в следующем
+ * релизе добавит шаги, якорь перестанет находиться и генерация упадёт — это лучше,
+ * чем тихо оставить лестницу короче нашей версии.
+ */
+const OLD_LAST_STEP = `  { fromVersion: "0.2.10", targetVersion: "${UPSTREAM.version}", run: tickUpgradeVersion }`
+
+const NEW_LAST_STEP = [
+  `  { fromVersion: "0.2.10", targetVersion: "${UPSTREAM.version}", run: tickUpgradeVersion },`,
+  `  // ${UPSTREAM.version} → ${LOCAL_VERSION} 空步（本地补丁：只换写队列，home 级存储形态不变）：run 指共享空函数，只推进刻度。`,
+  `  { fromVersion: "${UPSTREAM.version}", targetVersion: "${LOCAL_VERSION}", run: tickUpgradeVersion }`
+].join('\n')
+
 /** Правки бандла: каждая должна найтись ровно один раз, иначе генерация падает. */
 export const DELTAS = [
   // Старое объявление цепочки убираем целиком: новая очередь вводится в следующей правке.
   { label: 'старая карта цепочек записи', from: `${OLD_WRITE_CHAINS}\n`, to: '' },
   { label: 'схлопывание writeFileAtomic (drainWriteSlot)', from: OLD_WRITE_FILE_ATOMIC, to: NEW_WRITE_FILE_ATOMIC },
   { label: 'поле persistSlots в CatalogDirectory', from: OLD_DIRTY_FIELD, to: NEW_DIRTY_FIELD },
-  { label: 'слияние persistRoot по root', from: OLD_PERSIST_ROOT, to: NEW_PERSIST_ROOT }
+  { label: 'слияние persistRoot по root', from: OLD_PERSIST_ROOT, to: NEW_PERSIST_ROOT },
+  { label: 'пустой шаг апгрейда до нашей версии', from: OLD_LAST_STEP, to: NEW_LAST_STEP }
 ]
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex')
@@ -280,6 +312,21 @@ export function applyDeltas(source, deltas = DELTAS) {
   let result = source
   for (const { from, to } of deltas) result = result.replace(from, () => to)
   return result
+}
+
+/**
+ * Манифест: единственное поле, которое мы меняем, — `version`. Правкой текста, а не
+ * разбором с `JSON.stringify`: байты остального манифеста обязаны совпасть с
+ * опубликованными (порядок ключей, форматирование, экранирование).
+ */
+function setLocalVersion(bytes) {
+  const text = bytes.toString('utf8')
+  const from = `"version": "${UPSTREAM.version}"`
+  const first = text.indexOf(from)
+  if (first < 0 || text.indexOf(from, first + from.length) >= 0) {
+    throw new Error(`package.json: ожидалось единственное поле version ${UPSTREAM.version}`)
+  }
+  return Buffer.from(text.replace(from, `"version": "${LOCAL_VERSION}"`), 'utf8')
 }
 
 const UPSTREAM_URL = `https://registry.npmjs.org/${UPSTREAM.name}/-/${UPSTREAM.name.split('/').pop()}-${UPSTREAM.version}.tgz`
@@ -362,16 +409,18 @@ export async function generate(upstream, outDir) {
       throw new Error(`${file}: хеш апстрима не совпал (${sha256(bytes)}), дельта не применяется`)
     }
     await mkdir(path.dirname(path.join(outDir, file)), { recursive: true })
-    if (file === PATCHED) {
-      const patched = Buffer.from(applyDeltas(bytes.toString('utf8')), 'utf8')
-      const pin = PATCHED_SHA256[file]
-      if (pin !== undefined && sha256(patched) !== pin) {
-        throw new Error(`${file}: результат дельты не совпал с PATCHED_SHA256 (${sha256(patched)})`)
-      }
-      await writeFile(path.join(outDir, file), patched)
-    } else {
+    const rewrite = REWRITERS.get(file)
+    if (rewrite === undefined) {
       await writeFile(path.join(outDir, file), bytes)
+      written.push(file)
+      continue
     }
+    const result = rewrite(bytes)
+    const pin = PATCHED_SHA256[file]
+    if (pin !== undefined && sha256(result) !== pin) {
+      throw new Error(`${file}: результат дельты не совпал с PATCHED_SHA256 (${sha256(result)})`)
+    }
+    await writeFile(path.join(outDir, file), result)
     written.push(file)
   }
   return written
@@ -392,9 +441,10 @@ async function main() {
   try {
     const written = await generate(upstream, outDir)
     if (!check) {
-      const patched = sha256(await readFile(path.join(outDir, PATCHED)))
       console.log(`собрано файлов: ${written.length}`)
-      console.log(`sha256 ${PATCHED}: ${patched}`)
+      for (const file of REWRITERS.keys()) {
+        console.log(`sha256 ${file}: ${sha256(await readFile(path.join(outDir, file)))}`)
+      }
       return
     }
     const diffs = []

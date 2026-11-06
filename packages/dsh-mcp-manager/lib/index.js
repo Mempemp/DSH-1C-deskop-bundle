@@ -654,7 +654,7 @@ var require_lib2 = __commonJS({
     Schema.extend = /* @__PURE__ */ __name(function extend(type, resolve22) {
       resolvers[type] = resolve22;
     }, "extend");
-    Schema.resolve = /* @__PURE__ */ __name(function resolve3(data, schema, options = {}, strict = false) {
+    Schema.resolve = /* @__PURE__ */ __name(function resolve4(data, schema, options = {}, strict = false) {
       if (!schema) return [data];
       if (options.ignore?.(data, schema)) return [data];
       if ((0, import_cosmokit.isNullable)(data) && schema.type !== "lazy") {
@@ -1356,9 +1356,94 @@ function isLoopbackRequest(request, options = {}) {
     return false;
   }
 }
+function liveConnectionAdmission(ctx) {
+  return () => {
+    const connection = ctx.get("connection", false);
+    if (connection === null || typeof connection !== "object" || !("requestRejection" in connection) || typeof connection.requestRejection !== "function") {
+      return void 0;
+    }
+    const requestRejection = connection.requestRejection;
+    return (request) => requestRejection.call(connection, request);
+  };
+}
+function isRemotePeerScope(value) {
+  return value !== null && typeof value === "object" && "ctx" in value && value.ctx !== null && typeof value.ctx === "object" && "effect" in value.ctx && typeof value.ctx.effect === "function";
+}
+function currentRemoteSource(source) {
+  try {
+    return source?.();
+  } catch {
+    return void 0;
+  }
+}
+function normalizeRemoteRejection(value) {
+  if (value === void 0)
+    return void 0;
+  return value === 401 || value === 403 ? value : 403;
+}
+function normalizePeerAdmissionResult(value) {
+  if (value !== null && typeof value === "object") {
+    if ("peer" in value && isRemotePeerScope(value.peer))
+      return { peer: value.peer };
+    if ("rejection" in value && (value.rejection === 401 || value.rejection === 403)) {
+      return { rejection: value.rejection };
+    }
+  }
+  return { rejection: 403 };
+}
+function liveConnectionPeerAdmission(ctx) {
+  return () => {
+    const connection = ctx.get("connection", false);
+    if (connection === null || typeof connection !== "object" || !("admit" in connection) || typeof connection.admit !== "function") {
+      return void 0;
+    }
+    const admit = connection.admit;
+    return (request) => normalizePeerAdmissionResult(admit.call(connection, request));
+  };
+}
+function admitLongLivedRequest(request, options = {}) {
+  if (isLoopbackPeerAddress(request)) {
+    return isLoopbackRequest(request, options) ? {} : { rejection: 403 };
+  }
+  const admission = currentRemoteSource(options.remotePeerAdmission);
+  if (typeof admission !== "function")
+    return { rejection: 403 };
+  try {
+    return normalizePeerAdmissionResult(admission(request));
+  } catch {
+    return { rejection: 403 };
+  }
+}
+function bindPeerLifecycle(peer, cleanup, label) {
+  const dispose = peer.ctx.effect(() => () => cleanup(), label);
+  let disposed = false;
+  return () => {
+    if (disposed)
+      return;
+    disposed = true;
+    if (typeof dispose === "function")
+      void dispose();
+  };
+}
+function routeFenceRejection(request, options = {}) {
+  if (isLoopbackPeerAddress(request)) {
+    return isLoopbackRequest(request, options) ? void 0 : 403;
+  }
+  const admission = currentRemoteSource(options.remoteAdmission);
+  if (typeof admission !== "function")
+    return 403;
+  try {
+    return normalizeRemoteRejection(admission(request));
+  } catch {
+    return 403;
+  }
+}
 function guardLoopbackMethod(req, res, methods, loopbackOptions) {
-  if (!isLoopbackRequest(req, loopbackOptions)) {
-    writeJson(res, 403, { error: "forbidden: loopback-only" });
+  const rejection = routeFenceRejection(req, loopbackOptions);
+  if (rejection !== void 0) {
+    writeJson(res, rejection, {
+      error: rejection === 401 ? "unauthorized" : "forbidden: loopback-only"
+    });
     return false;
   }
   if (!methods.includes(req.method)) {
@@ -1727,6 +1812,49 @@ async function readJsonFile(file) {
 
 // lib/server/shared/compose.js
 import { isAbsolute } from "node:path";
+
+// lib/server/shared/constants.js
+var DEFAULT_ANNOUNCE_CATALOG = true;
+var DEFAULT_CATALOG_MAX_ENTRIES = 6;
+var DEFAULT_TOOL_CALL_TIMEOUT_MS = 15e3;
+var CONNECT_TIMEOUT_MS = 1e4;
+var DISCOVERY_TIMEOUT_MS = 1e4;
+var LIST_DEFAULT_TOOLS_PER_SERVER = 50;
+var SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+var OFFICIAL_MCP_CLIENT_SPECIFIER = "@deepseek-ai/dsh-mcp-client";
+var OFFICIAL_MCP_CLIENT_LOG_NAME = "mcp-client";
+var MAX_MCP_IMAGE_BYTES = 8 * 1024 * 1024;
+var MAX_MCP_IMAGES_PER_RESULT = 10;
+function exceedsMcpImageCount(count) {
+  return count > MAX_MCP_IMAGES_PER_RESULT;
+}
+function exceedsMcpImageBytes(byteLength) {
+  return byteLength > MAX_MCP_IMAGE_BYTES;
+}
+function assertMcpImageBatch(inputs) {
+  if (exceedsMcpImageCount(inputs.length)) {
+    throw new Error(`too many images in one result (>${MAX_MCP_IMAGES_PER_RESULT})`);
+  }
+  for (const input of inputs) {
+    if (exceedsMcpImageBytes(input.data.byteLength)) {
+      throw new Error("the image data exceeds 8 MiB");
+    }
+  }
+}
+
+// lib/server/shared/compose.js
+function guardedAttachments(ctx) {
+  return {
+    async saveImages(inputs) {
+      assertMcpImageBatch(inputs);
+      const store = ctx.get("attachments");
+      if (store === void 0 || store === null || typeof store.saveImages !== "function") {
+        throw new Error("no attachment store is mounted");
+      }
+      return store.saveImages(inputs);
+    }
+  };
+}
 function bindHost(ctx) {
   return {
     logger: ctx.logger,
@@ -1811,7 +1939,15 @@ function bindHost(ctx) {
         return await loader.import(specifier);
       },
       mount: (module, config) => {
-        const fiber = ctx.plugin(module, config);
+        const isolated = ctx.isolate("attachments");
+        const fiber = isolated.plugin({
+          name: "dsh-mcp-manager:guarded-mcp-client",
+          async apply(inner) {
+            inner.provide("attachments", guardedAttachments(ctx));
+            const child = inner.plugin(module, config);
+            await child.await();
+          }
+        });
         const state = { disposed: false };
         const handle = {
           ready: fiber.await().then(() => void 0),
@@ -1831,17 +1967,6 @@ function bindHost(ctx) {
     }
   };
 }
-
-// lib/server/shared/constants.js
-var DEFAULT_ANNOUNCE_CATALOG = true;
-var DEFAULT_CATALOG_MAX_ENTRIES = 6;
-var DEFAULT_TOOL_CALL_TIMEOUT_MS = 15e3;
-var CONNECT_TIMEOUT_MS = 1e4;
-var DISCOVERY_TIMEOUT_MS = 1e4;
-var LIST_DEFAULT_TOOLS_PER_SERVER = 50;
-var SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
-var OFFICIAL_MCP_CLIENT_SPECIFIER = "@deepseek-ai/dsh-mcp-client";
-var OFFICIAL_MCP_CLIENT_LOG_NAME = "mcp-client";
 
 // lib/server/shared/tool-names.js
 import { createHash } from "node:crypto";
@@ -2158,6 +2283,126 @@ function summarizeAbsent(base, scope, server) {
   };
 }
 var McpManager = class {
+  httpConnections = /* @__PURE__ */ new Map();
+  httpEpochs = /* @__PURE__ */ new Map();
+  httpSequence = 0;
+  userStateQueue = Promise.resolve();
+  connectionKey(root, scope, name2) {
+    return JSON.stringify([root, scope, name2]);
+  }
+  invalidateHttpConnection(root, scope, name2) {
+    const key = this.connectionKey(root, scope, name2);
+    this.httpEpochs.set(key, ++this.httpSequence);
+    this.httpConnections.delete(key);
+  }
+  markDisabled(mw, root, name2) {
+    const disabled = mw.disabledByRoot.get(root) ?? /* @__PURE__ */ new Set();
+    disabled.add(name2);
+    mw.disabledByRoot.set(root, disabled);
+    return disabled;
+  }
+  async rootForRequest(scope, cwd) {
+    if (scope !== SCOPE_PROJECT)
+      return MIDDLEWARE_GLOBAL_ROOT;
+    const captured = this.projectRoot;
+    const root = cwd !== void 0 ? await projectRootForCwd(cwd, orchestratorPorts.get().workspace.findProjectRoot) : captured;
+    if (root === void 0)
+      throw new Error("no active project session (call session with a cwd first)");
+    return root;
+  }
+  /** HTTP 受理入口；宿主 connect 仍等待完整连接。 */
+  async acceptConnection(name2, scope, cwd) {
+    const started = this.httpSequence;
+    const root = await this.rootForRequest(scope, cwd);
+    const key = this.connectionKey(root, scope, name2);
+    const epoch = this.httpEpochs.get(key) ?? 0;
+    if (epoch > started)
+      throw new Error("connection request cancelled");
+    await this.validateHttpTarget(root, scope, name2);
+    if ((this.httpEpochs.get(key) ?? 0) !== epoch)
+      throw new Error("connection request cancelled");
+    const mw = this.middleware;
+    if (mw === void 0)
+      throw new Error("middleware is not initialized (apply first)");
+    if (this.httpConnections.get(key)?.state === "connecting")
+      return root;
+    const job = { state: "connecting" };
+    this.httpConnections.set(key, job);
+    this.emitStatus();
+    void this.runHttpConnection(mw, root, name2, key, job);
+    return root;
+  }
+  async validateHttpTarget(root, scope, name2) {
+    const store = scope === SCOPE_PROJECT ? await this.projectStoreFor(root) : this.store;
+    if (store === void 0)
+      throw new Error(`workspace ${root} has no project MCP config`);
+    const server = resolveConnectableServer(store, this.runtimeRegistry, name2, scope, (message) => this.logger.warn(message));
+    if (server === void 0)
+      throw new Error(`server "${name2}" not found in ${scope} scope`);
+    if (server.enabled === false)
+      throw new Error(`server "${name2}" is disabled`);
+  }
+  async runHttpConnection(mw, root, name2, key, job) {
+    const current = () => this.httpConnections.get(key) === job;
+    try {
+      const unit = await mw.projectUnitFor(root);
+      if (!current())
+        return;
+      if (unit === void 0)
+        throw new Error(`workspace ${root} has no project MCP config`);
+      unit.userDisabled.delete(name2);
+      mw.disabledByRoot.get(root)?.delete(name2);
+      await this.saveUserState(mw.units);
+      if (!current())
+        return;
+      await mw.ensureConnected(root, name2, { force: true });
+      if (!current())
+        return;
+      if (!unit.connections.has(name2))
+        throw new Error(`server "${name2}" did not start`);
+      this.httpConnections.delete(key);
+    } catch (error) {
+      if (!current())
+        return;
+      job.state = "failed";
+      job.failedEntry = this.entryForRoot(root, name2);
+      try {
+        job.error = this.redactError(error);
+      } catch {
+        job.error = "connection failed";
+      }
+    }
+    this.emitStatus();
+  }
+  entryForRoot(root, name2) {
+    return this.middleware?.units.get(root)?.connections.get(name2);
+  }
+  async disconnectForRequest(name2, scope, cwd) {
+    const root = await this.rootForRequest(scope, cwd);
+    const mw = this.middleware;
+    this.invalidateHttpConnection(root, scope, name2);
+    if (mw === void 0)
+      return root;
+    const disabled = this.markDisabled(mw, root, name2);
+    const unit = mw.units.get(root);
+    if (unit !== void 0) {
+      unit.userDisabled.add(name2);
+      mw.releaseConnection(root, name2);
+      unit.inFlight.delete(name2);
+    }
+    this.emitStatus();
+    const units = new Map(mw.units);
+    if (unit === void 0)
+      units.set(root, {
+        root,
+        connections: /* @__PURE__ */ new Map(),
+        inFlight: /* @__PURE__ */ new Map(),
+        userDisabled: disabled,
+        lastTouchedAt: Date.now()
+      });
+    await this.saveUserState(units);
+    return root;
+  }
   ctx;
   store;
   listeners;
@@ -2436,7 +2681,14 @@ var McpManager = class {
   }
   /** 中间层宿主：持久化 userDisabled。 */
   async saveUserState(units) {
-    await orchestratorPorts.get().configStore.saveUserState(this.userStatePath, units);
+    const snapshot = new Map([...units].map(([root, unit]) => [
+      root,
+      { ...unit, userDisabled: new Set(unit.userDisabled) }
+    ]));
+    const write = this.userStateQueue.then(() => orchestratorPorts.get().configStore.saveUserState(this.userStatePath, snapshot));
+    this.userStateQueue = write.catch(() => {
+    });
+    await write;
   }
   /** 中间层宿主：root 的目录缓存文件路径。 */
   catalogCachePathFor(root) {
@@ -2596,7 +2848,10 @@ var McpManager = class {
     this.projectRoot = root;
     this.projectStore = void 0;
     if (root !== void 0) {
-      this.projectStore = await this.projectStoreFor(root);
+      const store = await this.projectStoreFor(root);
+      if (this.projectRoot !== root)
+        return;
+      this.projectStore = store;
     }
     await reloadStoreQuietly(this.store, (error) => {
       this.logger.warn(`dsh-mcp-manager: reload global config failed: ${this.redactError(error)}`);
@@ -2756,15 +3011,15 @@ var McpManager = class {
    * userDisabled 命中不连（与浮窗断开语义一致）；无活动项目 root 静默返回
    * （与旧 touchMiddlewareUnit 同口径）。
    */
-  ensureMiddlewareServer(name2) {
+  ensureMiddlewareServer(name2, requestedRoot = this.projectRoot) {
     const mw = this.middleware;
-    if (mw === void 0 || this.projectRoot === void 0)
+    if (mw === void 0 || requestedRoot === void 0)
       return;
-    const root = this.projectRoot;
+    const root = requestedRoot;
     void mw.projectUnitFor(root).then(async (unit) => {
       if (unit === void 0 || unit.userDisabled.has(name2))
         return;
-      const current = this.projectStore?.find(name2);
+      const current = this.projectStores.get(root)?.find(name2) ?? (root === this.projectRoot ? this.projectStore?.find(name2) : void 0);
       const entry = unit.connections.get(name2);
       if (entry !== void 0 && current !== void 0 && JSON.stringify(entry.server) !== JSON.stringify(current)) {
         await mw.ensureConnected(root, name2, { force: true });
@@ -2780,12 +3035,14 @@ var McpManager = class {
    * 不写 userDisabled——与 disconnect 的禁用语义区分）。此前 update/remove 仅
    * 处理项目单元，@global 池连接与目录残留导致「已删服务器仍可调用」。
    */
-  dropMiddlewareConnection(name2) {
+  dropMiddlewareConnection(name2, root) {
     const mw = this.middleware;
     if (mw === void 0)
       return;
     let dropped = false;
     for (const unit of mw.units.values()) {
+      if (root !== void 0 && unit.root !== root)
+        continue;
       if (mw.releaseConnection(unit.root, name2))
         dropped = true;
       const { catalogDirectory: catalogDirectory2 } = orchestratorPorts.get().catalog;
@@ -2799,7 +3056,10 @@ var McpManager = class {
         dropped = true;
       }
     }
-    mw.abandonInFlight(name2);
+    if (root === void 0)
+      mw.abandonInFlight(name2);
+    else
+      mw.units.get(root)?.inFlight.delete(name2);
     if (dropped)
       this.emitStatus();
   }
@@ -2869,9 +3129,10 @@ var McpManager = class {
       this.start(config.name, scope);
     return config;
   }
-  async update(name2, patch, scope = SCOPE_GLOBAL) {
+  async update(name2, patch, scope = SCOPE_GLOBAL, cwd) {
     const { configModel } = orchestratorPorts.get();
-    const store = scope === SCOPE_PROJECT ? await this.projectStoreOrThrow() : this.store;
+    const root = await this.rootForRequest(scope, cwd);
+    const store = await this.storeForRoot(root, scope);
     const existing = store.find(name2);
     if (existing === void 0)
       throw new Error(`server "${name2}" not found in ${scope} scope`);
@@ -2881,17 +3142,64 @@ var McpManager = class {
       name: name2
     });
     configModel.assertEnvPolicy(merged.env, merged.headers, void 0, merged.url, merged.args);
+    const revision = this.reserveUpdate(root, scope, name2);
     store.upsert(merged);
+    this.cancelDisabledUpdate(root, scope, name2, merged);
     await store.save();
-    this.dropMiddlewareConnection(name2);
-    if (merged.enabled !== false) {
-      this.start(name2, scope);
-    }
+    if (!this.ownsUpdate(revision))
+      return merged;
+    this.invalidateHttpConnection(root, scope, name2);
+    this.dropMiddlewareConnection(name2, root);
+    if (patch.enabled === true)
+      await this.acceptConnection(name2, scope, scope === SCOPE_PROJECT ? root : void 0);
+    else
+      this.startUpdatedServer(root, scope, name2, merged);
     return merged;
   }
-  async remove(name2, scope = SCOPE_GLOBAL) {
-    const store = scope === SCOPE_PROJECT ? await this.projectStoreOrThrow() : this.store;
-    this.dropMiddlewareConnection(name2);
+  async storeForRoot(root, scope) {
+    if (scope !== SCOPE_PROJECT)
+      return this.store;
+    const store = this.projectStores.get(root) ?? (this.projectRoot === root ? this.projectStore : void 0) ?? await this.projectStoreFor(root);
+    if (store === void 0)
+      throw new Error(`workspace ${root} has no project MCP config`);
+    return store;
+  }
+  reserveUpdate(root, scope, name2) {
+    if (root === void 0)
+      return void 0;
+    const key = this.connectionKey(root, scope, name2);
+    const epoch = ++this.httpSequence;
+    this.httpEpochs.set(key, epoch);
+    return { key, epoch };
+  }
+  ownsUpdate(revision) {
+    return revision === void 0 || this.httpEpochs.get(revision.key) === revision.epoch;
+  }
+  cancelDisabledUpdate(root, scope, name2, server) {
+    if (root === void 0 || server.enabled !== false)
+      return;
+    const key = this.connectionKey(root, scope, name2);
+    this.httpConnections.delete(key);
+    const unit = this.middleware?.units.get(root);
+    if (unit !== void 0) {
+      this.middleware?.releaseConnection(root, name2);
+      unit.inFlight.delete(name2);
+    }
+    this.emitStatus();
+  }
+  startUpdatedServer(root, scope, name2, server) {
+    if (server.enabled === false)
+      return;
+    if (scope === SCOPE_PROJECT)
+      this.ensureMiddlewareServer(name2, root);
+    else
+      this.start(name2, scope);
+  }
+  async remove(name2, scope = SCOPE_GLOBAL, cwd) {
+    const root = await this.rootForRequest(scope, cwd);
+    const store = await this.storeForRoot(root, scope);
+    this.invalidateHttpConnection(root, scope, name2);
+    this.dropMiddlewareConnection(name2, root);
     store.remove(name2);
     await store.save();
   }
@@ -2917,6 +3225,7 @@ var McpManager = class {
     if (unit === void 0)
       throw new Error(`workspace ${root} has no project MCP config`);
     unit.userDisabled.delete(name2);
+    mw.disabledByRoot.get(root)?.delete(name2);
     await this.saveUserState(mw.units);
     await mw.ensureConnected(root, name2, { force: true });
   }
@@ -2938,9 +3247,12 @@ var McpManager = class {
       return;
     let targetUnit;
     const scoped = orchestratorPorts.get().workspace.normalizeScope(scope ?? "");
+    const requestRoot = scoped === SCOPE_PROJECT ? this.projectRoot : MIDDLEWARE_GLOBAL_ROOT;
+    if (requestRoot !== void 0)
+      this.invalidateHttpConnection(requestRoot, scoped, name2);
     if (scoped === SCOPE_PROJECT) {
       targetUnit = this.projectRoot !== void 0 ? mw.units.get(this.projectRoot) : void 0;
-    } else if (this.store.find(name2) !== void 0 && !this.runtimeRegistry.has(name2)) {
+    } else if (scope !== void 0 || this.store.find(name2) !== void 0) {
       targetUnit = mw.units.get(MIDDLEWARE_GLOBAL_ROOT);
     } else {
       targetUnit = [...mw.units.values()].find((unit) => unit.connections.has(name2) || unit.userDisabled.has(name2));
@@ -2948,10 +3260,11 @@ var McpManager = class {
     if (targetUnit === void 0)
       return;
     targetUnit.userDisabled.add(name2);
-    await this.saveUserState(mw.units);
+    this.markDisabled(mw, targetUnit.root, name2);
     mw.releaseConnection(targetUnit.root, name2);
-    mw.abandonInFlight(name2);
+    targetUnit.inFlight.delete(name2);
     this.emitStatus();
+    await this.saveUserState(mw.units);
   }
   async reconnect(name2, scope = SCOPE_GLOBAL) {
     await this.disconnect(name2, scope);
@@ -2959,43 +3272,65 @@ var McpManager = class {
   }
   /** 面板数据：配置 + 实时状态 + 工具列表 + 项目信息。 */
   summary() {
+    return this.summaryForRoot(this.projectRoot ?? MIDDLEWARE_GLOBAL_ROOT);
+  }
+  async summaryForCwd(cwd) {
+    const root = await projectRootForCwd(cwd, orchestratorPorts.get().workspace.findProjectRoot);
+    if (root === void 0)
+      return this.summaryForRoot(MIDDLEWARE_GLOBAL_ROOT);
+    await this.projectStoreFor(root);
+    return this.summaryForRoot(root);
+  }
+  summaryForRoot(root) {
     const servers = [];
     for (const server of this.store.data.servers) {
-      servers.push(this.summarize(server, SCOPE_GLOBAL));
+      servers.push(this.summarizeForRoot(server, SCOPE_GLOBAL, root));
     }
-    if (this.projectStore !== void 0) {
-      for (const server of this.projectStore.data.servers) {
-        servers.push(this.summarize(server, SCOPE_PROJECT));
+    const projectStore = this.summaryStoreForRoot(root);
+    if (projectStore !== void 0) {
+      for (const server of projectStore.data.servers) {
+        servers.push(this.summarizeForRoot(server, SCOPE_PROJECT, root));
       }
     }
     for (const server of this.runtimeRegistry.values()) {
-      servers.push(this.summarize(server, SCOPE_GLOBAL));
+      servers.push(this.summarizeForRoot(server, SCOPE_GLOBAL, root));
     }
     const byStatus = { ...EMPTY_STATUS_COUNTS };
     for (const server of servers)
       byStatus[server.status] = (byStatus[server.status] ?? 0) + 1;
     return {
-      cwd: this.projectRoot ?? void 0,
-      projectRoot: this.projectRoot ?? void 0,
+      cwd: root === MIDDLEWARE_GLOBAL_ROOT ? void 0 : root,
+      projectRoot: root === MIDDLEWARE_GLOBAL_ROOT ? void 0 : root,
       servers,
       counts: byStatus
     };
+  }
+  summaryStoreForRoot(root) {
+    if (root === MIDDLEWARE_GLOBAL_ROOT)
+      return void 0;
+    return this.projectStores.get(root) ?? (root === this.projectRoot ? this.projectStore : void 0);
   }
   /**
    * 投影单元：该 (server, scope) 归属的中间层单元。单池后全部条目都在池里，
    * 只剩「单元还没建出来 / 无项目 root」这两种缺失。
    */
-  middlewareUnitFor(serverName, scope) {
+  middlewareUnitFor(serverName, scope, projectRoot = this.projectRoot) {
     const mw = this.middleware;
     if (mw === void 0)
       return void 0;
-    const root = scope === SCOPE_PROJECT ? this.projectRoot : MIDDLEWARE_GLOBAL_ROOT;
+    const root = scope === SCOPE_PROJECT ? projectRoot : MIDDLEWARE_GLOBAL_ROOT;
     return root === void 0 ? void 0 : mw.units.get(root);
   }
   summarize(server, scope) {
+    return this.summarizeForRoot(server, scope, this.projectRoot ?? MIDDLEWARE_GLOBAL_ROOT);
+  }
+  summarizeForRoot(server, scope, root) {
     const { catalog: catalogPort, pipeline } = orchestratorPorts.get();
     const base = projectServerForSummary(server, pipeline.maskSecretArgsForDisplay);
-    const unit = this.middlewareUnitFor(server.name, scope);
+    const httpSummary = this.httpSummary(server, scope, base, root);
+    if (httpSummary !== void 0)
+      return httpSummary;
+    const unit = this.middlewareUnitFor(server.name, scope, root);
     const entry = unit?.connections.get(server.name);
     if (unit === void 0 || entry === void 0)
       return summarizeAbsent(base, scope, server);
@@ -3015,6 +3350,18 @@ var McpManager = class {
       // redactError），lifecycle 域内原文不动；已脱敏源二次脱敏恒等无害。
       error: pooledErrorText(entry, catalog, (error) => this.redactError(error))
     });
+  }
+  httpSummary(server, scope, base, projectRoot) {
+    const root = scope === SCOPE_PROJECT ? projectRoot : MIDDLEWARE_GLOBAL_ROOT;
+    const job = this.httpConnections.get(this.connectionKey(root, scope, server.name));
+    if (job === void 0 || server.enabled === false)
+      return void 0;
+    const current = this.middleware?.units.get(root)?.connections.get(server.name);
+    if (job.state === "failed" && current !== job.failedEntry && this.middleware?.statusOf(root, server.name) === SERVER_STATES.connected) {
+      this.httpConnections.delete(this.connectionKey(root, scope, server.name));
+      return void 0;
+    }
+    return { ...summarizeAbsent(base, scope, server), status: job.state, error: job.error };
   }
   async dispose() {
     if (this.statusTimer !== void 0) {
@@ -3142,6 +3489,9 @@ function createSseHub(options) {
     } catch {
     }
   }
+  function unregister(res) {
+    evict(res, "close");
+  }
   function broadcast(text) {
     for (const [res] of conns) {
       writeFrame(res, text);
@@ -3194,6 +3544,7 @@ function createSseHub(options) {
   heartbeatTimer.unref?.();
   return {
     register,
+    unregister,
     broadcast,
     size,
     evictStats: evictStatsCopy,
@@ -3209,6 +3560,11 @@ function queryParam(url, name2) {
 }
 
 // lib/server/api/routes-controllers.js
+function guardRouteAccess(req, res, methods, helpers) {
+  return guardLoopbackMethod(req, res, methods, {
+    remoteAdmission: helpers.remoteAdmission
+  });
+}
 function requireNameParam(url, res) {
   const name2 = queryParam(url, "name");
   if (name2 === void 0 || name2 === "") {
@@ -3229,7 +3585,11 @@ function buildConfigRoute(manager, helpers) {
     kind: "exact",
     path: ROUTES.config,
     handler: async (req, res) => {
-      if (ROUTE_FENCE.config.loopbackExempt.includes(String(req.method))) {
+      const method = String(req.method);
+      const methods = [...ROUTE_FENCE.config.loopbackExempt, ...ROUTE_FENCE.config.guarded];
+      if (!guardRouteAccess(req, res, methods, helpers))
+        return;
+      if (ROUTE_FENCE.config.loopbackExempt.includes(method)) {
         try {
           writeJson(res, 200, manager.uiConfig());
         } catch (error) {
@@ -3237,9 +3597,7 @@ function buildConfigRoute(manager, helpers) {
         }
         return;
       }
-      if (ROUTE_FENCE.config.guarded.includes(String(req.method))) {
-        if (!guardLoopbackMethod(req, res, ROUTE_FENCE.config.guarded))
-          return;
+      if (ROUTE_FENCE.config.guarded.includes(method)) {
         let body;
         try {
           body = await readJsonBody(req);
@@ -3302,11 +3660,12 @@ async function createServer(req, res, manager, helpers) {
 }
 async function changeServer(method, name2, url, req, res, manager, helpers) {
   try {
-    await helpers.maybeSession(url);
     const scope = helpers.scopeParam(url);
+    const cwd = queryParam(url, "cwd");
+    const root = await manager.rootForRequest(scope, cwd);
     if (method === "DELETE") {
-      await manager.remove(name2, scope);
-      writeJson(res, 200, { ok: true, summary: manager.summary() });
+      await manager.remove(name2, scope, scope === SCOPE_PROJECT ? root : cwd);
+      writeJson(res, 200, { ok: true, summary: manager.summaryForRoot(root) });
       return;
     }
     const body = await readJsonBody(req);
@@ -3314,9 +3673,10 @@ async function changeServer(method, name2, url, req, res, manager, helpers) {
       writeJson(res, 400, { error: "invalid JSON body" });
       return;
     }
-    const updated = await manager.update(name2, body, scope);
-    const server = typeof manager.summarize === "function" ? manager.summarize(updated, scope) : updated;
-    writeJson(res, 200, { server, summary: manager.summary() });
+    const updated = await manager.update(name2, body, scope, scope === SCOPE_PROJECT ? root : cwd);
+    const server = manager.summarizeForRoot(updated, scope, root);
+    const status = typeof body.enabled === "boolean" ? 202 : 200;
+    writeJson(res, status, { server, summary: manager.summaryForRoot(root) });
   } catch (error) {
     helpers.handleError(res, error);
   }
@@ -3328,11 +3688,13 @@ function buildServersRoute(manager, helpers) {
     handler: async (req, res) => {
       const url = new URL(req.url ?? "/", "http://localhost");
       const method = req.method ?? "GET";
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE.servers.guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE.servers.guarded, helpers))
         return;
       if (method === "GET") {
         try {
-          writeJson(res, 200, manager.summary());
+          const cwd = queryParam(url, "cwd");
+          const summary = cwd === void 0 ? manager.summary() : await manager.summaryForCwd(cwd);
+          writeJson(res, 200, summary);
         } catch (error) {
           helpers.handleError(res, error);
         }
@@ -3349,7 +3711,7 @@ function buildSessionRoute(manager, helpers) {
     kind: "exact",
     path: ROUTES.session,
     handler: async (req, res) => {
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE.session.guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE.session.guarded, helpers))
         return;
       const body = await readJsonBody(req);
       if (body === void 0 || typeof body.cwd !== "string") {
@@ -3380,7 +3742,7 @@ function buildResumeRoute(manager, helpers) {
     kind: "exact",
     path: ROUTES.resume,
     handler: async (req, res) => {
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE.resume.guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE.resume.guarded, helpers))
         return;
       try {
         if (typeof manager.resumeReconnect !== "function")
@@ -3417,16 +3779,15 @@ function buildNameActionRoute(route, action, manager, helpers) {
     kind: "exact",
     path: ROUTES[route],
     handler: async (req, res) => {
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE[route].guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE[route].guarded, helpers))
         return;
       const url = new URL(req.url ?? "/", "http://localhost");
       const name2 = requireNameParam(url, res);
       if (name2 === void 0)
         return;
       try {
-        await helpers.maybeSession(url);
-        await action(name2, helpers.scopeParam(url));
-        writeJson(res, 200, { ok: true, summary: manager.summary() });
+        const root = await action(name2, helpers.scopeParam(url), queryParam(url, "cwd"));
+        writeJson(res, 202, { ok: true, summary: manager.summaryForRoot(root) });
       } catch (error) {
         helpers.handleError(res, error);
       }
@@ -3434,13 +3795,13 @@ function buildNameActionRoute(route, action, manager, helpers) {
   };
 }
 function buildConnectRoute(manager, helpers) {
-  return buildNameActionRoute("connect", (name2, scope) => manager.connect(name2, scope), manager, helpers);
+  return buildNameActionRoute("connect", (name2, scope, cwd) => manager.acceptConnection(name2, scope, cwd), manager, helpers);
 }
 function buildDisconnectRoute(manager, helpers) {
-  return buildNameActionRoute("disconnect", (name2, scope) => manager.disconnect(name2, scope), manager, helpers);
+  return buildNameActionRoute("disconnect", (name2, scope, cwd) => manager.disconnectForRequest(name2, scope, cwd), manager, helpers);
 }
 function buildReconnectRoute(manager, helpers) {
-  return buildNameActionRoute("reconnect", (name2, scope) => manager.reconnect(name2, scope), manager, helpers);
+  return buildNameActionRoute("reconnect", (name2, scope, cwd) => manager.acceptConnection(name2, scope, cwd), manager, helpers);
 }
 async function importOneServer(server, store, scope, overwrite, manager, imported, skipped) {
   if (store.find(server.name) === void 0) {
@@ -3461,7 +3822,7 @@ function buildImportJsonRoute(manager, helpers) {
     path: ROUTES.importJson,
     handler: async (req, res) => {
       const { workspace, configModel } = apiPorts.get();
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE.importJson.guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE.importJson.guarded, helpers))
         return;
       const body = await readJsonBody(req);
       if (body === void 0 || typeof body.json !== "string") {
@@ -3512,7 +3873,7 @@ function buildToolDisableRoute(manager, helpers) {
     path: ROUTES.toolDisable,
     handler: async (req, res) => {
       const { workspace } = apiPorts.get();
-      if (!guardLoopbackMethod(req, res, ROUTE_FENCE.toolDisable.guarded))
+      if (!guardRouteAccess(req, res, ROUTE_FENCE.toolDisable.guarded, helpers))
         return;
       const url = new URL(req.url ?? "/", "http://localhost");
       const body = await readJsonBody(req);
@@ -3553,6 +3914,9 @@ function buildToolDisableRoute(manager, helpers) {
 
 // lib/server/api/routes.js
 function makeRoutes(manager, _cwd = process.cwd()) {
+  return makeRoutesWithAccess(manager, _cwd);
+}
+function makeRoutesWithAccess(manager, _cwd = process.cwd(), access = {}) {
   const handleError = (res, error) => {
     let message;
     try {
@@ -3568,7 +3932,12 @@ function makeRoutes(manager, _cwd = process.cwd()) {
     if (cwdParam !== void 0 && cwdParam !== "")
       await manager.setSession(cwdParam);
   };
-  const helpers = { handleError, scopeParam, maybeSession };
+  const helpers = {
+    handleError,
+    scopeParam,
+    maybeSession,
+    remoteAdmission: access.remoteAdmission
+  };
   return [
     buildConfigRoute(manager, helpers),
     buildServersRoute(manager, helpers),
@@ -3600,12 +3969,45 @@ function broadcastFrame(connections, frame) {
   }
 }
 function makeEventsRoute(manager, options) {
+  return makeEventsRouteWithAccess(manager, options);
+}
+function makeEventsRouteWithAccess(manager, options) {
   return {
     kind: "exact",
     path: ROUTES.events,
     handler: (req, res) => {
-      if (!guardLoopbackMethod(req, res, ["GET"]))
+      const admission = admitLongLivedRequest(req, {
+        remotePeerAdmission: options?.remotePeerAdmission
+      });
+      if ("rejection" in admission) {
+        writeJson(res, admission.rejection, {
+          error: admission.rejection === 401 ? "unauthorized" : "forbidden: loopback-only"
+        });
         return;
+      }
+      if (req.method !== "GET") {
+        writeJson(res, 405, { error: `method not allowed: ${req.method}` });
+        return;
+      }
+      let lifecycleSettled = false;
+      let disposePeer;
+      const closeForPeer = () => {
+        if (lifecycleSettled)
+          return;
+        lifecycleSettled = true;
+        disposePeer = void 0;
+        hub.unregister(res);
+        if (!res.writableEnded && !res.destroyed)
+          res.destroy();
+      };
+      if (admission.peer !== void 0) {
+        try {
+          disposePeer = bindPeerLifecycle(admission.peer, closeForPeer, "dsh-mcp-manager: raw SSE bound to admitted Peer");
+        } catch {
+          writeJson(res, 403, { error: "forbidden: peer-unavailable" });
+          return;
+        }
+      }
       const hub = manager.sseHub ??= createSseHub({
         heartbeatMs: options?.heartbeatMs
       });
@@ -3617,15 +4019,29 @@ function makeEventsRoute(manager, options) {
       res.write(": connected\n\n");
       res.write(sseData({ type: SSE_FRAMES.summary }));
       hub.register(res);
+      res.on("close", () => {
+        hub.unregister(res);
+        if (lifecycleSettled)
+          return;
+        lifecycleSettled = true;
+        const dispose = disposePeer;
+        disposePeer = void 0;
+        dispose?.();
+      });
     }
   };
 }
 function makeHealthRoute(manager) {
+  return makeHealthRouteWithAccess(manager);
+}
+function makeHealthRouteWithAccess(manager, access = {}) {
   return {
     kind: "exact",
     path: ROUTES.health,
     handler: (req, res) => {
-      if (!guardLoopbackMethod(req, res, ["GET"]))
+      if (!guardLoopbackMethod(req, res, ["GET"], {
+        remoteAdmission: access.remoteAdmission
+      }))
         return;
       let servers = 0;
       let connected = 0;
@@ -5286,7 +5702,9 @@ var COUNT_LIMITS = {};
 // lib/server/servers/dispatch/interface.js
 var interface_exports3 = {};
 __export(interface_exports3, {
-  executeMcpCall: () => executeMcpCall
+  executeMcpCall: () => executeMcpCall,
+  executeNestedTool: () => executeNestedTool,
+  nestedExecutionAgent: () => nestedExecutionAgent
 });
 
 // lib/server/servers/dispatch/impl/redact/index.js
@@ -5296,6 +5714,137 @@ function redactMcpError(pipeline, servers, text) {
 }
 
 // lib/server/servers/dispatch/impl/call/index.js
+function isRuntimeLoader(value) {
+  return typeof value === "object" && value !== null && "import" in value && typeof value.import === "function";
+}
+function isToolPipelineModule(value) {
+  return typeof value === "object" && value !== null && "ToolExecutionPipeline" in value && typeof value.ToolExecutionPipeline === "function";
+}
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+async function loadToolPipeline(ctx) {
+  const loader = ctx.get("loader");
+  if (!isRuntimeLoader(loader)) {
+    throw new Error("dsh-mcp-manager: 宿主未提供 loader 服务，无法加载官方工具执行 pipeline");
+  }
+  const load = loader.import.bind(loader);
+  const module = await load("@deepseek-ai/dsh-tools/pipeline");
+  if (!isToolPipelineModule(module)) {
+    throw new Error("dsh-mcp-manager: @deepseek-ai/dsh-tools/pipeline 未导出 ToolExecutionPipeline");
+  }
+  return module;
+}
+function hasStoredModelImage(content) {
+  let found = false;
+  for (const block of content) {
+    if (!isRecord(block) || block.type !== "image")
+      continue;
+    if (!("attachment" in block))
+      return false;
+    found = true;
+  }
+  return found;
+}
+function exactNestedToolSource(tools, expectedName, isParentActive) {
+  let lookedUp = false;
+  let expectedDefinition;
+  let projectsContent = false;
+  const outerAdmitted = (scope, toolSet) => {
+    const outer = toolSet === void 0 ? tools.executable("ws_mcp_call", scope) : tools.executable("ws_mcp_call", scope, toolSet);
+    return outer !== void 0;
+  };
+  const current = (scope, toolSet) => {
+    if (!isParentActive() || !outerAdmitted(scope, toolSet))
+      return false;
+    return lookedUp && expectedDefinition !== void 0 && tools.executable(expectedName) === expectedDefinition;
+  };
+  return {
+    get(name2, scope, toolSet) {
+      if (name2 !== expectedName || !isParentActive() || !outerAdmitted(scope, toolSet))
+        return void 0;
+      if (!lookedUp) {
+        lookedUp = true;
+        expectedDefinition = tools.executable(expectedName);
+        projectsContent = typeof expectedDefinition?.projectContent === "function";
+      }
+      return tools.executable(expectedName) === expectedDefinition ? expectedDefinition : void 0;
+    },
+    reject(name2, nested) {
+      if (name2 !== expectedName) {
+        return new Error(`nested MCP execution rejected unexpected tool ${JSON.stringify(name2)}`);
+      }
+      if (!nested || !isParentActive()) {
+        return new Error(`nested MCP execution ${JSON.stringify(name2)} requires an active enclosing execution token`);
+      }
+      if (lookedUp && expectedDefinition === void 0) {
+        return new Error(`nested MCP execution ${JSON.stringify(name2)} is not a current unconditional registration`);
+      }
+      return void 0;
+    },
+    current,
+    projectedContent(result) {
+      return projectsContent && result.isError === false && hasStoredModelImage(result.content) ? result.content : void 0;
+    }
+  };
+}
+function isNestedExecutionAgent(value) {
+  return typeof value === "object" && value !== null;
+}
+function nestedExecutionAgent(value) {
+  if (value === void 0)
+    return void 0;
+  if (isNestedExecutionAgent(value))
+    return value;
+  throw new Error("ws_mcp_call: nested execution agent must be an object");
+}
+function commitNestedEffects(result, hooks, canCommit) {
+  if (!canCommit)
+    return;
+  const contexts = result.additionalContexts ?? [];
+  if (contexts.length > 0) {
+    if (hooks.deferContext === void 0) {
+      throw new Error("nested MCP result carries context without an outer execution context");
+    }
+    for (const context of contexts)
+      hooks.deferContext(context);
+  }
+  if (result.isError === false && result.concludesTurn === true) {
+    if (hooks.concludeTurn === void 0) {
+      throw new Error("nested MCP result concludes the turn without an outer execution context");
+    }
+    hooks.concludeTurn();
+  }
+}
+async function executeNestedTool(ctx, input, hooks) {
+  const module = await loadToolPipeline(ctx);
+  const parentActive = () => input.parent !== void 0 && (hooks.isParentActive?.() ?? false);
+  const source = exactNestedToolSource(ctx.tools, input.name, parentActive);
+  const executionPipeline = new module.ToolExecutionPipeline(ctx, source);
+  const prepared = await executionPipeline.prepare(input);
+  const outcome = prepared.kind !== "dispatch" ? prepared : source.current(prepared.exec.agent, prepared.exec.toolSet) ? await executionPipeline.dispatch(prepared.exec) : {
+    kind: "final-result",
+    result: nestedDependencyUnavailable(input.name)
+  };
+  const result = await executionPipeline.complete(prepared.exec, outcome);
+  const canCommit = parentActive() && !input.signal.aborted;
+  commitNestedEffects(result, hooks, canCommit);
+  const modelContent = source.projectedContent(result);
+  if (canCommit && modelContent !== void 0)
+    hooks.onModelContent?.(modelContent);
+  return result;
+}
+function nestedDependencyUnavailable(name2) {
+  const reason = `nested MCP dependency ${JSON.stringify(name2)} is no longer executable in the active caller execution`;
+  return {
+    isError: true,
+    content: [{ type: "text", text: `Error: ${reason}` }],
+    error: {
+      message: reason,
+      info: { name: "ToolNotFoundError", code: "UNKNOWN_TOOL", reason }
+    }
+  };
+}
 function subCallId(callId) {
   return `${String(callId)}:mcp:1`;
 }
@@ -5305,10 +5854,8 @@ function remoteExecutionInput(input, id, tool, args) {
     ...input.rootCallId === void 0 ? {} : { rootCallId: input.rootCallId },
     name: input.registeredNameFor(id, tool),
     arguments: typeof args === "object" && args !== null ? args : {},
-    // #767 笔 1b F4 收口：远端转发**不带 agent**。带了就等于把子调用挂回该 agent 的作用域，
-    // 而本包已把 mcp__* 从每个 agent 的模型视野摘掉——自家转发会被自己那条 deny 一起打死。
-    // 不带 agent 走全局面（guard 靠 parent ∈ forwarding 放行）；代价是官方执行器那次图片
-    // 准入退化成文本，由本包自持的 image-admission 经 finalizeContent 补回来。
+    ...input.agent === void 0 ? {} : { agent: input.agent },
+    ...input.toolSet === void 0 ? {} : { toolSet: input.toolSet },
     ...input.parent === void 0 ? {} : { parent: input.parent },
     // 宿主 executor 无条件读 signal.aborted（实测 §2.9-6：给 undefined 当场 TypeError），
     // 而调用方不保证带 signal——没有就现造一个。
@@ -5409,7 +5956,8 @@ async function executeRemoteCall(input, parsed, tool, args, entry, callBudgetMs,
     throw new Error(redactMcpError(pipeline, input.allServers(), `ws_mcp_call: ${JSON.stringify(`${parsed.server}/${tool}`)} 调用失败：${pipeline.msgOf(error)}`));
   }
   if (result.isError === true) {
-    throw new Error(redactMcpError(pipeline, input.allServers(), `ws_mcp_call: 远端工具返回错误：${result.error.message}；可先用 ws_mcp_detail 核对参数 schema 后重试`));
+    const hostDependencyRejected = result.error.info?.code === "UNKNOWN_TOOL";
+    throw new Error(redactMcpError(pipeline, input.allServers(), hostDependencyRejected ? `ws_mcp_call: 调用失败（宿主 MCP 依赖准入拒绝）：${result.error.message}` : `ws_mcp_call: 远端工具返回错误：${result.error.message}；可先用 ws_mcp_detail 核对参数 schema 后重试`));
   }
   const projected = pipeline.projectCallToolResult(result.value, {
     errorText: (content) => `ws_mcp_call: 远端工具返回错误：${pipeline.msgOf(content)}；可先用 ws_mcp_detail 核对参数 schema 后重试`,
@@ -5423,10 +5971,11 @@ async function executeRemoteCall(input, parsed, tool, args, entry, callBudgetMs,
       type: "text",
       text: "（提示：本工具目录已过期，schema 可能已变更，请重新 ws_mcp_search）"
     };
-    return {
+    const value = {
       content: [hint, ...projected.content],
       ...projected.structuredContent !== void 0 ? { structuredContent: projected.structuredContent } : {}
     };
+    return value;
   }
   return projected;
 }
@@ -5501,6 +6050,24 @@ var MountLedger = class {
   entries = /* @__PURE__ */ new Map();
   /** 释放后待结算的 dispose：只收不 await，见文件头「已知缺口」。 */
   pending = [];
+  disposing = /* @__PURE__ */ new Map();
+  trackDisposal(key, disposal) {
+    this.disposing.set(key, disposal);
+    void disposal.then(
+      () => {
+        if (this.disposing.get(key) === disposal)
+          this.disposing.delete(key);
+      },
+      // 失败时保留拒因：不能确认同名预留已解除。
+      () => {
+      }
+    );
+  }
+  async waitForRelease(key) {
+    const disposal = this.disposing.get(key);
+    if (disposal !== void 0)
+      await disposal;
+  }
   /** 记账并**发起**装载：先查键再装，撞键当场抛（早失败 + 判词点名键）。 */
   mount(key, module, config) {
     if (this.entries.has(key)) {
@@ -5531,6 +6098,7 @@ var MountLedger = class {
       return;
     this.entries.delete(key);
     const disposal = entry.handle.dispose();
+    this.trackDisposal(key, disposal);
     void disposal.catch(() => {
     });
     this.pending.push(disposal);
@@ -5541,7 +6109,9 @@ var MountLedger = class {
     if (entry === void 0)
       return;
     this.entries.delete(key);
-    await entry.handle.dispose();
+    const disposal = entry.handle.dispose();
+    this.trackDisposal(key, disposal);
+    await disposal;
   }
   /** 域卸载：逐条摘账并发起 dispose，不等结算（见文件头「已知缺口」）。 */
   release() {
@@ -5675,8 +6245,8 @@ function settle(input, state, error) {
   return error === void 0 ? { kind: "settled", state } : { kind: "settled", state, error };
 }
 function yieldOneTick() {
-  return new Promise((resolve3) => {
-    setTimeout(resolve3, 0);
+  return new Promise((resolve4) => {
+    setTimeout(resolve4, 0);
   });
 }
 function missingToolFaceText() {
@@ -5743,7 +6313,11 @@ async function mountServer(input) {
   const id = workspace.idFor(input.root, input.server.name);
   const officialConfig = officialMcpConfig(input.server, id, config.expandServerEnv);
   const module = await loader.load(OFFICIAL_MCP_CLIENT_SPECIFIER);
+  await mountLedger.waitForRelease(id);
+  if (input.shouldMount?.() === false)
+    throw new Error("connection attempt cancelled");
   const entry = mountLedger.mount(id, module, officialConfig);
+  input.onMounted?.(id);
   const collected = collectOfficialLogs(logs, id);
   let outcome;
   try {
@@ -6029,7 +6603,7 @@ function createRedactor(servers) {
 function withTimeout(promise, ms, message, signal) {
   if (signal?.aborted === true)
     return Promise.reject(signal.reason ?? new Error("aborted"));
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const timer = setTimeout(() => {
       cleanup();
       reject(new Error(message));
@@ -6045,7 +6619,7 @@ function withTimeout(promise, ms, message, signal) {
     signal?.addEventListener("abort", onAbort, { once: true });
     void promise.then((value) => {
       cleanup();
-      resolve3(value);
+      resolve4(value);
     }, (error) => {
       cleanup();
       reject(error);
@@ -6184,6 +6758,86 @@ var MAX_TOTAL_CATALOG_BYTES = 256 * 1024;
 var LIST_MAX_TOOLS_PER_SERVER = 500;
 
 // lib/server/connection/runtime/middleware.js
+var pendingRootInits = /* @__PURE__ */ new WeakMap();
+function initRegistryFor(self) {
+  const registry = pendingRootInits.get(self);
+  if (registry === void 0) {
+    const created = /* @__PURE__ */ new Map();
+    pendingRootInits.set(self, created);
+    return created;
+  }
+  return registry;
+}
+function cancelPendingInit(self, root) {
+  const registry = pendingRootInits.get(self);
+  if (registry === void 0)
+    return;
+  const task = registry.get(root);
+  if (task === void 0)
+    return;
+  task.cancelled = true;
+  if (registry.get(root) === task)
+    registry.delete(root);
+}
+async function runRootInit(self, root, task) {
+  const registry = initRegistryFor(self);
+  if (!initOwned(registry, root, task))
+    return void 0;
+  const servers = await self.host.projectServersFor(root);
+  if (!initOwned(registry, root, task))
+    return void 0;
+  if (servers === void 0)
+    return void 0;
+  const unit = buildProjectUnit(root, self.disabledByRoot.get(root));
+  if (!initOwned(registry, root, task))
+    return void 0;
+  self.units.set(root, unit);
+  await loadRootCatalog(self, root, unit, task, registry);
+  if (!initOwned(registry, root, task) || self.units.get(root) !== unit)
+    return void 0;
+  launchBackgroundConnects(self, root, servers);
+  unit.lastTouchedAt = Date.now();
+  return unit;
+}
+function initOwned(registry, root, task) {
+  return !task.cancelled && registry.get(root) === task;
+}
+function buildProjectUnit(root, userDisabled) {
+  return {
+    root,
+    connections: /* @__PURE__ */ new Map(),
+    userDisabled: new Set(userDisabled ?? []),
+    lastTouchedAt: Date.now(),
+    inFlight: /* @__PURE__ */ new Map()
+  };
+}
+async function loadRootCatalog(self, root, unit, task, registry) {
+  try {
+    await runtimePorts.get().catalog.catalogDirectory.ensureRootLoaded(root, self.host.catalogCachePath(root));
+  } catch (error) {
+    if (self.units.get(root) === unit && registry.get(root) === task)
+      self.teardownUnit(root);
+    throw error;
+  }
+}
+function launchBackgroundConnects(self, root, servers) {
+  for (const server of servers) {
+    if (server.enabled === false)
+      continue;
+    void self.ensureConnected(root, server.name).catch(() => {
+      self.host.logger.warn(`dsh-mcp-manager: background connect ${server.name}@${root} failed (see entry error)`);
+    });
+  }
+}
+async function awaitPendingInit(self, root, task) {
+  const registry = initRegistryFor(self);
+  try {
+    return await task.promise;
+  } finally {
+    if (registry.get(root) === task)
+      registry.delete(root);
+  }
+}
 function connectWrappedServer(unit, root, serverName, server, host) {
   if (!Array.isArray(server.toolDefinitions))
     return false;
@@ -6211,6 +6865,21 @@ function connectWrappedServer(unit, root, serverName, server, host) {
   host.emitStatus();
   return true;
 }
+function ownsMount(unit, name2, entry) {
+  return !entry.disposed && unit.connections.get(name2) === entry;
+}
+function recordPendingMount(unit, name2, entry, id, release) {
+  const pending = { id, released: false };
+  entry.pendingMount = pending;
+  if (!ownsMount(unit, name2, entry)) {
+    pending.released = true;
+    release(id);
+  }
+}
+function releaseDiscardedMount(entry, id, release) {
+  if (entry.pendingMount?.released !== true)
+    release(id);
+}
 async function mountRemoteServer(unit, root, serverName, server, entry, faces) {
   const { lifecycle } = runtimePorts.get();
   const current = unit.connections.get(serverName);
@@ -6233,15 +6902,19 @@ async function mountRemoteServer(unit, root, serverName, server, entry, faces) {
     mounted = await lifecycle.mountServer({
       root,
       server,
+      shouldMount: () => ownsMount(unit, serverName, newEntry),
+      onMounted: (id) => recordPendingMount(unit, serverName, newEntry, id, lifecycle.releaseServer),
       // 六态窗口内只推进状态：装上之后 id/handle 才回得来，这里不能碰代际守卫。
       onState: (next) => {
-        if (newEntry.disposed)
+        if (!ownsMount(unit, serverName, newEntry))
           return;
         newEntry.status = next;
         faces.host.emitStatus();
       }
     });
   } catch (error) {
+    if (!ownsMount(unit, serverName, newEntry))
+      return;
     newEntry.status = "failed";
     newEntry.error = faces.redact(error);
     newEntry.readySettled = true;
@@ -6252,8 +6925,8 @@ async function mountRemoteServer(unit, root, serverName, server, entry, faces) {
   newEntry.id = mounted.id;
   newEntry.handle = mounted.entry.handle;
   newEntry.readySettled = true;
-  if (newEntry.disposed || unit.connections.get(serverName) !== newEntry) {
-    lifecycle.releaseServer(mounted.id);
+  if (!ownsMount(unit, serverName, newEntry)) {
+    releaseDiscardedMount(newEntry, mounted.id, lifecycle.releaseServer);
     return;
   }
   if (mounted.outcome.kind === "settled") {
@@ -6292,8 +6965,13 @@ async function disposePreviousGeneration(entry, disposeServer2) {
   if (entry === void 0 || Array.isArray(entry.server.toolDefinitions))
     return;
   entry.disposed = true;
-  if (entry.id !== void 0)
-    await disposeServer2(entry.id);
+  const pending = entry.pendingMount;
+  const id = entry.id ?? (pending?.released === true ? void 0 : pending?.id);
+  if (id !== void 0) {
+    if (pending !== void 0)
+      pending.released = true;
+    await disposeServer2(id);
+  }
 }
 function connectableServer(servers, serverName) {
   const server = servers?.find((candidate) => candidate.name === serverName);
@@ -6315,8 +6993,8 @@ var McpMiddleware = class {
   /** 工具级禁用（root → server → Set<tool>；root=@global 跨工作空间共享）。 */
   disabledTools = /* @__PURE__ */ new Map();
   /**
-   * 在飞的转发子调用登记表：我方 dispatch 经 `ctx.tools.execute` 派出去的子调用，其
-   * `parent` 就是这次外层调用的 token，派发前登记、结算后注销（try/finally）。
+   * 在飞的转发子调用登记表：我方 dispatch 经公开 nested `ToolExecutionPipeline` 派出去的
+   * 子调用，其 `parent` 就是这次外层调用的 token，派发前登记、结算后注销（try/finally）。
    * pre-execute guard 只按发起者放行（裁定 R/Z）——集合外的一律走工具级裁决，
    * 模型直呼不会因为名字像就被放行。集合随实例消亡，热切换重建中间层即清空。
    */
@@ -6325,34 +7003,33 @@ var McpMiddleware = class {
     this.host = host;
     this.units = /* @__PURE__ */ new Map();
   }
-  /** 读取/创建 root 的单元（root 无项目标记 → undefined）。 */
+  /** 读取/创建 root 的单元（root 无项目标记 → undefined）。
+   *
+   *  #1168 窗口 B（并发初始化去重）：先查在飞 init，再决定要不要建单元——同根的并发
+   *  首次调用共享同一个 init 任务（同一代单元），不再各建一份（后写覆盖先写）。init 在
+   *  **配置读取开始前**就同步占位（Promise.resolve().then 把真正工作推迟一拍，但登记
+   *  在同一同步段完成），堵住「两个调用都越过 units.get 判空」的窗口。
+   *
+   *  init 何时 resolve：目录缓存（last-good）已载入、且 enabled 连接的 in-flight 任务已
+   *  登记之后——不等远端连接本身（连接是 fire-and-forget）。于是并发首次读拿到的一定是
+   *  已完成目录载入的完整单元，而不是半初始化对象。
+   */
   async projectUnitFor(root) {
     if (root === void 0)
       return void 0;
-    let unit = this.units.get(root);
-    if (unit === void 0) {
-      const servers = await this.host.projectServersFor(root);
-      if (servers === void 0)
-        return void 0;
-      unit = {
-        root,
-        connections: /* @__PURE__ */ new Map(),
-        userDisabled: new Set(this.disabledByRoot.get(root) ?? []),
-        lastTouchedAt: Date.now(),
-        inFlight: /* @__PURE__ */ new Map()
-      };
-      this.units.set(root, unit);
-      await runtimePorts.get().catalog.catalogDirectory.ensureRootLoaded(root, this.host.catalogCachePath(root));
-      for (const server of servers) {
-        if (server.enabled === false)
-          continue;
-        void this.ensureConnected(root, server.name).catch(() => {
-          this.host.logger.warn(`dsh-mcp-manager: background connect ${server.name}@${root} failed (see entry error)`);
-        });
-      }
+    const registry = initRegistryFor(this);
+    const pending = registry.get(root);
+    if (pending !== void 0)
+      return awaitPendingInit(this, root, pending);
+    const existing = this.units.get(root);
+    if (existing !== void 0) {
+      existing.lastTouchedAt = Date.now();
+      return existing;
     }
-    unit.lastTouchedAt = Date.now();
-    return unit;
+    const task = { promise: Promise.resolve(void 0), cancelled: false };
+    task.promise = Promise.resolve().then(() => runRootInit(this, root, task));
+    registry.set(root, task);
+    return awaitPendingInit(this, root, task);
   }
   /** 连接一个服务器（in-flight 去重；失败后台重连）。
    * @param opts.force 用户显式连接（浮窗「连接」/切回前台恢复）时 true：忽略
@@ -6365,14 +7042,14 @@ var McpMiddleware = class {
       return;
     if (unit.userDisabled.has(serverName))
       return;
-    const servers = await this.host.projectServersFor(root);
-    const server = servers?.find((entry) => entry.name === serverName);
-    if (server === void 0 || server.enabled === false)
-      return;
     const existing = unit.inFlight.get(serverName);
     if (existing !== void 0)
       return existing;
-    const promise = this.connectInternal(root, serverName, opts);
+    const promise = Promise.resolve().then(() => {
+      if (this.units.get(root) !== unit || unit.inFlight.get(serverName) !== promise)
+        return;
+      return this.connectInternal(root, serverName, opts);
+    });
     unit.inFlight.set(serverName, promise);
     try {
       await promise;
@@ -6396,19 +7073,27 @@ var McpMiddleware = class {
     const unit = this.units.get(root);
     if (unit === void 0)
       return;
+    const attempt = unit.inFlight.get(serverName);
+    const stillCurrent = () => this.units.get(root) === unit && unit.inFlight.get(serverName) === attempt && !unit.userDisabled.has(serverName);
     const force = opts.force === true;
     const { lifecycle } = runtimePorts.get();
     const entry = unit.connections.get(serverName);
     if (shortCircuitsOnState(this.statusOf(root, serverName), force))
       return;
-    await disposePreviousGeneration(entry, (id) => lifecycle.disposeServer(id));
     const servers = await this.host.projectServersFor(root);
     const server = connectableServer(servers, serverName);
-    if (server === void 0)
+    if (server === void 0 || !stillCurrent())
       return;
-    if (connectWrappedServer(unit, root, serverName, server, this.host))
+    await disposePreviousGeneration(entry, (id) => lifecycle.disposeServer(id));
+    if (!stillCurrent())
       return;
-    await mountRemoteServer(unit, root, serverName, server, entry, this.mountFaces());
+    const freshServers = await this.host.projectServersFor(root);
+    const freshServer = connectableServer(freshServers, serverName);
+    if (freshServer === void 0 || !stillCurrent())
+      return;
+    if (connectWrappedServer(unit, root, serverName, freshServer, this.host))
+      return;
+    await mountRemoteServer(unit, root, serverName, freshServer, entry, this.mountFaces());
   }
   /**
    * 装载面：注册面视图 / 工具元信息 / 脱敏都是本类方法的转发，形状与调用点无关——
@@ -6548,8 +7233,12 @@ var McpMiddleware = class {
     const { dispatch, pipeline, workspace, catalog: catalogPort } = runtimePorts.get();
     const catalogRoot = workspace.parseFullServerName(fullName)?.root;
     const registeredNameFor = (id, tool) => publicToolName(id, tool);
-    const execute = (input) => this.host.ctx.tools.execute(input);
     const parent = identity.parent;
+    const agent = dispatch.nestedExecutionAgent(identity.agent);
+    const execute = (input) => dispatch.executeNestedTool(this.host.ctx, input, {
+      ...identity,
+      isParentActive: () => parent !== void 0 && this.forwarding.has(parent)
+    });
     if (parent !== void 0)
       this.forwarding.add(parent);
     try {
@@ -6558,10 +7247,11 @@ var McpMiddleware = class {
         toolRaw,
         rawArgs,
         signal,
-        agent: identity.agent,
+        agent,
         callId: identity.callId,
         ...identity.rootCallId === void 0 ? {} : { rootCallId: identity.rootCallId },
         ...parent === void 0 ? {} : { parent },
+        toolSet: identity.toolSet,
         forwarding: this.forwarding,
         registeredNameFor,
         execute,
@@ -6595,8 +7285,12 @@ var McpMiddleware = class {
     if (unit === void 0 || entry === void 0)
       return false;
     entry.disposed = true;
-    if (entry.id !== void 0)
-      runtimePorts.get().lifecycle.releaseServer(entry.id);
+    const id = entry.id ?? entry.pendingMount?.id;
+    if (id !== void 0) {
+      if (entry.pendingMount !== void 0)
+        entry.pendingMount.released = true;
+      runtimePorts.get().lifecycle.releaseServer(id);
+    }
     unit.connections.delete(serverName);
     return true;
   }
@@ -6622,6 +7316,7 @@ var McpMiddleware = class {
   }
   /** 拆毁一个单元（逐条走账本拆除，保留目录缓存）。 */
   teardownUnit(root) {
+    cancelPendingInit(this, root);
     const unit = this.units.get(root);
     if (unit === void 0)
       return;
@@ -6636,6 +7331,11 @@ var McpMiddleware = class {
   async dispose() {
     for (const root of [...this.units.keys()])
       this.teardownUnit(root);
+    const registry = pendingRootInits.get(this);
+    if (registry !== void 0) {
+      for (const root of [...registry.keys()])
+        cancelPendingInit(this, root);
+    }
     this.units.clear();
   }
 };
@@ -7019,7 +7719,7 @@ function externalModificationError(path) {
   return new Error(`dsh-mcp-manager: 配置文件在外部被修改（${path}），本次写入已中止以防覆盖；请重载后重试`);
 }
 function wait(milliseconds) {
-  return new Promise((resolve3) => setTimeout(resolve3, milliseconds));
+  return new Promise((resolve4) => setTimeout(resolve4, milliseconds));
 }
 function temporaryNameFor2(path) {
   return `${path}.tmp.${process.pid}.${Date.now().toString(36)}.${randomBytes5(6).toString("hex")}.tmp`;
@@ -7172,7 +7872,18 @@ var McpStore = class {
 import { createHash as createHash4, randomBytes as randomBytes6 } from "node:crypto";
 import { mkdir as mkdir5, rename as rename5, rm as rm5, writeFile as writeFile5 } from "node:fs/promises";
 import { existsSync as existsSync6 } from "node:fs";
-import { dirname as dirname7 } from "node:path";
+import { dirname as dirname7, resolve as resolve2 } from "node:path";
+var stateTransactions = /* @__PURE__ */ new Map();
+function enqueueStateTransaction(file, task) {
+  const key = resolve2(file);
+  const previous = stateTransactions.get(key) ?? Promise.resolve();
+  const current = previous.then(task, task);
+  stateTransactions.set(key, current);
+  return current.finally(() => {
+    if (stateTransactions.get(key) === current)
+      stateTransactions.delete(key);
+  });
+}
 async function writeStateFile(file, data) {
   let registered = true;
   try {
@@ -7223,10 +7934,14 @@ async function otherKeyOf(file, key) {
   return void 0;
 }
 async function saveUserState(file, units) {
+  const snapshot = new Map([...units].map(([root, unit]) => [root, new Set(unit.userDisabled)]));
+  await enqueueStateTransaction(file, () => saveUserStateSnapshot(file, snapshot));
+}
+async function saveUserStateSnapshot(file, units) {
   const merged = await loadUserState(file);
-  for (const [root, unit] of units) {
-    if (unit.userDisabled.size > 0)
-      merged.set(root, new Set(unit.userDisabled));
+  for (const [root, disabled2] of units) {
+    if (disabled2.size > 0)
+      merged.set(root, disabled2);
     else
       merged.delete(root);
   }
@@ -7325,6 +8040,9 @@ async function saveDisabledTools(file, disabledTools) {
     if (Object.keys(serverRec).length > 0)
       payload[root] = serverRec;
   }
+  await enqueueStateTransaction(file, () => saveDisabledToolsSnapshot(file, payload));
+}
+async function saveDisabledToolsSnapshot(file, payload) {
   const kept = await otherKeyOf(file, "disabled");
   try {
     await writeStateFile(file, JSON.stringify({ version: 1, disabledTools: payload, ...kept !== void 0 ? { disabled: kept } : {} }, null, 2));
@@ -7363,8 +8081,6 @@ var injectPorts = new InjectPorts();
 // lib/server/inject/impl/image-admission/index.js
 var IMAGE_MEDIA_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 var CANONICAL_BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
-var MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-var MAX_IMAGES_PER_RESULT = 10;
 function recordOf(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
 }
@@ -7413,7 +8129,7 @@ function decodeImage(block) {
   if (typeof data !== "string") {
     throw new Error("the image data is not canonical base64");
   }
-  if (data.length > MAX_IMAGE_BYTES * 2) {
+  if (data.length > MAX_MCP_IMAGE_BYTES * 2) {
     throw new Error("the image data exceeds 8 MiB");
   }
   if (data.length <= 1024 * 1024 && !CANONICAL_BASE64.test(data)) {
@@ -7423,7 +8139,7 @@ function decodeImage(block) {
   if (bytes.toString("base64") !== data) {
     throw new Error("the image data is not canonical base64");
   }
-  if (bytes.length > MAX_IMAGE_BYTES) {
+  if (exceedsMcpImageBytes(bytes.length)) {
     throw new Error("the image data exceeds 8 MiB");
   }
   return {
@@ -7465,12 +8181,12 @@ function projectContent(content, formatBlock, image) {
   return projected;
 }
 async function projectImageAdmission(request) {
-  const { agent, content, signal, faces, formatBlock } = request;
+  const { agent, content, projectedContent, signal, faces, formatBlock } = request;
   if (!containsRemoteImage(content))
     return void 0;
   const remoteCount = countRemoteImages(content);
-  if (remoteCount > MAX_IMAGES_PER_RESULT) {
-    return diagnosticProjection(content, formatBlock, `too many images in one result (>${MAX_IMAGES_PER_RESULT})`);
+  if (exceedsMcpImageCount(remoteCount)) {
+    return diagnosticProjection(content, formatBlock, `too many images in one result (>${MAX_MCP_IMAGES_PER_RESULT})`);
   }
   const decoded = decodeRemoteImages(content);
   if (decoded.validationErrors.size > 0) {
@@ -7479,6 +8195,8 @@ async function projectImageAdmission(request) {
       text: imageDiagnostic(block, decoded.validationErrors.get(index) ?? "another image in the same result was invalid")
     }));
   }
+  if (projectedContent !== void 0)
+    return [...projectedContent];
   let attachments;
   try {
     attachments = await resolveAdmission(faces, agent, signal);
@@ -7748,14 +8466,22 @@ async function executeCall(toolCtx, args, exec) {
   await toolCtx.mw.ensureConnected(unit.root, parsed.server);
   const startTime = Date.now();
   let value;
+  let nestedModelContent;
   try {
-    value = await toolCtx.mw.callTool(server, tool, callArguments, exec.signal, {
+    const nestedIdentity = {
       agent: exec.agent,
       callId: exec.callId,
       ...exec.rootCallId === void 0 ? {} : { rootCallId: exec.rootCallId },
       // token 即本次调用的身份：子调用以它为 parent，guard 据此区分「模型直呼」与「我方转发」。
-      ...exec.token === void 0 ? {} : { parent: exec.token }
-    });
+      ...exec.token === void 0 ? {} : { parent: exec.token },
+      toolSet: exec.toolSet,
+      deferContext: exec.deferContext,
+      concludeTurn: exec.concludeTurn,
+      onModelContent: (content) => {
+        nestedModelContent = content;
+      }
+    };
+    value = await toolCtx.mw.callTool(server, tool, callArguments, exec.signal, nestedIdentity);
     recordCallOk(toolCtx, parsed.server, tool, startTime);
   } catch (error) {
     recordCallFailed(toolCtx, parsed.server, tool, startTime, error);
@@ -7764,6 +8490,7 @@ async function executeCall(toolCtx, args, exec) {
   const projection = await projectImageAdmission({
     agent: exec.agent,
     content: callValueContent(value),
+    projectedContent: nestedModelContent,
     signal: exec.signal,
     faces: toolCtx.faces,
     formatBlock: formatCallContentBlock
@@ -7815,7 +8542,7 @@ function buildCallTool(toolCtx, callTimeoutMs) {
     // 外层超时由调用方现算递入（#935：max(全量源) + 25s 内部尾；旧 55s 写死值已删）。
     timeoutMs: callTimeoutMs,
     /**
-     * 官方 `applyFinalContent` 接缝：把本包自持的图片准入投影换进模型面（返回 `undefined`
+     * 官方 `applyFinalContent` 接缝：把 A+ 图片投影换进模型面（返回 `undefined`
      * 则保留原内容 = 继续走 `render`）。命中即删——每次执行只消费一次。`isError` 时把内容
      * 交回宿主：错误面不该被换面。
      */
@@ -8394,7 +9121,11 @@ var STEPS = [
   // 0.2.8 → 0.2.9 为空步（本版无 MCP 管理器 home 级存储形态变化）：run 指共享空函数。
   { fromVersion: "0.2.8", targetVersion: "0.2.9", run: tickUpgradeVersion },
   // 0.2.9 → 0.2.10 为空步（本版无 MCP 管理器 home 级存储形态变化）：run 指共享空函数，只推进刻度。
-  { fromVersion: "0.2.9", targetVersion: "0.2.10", run: tickUpgradeVersion }
+  { fromVersion: "0.2.9", targetVersion: "0.2.10", run: tickUpgradeVersion },
+  // 0.2.10 → 0.2.11 为空步（rc.1 适配不改变 home 级存储形态）：run 指共享空函数，只推进刻度。
+  { fromVersion: "0.2.10", targetVersion: "0.2.11", run: tickUpgradeVersion },
+  // 0.2.11 → 0.2.12 空步（本地补丁：只换写队列，home 级存储形态不变）：run 指共享空函数，只推进刻度。
+  { fromVersion: "0.2.11", targetVersion: "0.2.12", run: tickUpgradeVersion }
 ];
 
 // lib/server/upgrade/impl/version/index.js
@@ -8488,16 +9219,24 @@ function collectDenyNames(units, registeredNames) {
   };
 }
 function disposeAll(disposers) {
-  for (const dispose of [...disposers].reverse()) {
+  const errors = [];
+  for (const dispose of disposers.splice(0).reverse()) {
     try {
       dispose();
-    } catch {
+    } catch (error) {
+      disposers.unshift(dispose);
+      errors.push(error);
     }
   }
+  return errors;
 }
-function mountDenyList(face, deny, batched, onUnknown) {
-  const disposers = [];
+function isSessionReentry(error) {
+  return error instanceof Error && error.message === "session append cannot reenter while another append is being published";
+}
+function mountDenyList(face, lists, disposers, active, onUnknown) {
   const restrictOne = (name2) => {
+    if (!active())
+      return;
     try {
       disposers.push(face.tools.restrict({ deny: [name2] }));
     } catch (error) {
@@ -8506,34 +9245,32 @@ function mountDenyList(face, deny, batched, onUnknown) {
       onUnknown(name2, error);
     }
   };
-  try {
-    if (batched.length > 0) {
-      try {
-        disposers.push(face.tools.restrict({ deny: [...batched] }));
-      } catch (error) {
-        if (!isUnknownNameError(error))
-          throw error;
-        for (const name2 of batched)
-          restrictOne(name2);
-      }
-    }
-    const batchedSet = new Set(batched);
-    for (const name2 of deny) {
-      if (!batchedSet.has(name2))
+  if (lists.batched.length > 0 && active()) {
+    try {
+      disposers.push(face.tools.restrict({ deny: [...lists.batched] }));
+    } catch (error) {
+      if (!isUnknownNameError(error))
+        throw error;
+      for (const name2 of lists.batched)
         restrictOne(name2);
     }
-  } catch (error) {
-    disposeAll(disposers);
-    throw error;
   }
-  return disposers;
+  const batched = new Set(lists.batched);
+  for (const name2 of lists.deny) {
+    if (!batched.has(name2))
+      restrictOne(name2);
+  }
 }
 function startAgentVisibility(args) {
   const { events, units, registeredNames, logger } = args;
-  const applied = /* @__PURE__ */ new WeakMap();
   const live = /* @__PURE__ */ new Map();
+  const retired = /* @__PURE__ */ new Set();
+  const pending = /* @__PURE__ */ new Map();
+  const queued = /* @__PURE__ */ new Set();
   const unhook = [];
   let reconciling = false;
+  let changed = false;
+  let stopped = false;
   let degradedWarned = false;
   let skippedUnknownTotal = 0;
   const warnDegraded = (message) => {
@@ -8542,79 +9279,144 @@ function startAgentVisibility(args) {
     degradedWarned = true;
     logger.warn(message);
   };
-  const canonical = (agent) => {
-    const known = live.get(agent.id);
-    if (known !== void 0)
-      return known;
-    live.set(agent.id, agent);
-    return agent;
+  const canonical = (face) => {
+    let record = live.get(face.id);
+    if (record === void 0) {
+      record = { face, disposers: [], cleanup: [], disposed: false };
+      live.set(face.id, record);
+    }
+    return record;
   };
   const skipUnknown = (name2, error) => {
     skippedUnknownTotal += 1;
     logger.warn(`dsh-mcp-manager: 跳过挂载时已销的工具名 ${JSON.stringify(name2)}（累计跳过 ${skippedUnknownTotal} 个）：${String(error)}`);
   };
-  const applyTo = (face, deny, batched, key) => {
-    const prev = applied.get(face);
-    if (prev !== void 0 && prev.key === key)
-      return;
-    const record = { key, dispose: () => {
-    } };
-    applied.set(face, record);
-    if (prev !== void 0)
-      prev.dispose();
-    if (deny.length === 0)
-      return;
-    let disposers;
+  const readLists = () => {
     try {
-      disposers = mountDenyList(face, deny, batched, skipUnknown);
+      return collectDenyNames(units, registeredNames);
     } catch (error) {
-      applied.delete(face);
-      throw error;
+      warnDegraded(`dsh-mcp-manager: 读取工具注册面失败，模型可见面隐藏降级为 no-op（mcp__* 保持可见）：${String(error)}`);
+      return void 0;
     }
-    record.dispose = () => disposeAll(disposers);
   };
-  const liveFaces = () => {
-    const read = events.liveAgents;
-    if (read === void 0)
-      return [];
+  const failed = (record, error, allowRetry, key, cleanup = false) => {
+    if (!isSessionReentry(error) || !allowRetry)
+      logger.warn(`dsh-mcp-manager: 为 agent ${record.face.id} 应用工具可见面限制失败：${String(error)}`);
+    if (allowRetry && (isSessionReentry(error) || cleanup)) {
+      if (pending.has(record))
+        return;
+      pending.set(record, { retryMount: !cleanup, key });
+      queueMicrotask(() => {
+        const retry = pending.get(record);
+        if (!pending.delete(record))
+          return;
+        reconcile(record, false, !retry?.retryMount);
+      });
+      return;
+    }
+  };
+  const replace = (record, lists, allowRetry) => {
+    const active = () => !stopped && !record.disposed;
+    const next = [];
     try {
-      return read();
+      mountDenyList(record.face, lists, next, active, skipUnknown);
+      if (active()) {
+        record.cleanup.push(...record.disposers);
+        record.disposers = next;
+        record.key = keyOf(lists.deny);
+      } else {
+        record.cleanup.push(...next);
+      }
+    } catch (error) {
+      record.cleanup.push(...next);
+      failed(record, error, allowRetry, keyOf(lists.deny));
+    }
+  };
+  const applyTo = (record, lists, allowRetry) => {
+    const key = keyOf(lists?.deny ?? []);
+    if (!stopped && !record.disposed && lists !== void 0 && record.key !== key)
+      replace(record, lists, allowRetry);
+    for (const error of disposeAll(record.cleanup))
+      failed(record, error, allowRetry, key, true);
+    if (record.disposed && record.cleanup.length === 0)
+      retired.delete(record);
+  };
+  const discover = () => {
+    try {
+      for (const face of events.liveAgents?.() ?? [])
+        canonical(face);
     } catch (error) {
       logger.warn(`dsh-mcp-manager: 读取活 agent 表失败：${String(error)}`);
-      return [];
     }
   };
-  const reconcile = (extra = []) => {
-    if (reconciling)
+  const applyQueued = (record, lists, attempted, allowRetry, cleanupOnly) => {
+    const target = keyOf(lists?.deny ?? []);
+    const retry = pending.get(record);
+    if (retry !== void 0) {
+      if (lists !== void 0 && retry.key !== target)
+        retry.retryMount = true;
       return;
+    }
+    const key = record.disposed ? "disposed" : target;
+    const keys = attempted.get(record) ?? /* @__PURE__ */ new Set();
+    if (keys.has(key))
+      return;
+    keys.add(key);
+    attempted.set(record, keys);
+    applyTo(record, cleanupOnly ? void 0 : lists, allowRetry);
+  };
+  const refreshLists = (lists) => {
+    if (!changed || stopped)
+      return lists;
+    const latest = readLists();
+    if (latest !== void 0 && keyOf(latest.deny) !== keyOf(lists?.deny ?? [])) {
+      for (const record of live.values())
+        queued.add(record);
+    }
+    return latest;
+  };
+  const queueAll = () => {
+    if (!stopped)
+      discover();
+    for (const record of [...live.values(), ...retired])
+      queued.add(record);
+  };
+  const reconcile = (only, allowRetry = true, cleanupOnly = false) => {
+    if (only !== void 0)
+      queued.add(only);
+    if (reconciling) {
+      changed = true;
+      return;
+    }
+    if (only === void 0)
+      queueAll();
     reconciling = true;
+    const attempted = /* @__PURE__ */ new Map();
     try {
-      let lists;
-      try {
-        lists = collectDenyNames(units, registeredNames);
-      } catch (error) {
-        warnDegraded(`dsh-mcp-manager: 读取工具注册面失败，模型可见面隐藏降级为 no-op（mcp__* 保持可见）：${String(error)}`);
-        return;
-      }
-      const key = keyOf(lists.deny);
-      for (const agent of [...liveFaces(), ...live.values(), ...extra]) {
-        try {
-          applyTo(canonical(agent), lists.deny, lists.batched, key);
-        } catch (error) {
-          logger.warn(`dsh-mcp-manager: 为 agent ${agent.id} 应用工具可见面限制失败：${String(error)}`);
-        }
-      }
+      let lists = stopped ? void 0 : readLists();
+      do {
+        changed = false;
+        const batch = [...queued];
+        queued.clear();
+        for (const record of batch)
+          applyQueued(record, lists, attempted, allowRetry, cleanupOnly && record === only);
+        lists = refreshLists(lists);
+      } while (queued.size > 0);
     } finally {
       reconciling = false;
     }
   };
   const disposeAgent = (id) => {
-    const face = live.get(id);
-    if (face === void 0)
+    const record = live.get(id);
+    if (record === void 0)
       return;
-    applied.get(face)?.dispose();
-    applied.delete(face);
     live.delete(id);
+    pending.delete(record);
+    record.disposed = true;
+    record.cleanup.push(...record.disposers);
+    record.disposers = [];
+    retired.add(record);
+    reconcile(record);
   };
   const onCreated = events.onAgentCreated;
   const onDisposed = events.onAgentDisposed;
@@ -8630,16 +9432,26 @@ function startAgentVisibility(args) {
   };
   try {
     if (onCreated !== void 0)
-      hook(onCreated((agent) => reconcile([agent])));
+      hook(onCreated((agent) => {
+        if (!stopped) {
+          queued.add(canonical(agent));
+          reconcile();
+        }
+      }));
     if (onDisposed !== void 0)
       hook(onDisposed((agent) => disposeAgent(agent.id)));
     if (onChanged !== void 0)
-      hook(onChanged(() => reconcile()));
+      hook(onChanged(() => {
+        if (!stopped)
+          reconcile();
+      }));
   } catch (error) {
     warnDegraded(`dsh-mcp-manager: 订阅 agent 事件面失败，模型可见面隐藏降级为 no-op：${String(error)}`);
   }
   reconcile();
   return () => {
+    stopped = true;
+    pending.clear();
     for (const stop of unhook.splice(0)) {
       try {
         stop();
@@ -8648,6 +9460,7 @@ function startAgentVisibility(args) {
     }
     for (const id of [...live.keys()])
       disposeAgent(id);
+    reconcile();
   };
 }
 
@@ -8774,16 +9587,16 @@ __export(interface_exports10, {
 
 // lib/server/workspace/impl/root-resolution/index.js
 import { existsSync as existsSync9, realpathSync } from "node:fs";
-import { dirname as dirname10, isAbsolute as isAbsolute2, join as join5, resolve as resolve2 } from "node:path";
+import { dirname as dirname10, isAbsolute as isAbsolute2, join as join5, resolve as resolve3 } from "node:path";
 function dshHomePath() {
-  return resolve2(dshHome());
+  return resolve3(dshHome());
 }
 async function findProjectRoot(cwd) {
   const home = dshHomePath();
-  let current = resolve2(cwd ?? process.cwd());
+  let current = resolve3(cwd ?? process.cwd());
   for (let depth = 0; depth < 16; depth += 1) {
     const dotDsh = join5(current, ".dsh");
-    const hasProjectDsh = existsSync9(dotDsh) && resolve2(dotDsh) !== home;
+    const hasProjectDsh = existsSync9(dotDsh) && resolve3(dotDsh) !== home;
     if (existsSync9(join5(current, ".git")) || hasProjectDsh || existsSync9(join5(current, ".mcp.json"))) {
       return current;
     }
@@ -8792,7 +9605,7 @@ async function findProjectRoot(cwd) {
       break;
     current = parent;
   }
-  return resolve2(cwd ?? process.cwd());
+  return resolve3(cwd ?? process.cwd());
 }
 async function normalizedProjectRoot(cwd) {
   if (cwd === void 0 || cwd === null || cwd === "")
@@ -9061,9 +9874,11 @@ function registerCatalogInjection(ctx, manager, catalogMaxEntries, activeDirecto
   });
 }
 function setupRoutesAndBroadcast(ctx, manager) {
-  const routes = makeRoutes(manager);
-  const eventsRoute = makeEventsRoute(manager);
-  const healthRoute = makeHealthRoute(manager);
+  const remoteAdmission = liveConnectionAdmission(ctx);
+  const remotePeerAdmission = liveConnectionPeerAdmission(ctx);
+  const routes = makeRoutesWithAccess(manager, void 0, { remoteAdmission });
+  const eventsRoute = makeEventsRouteWithAccess(manager, { remotePeerAdmission });
+  const healthRoute = makeHealthRouteWithAccess(manager, { remoteAdmission });
   const disposers = [...routes, eventsRoute, healthRoute].map((route) => ctx.webServer.register(route));
   const unsubscribeStatus = manager.onStatus(() => {
     manager.sseHub?.broadcast(sseData({ type: SSE_FRAMES.summary }));

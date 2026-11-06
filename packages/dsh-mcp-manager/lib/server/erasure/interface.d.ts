@@ -11,14 +11,14 @@
  * 本域没有 deps.ts，也没有端口持有者：全部输入由组合根按调用实参递入。
  * 宿主类型只取官方类型层（catalog 锁版，仅 import type）。
  */
-import type { AssembleContext, PromptAssembly } from "@deepseek-ai/dsh-system-prompt";
+import type { AssembleContext, PromptPresentation } from "@deepseek-ai/dsh-system-prompt";
 import type { LoggerPort } from "../shared/interface.js";
 /**
  * 组装 waterfall 的订阅口（组合根从宿主 ctx.on 递进来，本域不直接依赖 cordis）。
  * 签名与宿主 system-prompt/assemble 事件逐字对应，避免任何类型断言。
  */
 export interface ErasureAssemblePort {
-    onAssemble(handler: (assembly: PromptAssembly, context: AssembleContext, next: () => Promise<PromptAssembly>) => Promise<PromptAssembly>): () => void;
+    onAssemble(handler: (assembly: PromptPresentation, context: AssembleContext, next: () => Promise<PromptPresentation>) => Promise<PromptPresentation>): () => void;
 }
 /**
  * startSdkErasure 的全部实参。

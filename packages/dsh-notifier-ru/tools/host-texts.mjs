@@ -1,7 +1,7 @@
 // Русские тексты хост-половины плагина уведомлений.
 //
 // Здесь только дельта: каждая пара «китайский фрагмент → русский фрагмент»
-// применяется к собранному апстрим-бандлу `@wingsky-1/dsh-notifier@0.2.7`.
+// применяется к собранному апстрим-бандлу `@wingsky-1/dsh-notifier@0.2.11`.
 // Длинные фрагменты применяются первыми, поэтому короткие куски вида
 // «读取失败» не портят уже переведённые длинные строки.
 //
@@ -148,10 +148,9 @@ export const HOST_TEXT = [
     '内置渠道不能删除：缺少 ${type}（页面停留在升级前时，刷新后重试）',
     'встроенный канал нельзя удалить: нет ${type} (если страница открыта со старой версии — обновите её и повторите)'
   ],
-  ['bark 频道 ${id} 缺少 baseUrl', 'у канала bark ${id} отсутствует baseUrl'],
-  ['bark 频道 ${id} 缺少 deviceKey', 'у канала bark ${id} отсутствует deviceKey'],
+  ['bark 频道 ${id} 缺少 ${missing}', 'у канала bark ${id} отсутствует ${missing}'],
   ['bark 频道 ${id} 的 level 非法', 'у канала bark ${id} недопустимый level'],
-  ['webhook 频道 ${id} 缺少 url', 'у канала webhook ${id} отсутствует url'],
+  ['webhook 频道 ${id} 缺少 ${missing}', 'у канала webhook ${id} отсутствует ${missing}'],
   ['webhook 频道 ${id} 的 auth 非法', 'у канала webhook ${id} недопустимая auth'],
   ['webhook 频道 ${id} 的 preset 非法', 'у канала webhook ${id} недопустимый preset'],
   [
@@ -159,78 +158,91 @@ export const HOST_TEXT = [
     '${kindLabel}: у канала ${id} поле ${key} зарезервировано — учётные данные только в известных полях'
   ],
   [
-    '${kindLabel} 频道 ${id} 的 ${key} 只能是字符串或数字',
-    '${kindLabel}: у канала ${id} поле ${key} может быть только строкой или числом'
+    '${kindLabel} 频道 ${id} 的 ${key} 不是已知键：删除它或核对拼写',
+    '${kindLabel}: у канала ${id} поле ${key} неизвестно — удалите его или проверьте написание'
   ],
+  ['bark 频道 ${id} 的 levels 最多 ${BARK_LEVELS_LIMIT} 项', 'у канала bark ${id} не более ${BARK_LEVELS_LIMIT} уровней'],
+  ['webhook 频道 ${id} 的 template 最多 ${WEBHOOK_TEMPLATE_MAX_CHARS} 字符', 'у канала webhook ${id} шаблон не длиннее ${WEBHOOK_TEMPLATE_MAX_CHARS} символов'],
+  [' 不是已知配置键，删除它或核对拼写', ' — неизвестный ключ конфигурации, удалите его или проверьте написание'],
+  [
+    '第 ${seenAt + 1} 条与第 ${index + 1} 条的频道身份都是 ${identity}：同一条频道只能有一个，删掉其中一条再保存',
+    'записи ${seenAt + 1} и ${index + 1} описывают один и тот же канал ${identity}: канал может быть только один, удалите лишнюю запись и сохраните'
+  ],
+  ['${label} 频道${subject} 的 ${key} 是必填键，不能删除', 'у канала ${label}${subject} поле ${key} обязательно, его нельзя удалить'],
+  ['"实例"', '"экземпляр"'],
+  ['历史记录服务不可用', 'служба истории недоступна'],
+  ['已拒绝投递：', 'доставка отклонена: '],
+  ['applyField 返回 false 却没记下拒收话术', 'applyField вернул false, но текст отказа не записан'],
 
-  // ── Текст самих уведомлений (шаблоны NOTIFY_KINDS) ──────────────────────────
-  ['parts.push(`${hours} 小时`);', 'parts.push(`${hours} ч`);'],
-  ['parts.push(`${minutes} 分`);', 'parts.push(`${minutes} мин`);'],
-  ['parts.push(`${seconds} 秒`);', 'parts.push(`${seconds} с`);'],
-  ['pwsh: "PowerShell 命令",', 'pwsh: "команда PowerShell",'],
-  ['bash: "终端命令",', 'bash: "команда терминала",'],
-  ['web_search: "联网搜索",', 'web_search: "поиск в интернете",'],
-  ['read: "读取文件",', 'read: "чтение файла",'],
-  ['write: "写入文件",', 'write: "запись файла",'],
-  ['edit: "编辑文件",', 'edit: "правка файла",'],
-  ['grep: "搜索文件内容",', 'grep: "поиск по содержимому файлов",'],
-  ['glob: "查找文件",', 'glob: "поиск файлов",'],
-  ['subagent: "子代理任务",', 'subagent: "задача субагента",'],
-  ['subagent_fork: "子代理任务",', 'subagent_fork: "задача субагента",'],
-  ['ssh_exec: "SSH 远程执行",', 'ssh_exec: "выполнение по SSH",'],
-  ['ssh_upload: "SSH 上传文件",', 'ssh_upload: "загрузка файла по SSH",'],
-  ['ssh_download: "SSH 下载文件",', 'ssh_download: "скачивание файла по SSH",'],
-  ['ssh_tunnel: "SSH 端口转发",', 'ssh_tunnel: "SSH-туннель",'],
-  ['ssh_cluster: "SSH 集群执行",', 'ssh_cluster: "выполнение на кластере по SSH",'],
-  ['ask_user_question: "向你提问",', 'ask_user_question: "вопрос к вам",'],
-  ['todo_write: "更新任务清单",', 'todo_write: "обновление списка задач",'],
-  ['job_list: "查看后台任务",', 'job_list: "список фоновых задач",'],
-  ['job_output: "查看任务输出",', 'job_output: "вывод задачи",'],
-  ['job_kill: "停止后台任务",', 'job_kill: "остановка фоновой задачи",'],
-  ['workflow: "工作流编排",', 'workflow: "оркестрация workflow",'],
-  ['ralph: "Ralph 循环执行",', 'ralph: "цикл Ralph",'],
-  ['memory_add: "写入项目记忆",', 'memory_add: "запись в память проекта",'],
-  ['memory_search: "检索项目记忆",', 'memory_search: "поиск по памяти проекта",'],
-  ['skill: "加载技能",', 'skill: "загрузка скилла",'],
-  ['create_goal: "创建目标",', 'create_goal: "создание цели",'],
-  ['get_goal: "查看目标",', 'get_goal: "просмотр цели",'],
-  ['update_goal: "更新目标"', 'update_goal: "обновление цели"'],
-  ['return `MCP 服务器 "${parts[1]}" 的工具 "${parts.slice(2).join("__")}"`;', 'return `инструмент "${parts.slice(2).join("__")}" сервера MCP "${parts[1]}"`;'],
-  ['title: "DSH：等待审批",', 'title: "DSH: нужно подтверждение",'],
+  // ── Ошибки канала ntfy (тема в шаблоне, приоритет) ──────────────────────────
+  ['ntfy priority 非法：需 1..5 数字', 'ntfy: недопустимый priority — нужно число 1..5'],
+  ['ntfy priority 非法：${String(value)}（需 1..5 数字）', 'ntfy: недопустимый priority — ${String(value)} (нужно число 1..5)'],
+  ['ntfy priority 非法：${value}（需 1..5 数字）', 'ntfy: недопустимый priority — ${value} (нужно число 1..5)'],
+  ['ntfy 配置错误：body.topic 需为字符串', 'ntfy: body.topic должен быть строкой'],
   [
-    'lines.push(`任务「${detail.taskTitle}」等待审批（工具「${prettyToolName(detail.tool)}」）`);',
-    'lines.push(`Задача «${detail.taskTitle}» ждёт подтверждения (инструмент: ${prettyToolName(detail.tool)})`);'
+    'ntfy 配置错误：topic 非法：${record.topic}（仅允许字母/数字/_/-，1..64 字符）',
+    'ntfy: недопустимый topic — ${record.topic} (только буквы, цифры, _ и -, 1..64 символа)'
   ],
   [
-    'lines.push(`工具「${prettyToolName(detail.tool)}」等待审批`);',
-    'lines.push(`Инструмент ${prettyToolName(detail.tool)} ждёт подтверждения`);'
+    'ntfy 配置错误：URL 末段 "${decodeTopicSegment(lastRaw)}" 与模板 topic "${topic}" 不一致（JSON 须发往服务根地址）；请改用根地址或统一 topic',
+    'ntfy: последний сегмент URL "${decodeTopicSegment(lastRaw)}" не совпадает с topic шаблона "${topic}" (JSON отправляется на корень службы); используйте корневой адрес или один и тот же topic'
   ],
-  ['lines.push(`理由：${detail.reason}`);', 'lines.push(`Причина: ${detail.reason}`);'],
-  ['lines.push("请到 DSH 界面确认或拒绝");', 'lines.push("Подтвердите или отклоните в DSH");'],
-  ['title: "DSH：向你提问",', 'title: "DSH: вопрос к вам",'],
-  ['lines.push(`任务「${detail.taskTitle}」需要你回答`);', 'lines.push(`Задача «${detail.taskTitle}» ждёт вашего ответа`);'],
-  ['lines.push("有提问需要你回答");', 'lines.push("Есть вопрос — нужен ваш ответ");'],
-  ['lines.push(`问题：${detail.question}`);', 'lines.push(`Вопрос: ${detail.question}`);'],
-  ['lines.push("请到 DSH 界面回答");', 'lines.push("Ответьте в DSH");'],
-  ['title: "DSH：任务完成",', 'title: "DSH: задача выполнена",'],
-  ['lines.push(`任务「${detail.taskTitle}」已完成`);', 'lines.push(`Задача «${detail.taskTitle}» выполнена`);'],
-  ['lines.push("后台任务已完成");', 'lines.push("Фоновая задача выполнена");'],
-  ['title: "DSH：子任务完成",', 'title: "DSH: подзадача выполнена",'],
-  ['lines.push(`子任务「${detail.taskTitle}」已完成`);', 'lines.push(`Подзадача «${detail.taskTitle}» выполнена`);'],
-  ['lines.push("子任务已完成");', 'lines.push("Подзадача выполнена");'],
-  ['lines.push(`耗时：${formatDuration(detail.durationMs ?? 0)}`);', 'lines.push(`Заняло: ${formatDuration(detail.durationMs ?? 0)}`);'],
-  ['title: "DSH：任务出错",', 'title: "DSH: ошибка задачи",'],
-  ['lines.push(`任务「${detail.taskTitle}」执行出错`);', 'lines.push(`Ошибка при выполнении задачи «${detail.taskTitle}»`);'],
-  ['lines.push("任务执行出错");', 'lines.push("Ошибка выполнения задачи");'],
   [
-    'lines.push(`第 ${detail.turn} 轮${detail.step ? `第 ${detail.step} 步` : ""}：${detail.message ?? ""}`);',
-    'lines.push(`Раунд ${detail.turn}${detail.step ? `, шаг ${detail.step}` : ""}: ${detail.message ?? ""}`);'
+    'ntfy 配置错误：缺少可用 topic（模板 topic 为空或仍为 <topic> 占位，且 URL 为服务根地址无法提取）；请在模板填写真实 topic',
+    'ntfy: нет пригодного topic (topic шаблона пуст или остался заглушкой <topic>, а из корневого адреса его не извлечь); впишите настоящий topic в шаблон'
   ],
-  ['lines.push(`错误：${detail.message}`);', 'lines.push(`Ошибка: ${detail.message}`);'],
-  ['title: "DSH：轮次完成",', 'title: "DSH: ход завершён",'],
-  ['const turn = detail.turn ? `第 ${detail.turn} 轮` : "";', 'const turn = detail.turn ? `раунд ${detail.turn}` : "";'],
-  ['return `任务「${detail.taskTitle}」${turn}工作已完成`;', 'return `Задача «${detail.taskTitle}»${turn ? `, ${turn}` : ""}: работа завершена`;'],
-  ['return `${turn}工作已完成`;', 'return `${turn ? `${turn}: ` : ""}работа завершена`;'],
+  [
+    'ntfy 配置错误：模板无可用 topic 且 URL 以 / 结尾，无法明确判断这是前缀根地址还是 topic 地址；请在模板填写真实 topic',
+    'ntfy: в шаблоне нет topic, а URL кончается на / — нельзя однозначно понять, это корень с префиксом или адрес темы; впишите настоящий topic в шаблон'
+  ],
+  [
+    'ntfy 配置错误：模板 topic 为空/占位且 URL 路径含多段，无法明确提取 topic（不猜测自托管前缀）；请改用服务根地址并在模板填写真实 topic',
+    'ntfy: topic шаблона пуст или остался заглушкой, а путь URL состоит из нескольких сегментов — topic не извлечь однозначно (префикс самохостинга не угадываем); используйте корневой адрес службы и впишите настоящий topic в шаблон'
+  ],
+  [
+    'ntfy 配置错误：URL 末段 topic 非法：${extracted}（仅允许字母/数字/_/-，1..64 字符）',
+    'ntfy: недопустимый topic в последнем сегменте URL — ${extracted} (только буквы, цифры, _ и -, 1..64 символа)'
+  ],
+  ['ntfy 配置错误：body 不是合法 JSON 对象', 'ntfy: body — не корректный объект JSON'],
+  ['ntfy 配置错误：body 顶层需为 JSON 对象', 'ntfy: верхний уровень body должен быть объектом JSON'],
+  ['ntfy 配置错误：URL 解析失败', 'ntfy: не удалось разобрать URL'],
+
+  // ── Текст самих уведомлений (каталог LOCALE_TEXT) ───────────────────────────
+  // 0.2.11 вынес тела уведомлений в каталоги ZH/EN с функциями; прежние якоря
+  // (lines.push(...) в NOTIFY_KINDS) больше не существуют. Переводим строки
+  // самого каталога: якоря — фрагменты в кавычках/шаблонах, ключи не трогаем.
+  ['任务「${task}」等待审批（工具「${tool}」）', 'Задача «${task}» ждёт подтверждения (инструмент: ${tool})'],
+  ['工具「${tool}」等待审批', 'Инструмент ${tool} ждёт подтверждения'],
+  ['理由：${reason2}', 'Причина: ${reason2}'],
+  ['请到 DSH 界面确认或拒绝', 'Подтвердите или отклоните в DSH'],
+  ['任务「${task}」需要你回答', 'Задача «${task}» ждёт вашего ответа'],
+  ['有提问需要你回答', 'Есть вопрос — нужен ваш ответ'],
+  ['问题：${question}', 'Вопрос: ${question}'],
+  ['请到 DSH 界面回答', 'Ответьте в DSH'],
+  ['任务「${task}」已完成', 'Задача «${task}» выполнена'],
+  ['后台任务已完成', 'Фоновая задача выполнена'],
+  ['子任务「${task}」已完成', 'Подзадача «${task}» выполнена'],
+  ['子任务已完成', 'Подзадача выполнена'],
+  ['耗时：${duration}', 'Заняло: ${duration}'],
+  ['${value} 小时', '${value} ч'],
+  ['${value} 分', '${value} мин'],
+  ['${value} 秒', '${value} с'],
+  ['任务「${task}」执行出错', 'Ошибка при выполнении задачи «${task}»'],
+  ['任务执行出错', 'Ошибка выполнения задачи'],
+  ['第 ${turn} 轮', 'Ход ${turn}'],
+  ['第 ${step} 步', ', шаг ${step}'],
+  ['错误：${message}', 'Ошибка: ${message}'],
+  ['任务「${task}」第 ${turn} 轮工作已完成', 'Задача «${task}»: ход ${turn} завершён'],
+  ['任务「${task}」工作已完成', 'Задача «${task}»: работа завершена'],
+  ['第 ${turn} 轮工作已完成', 'Ход ${turn} завершён'],
+  ['工作已完成', 'Работа завершена'],
+  // Заголовки тостов (каталог titles).
+  ['DSH：等待审批', 'DSH: нужно подтверждение'],
+  ['DSH：向你提问', 'DSH: вопрос к вам'],
+  ['DSH：任务完成', 'DSH: задача выполнена'],
+  ['DSH：子任务完成', 'DSH: подзадача выполнена'],
+  ['DSH：任务出错', 'DSH: ошибка задачи'],
+  ['DSH：轮次完成', 'DSH: ход завершён'],
   ['title: "DSH：测试通知",', 'title: "DSH: тестовое уведомление",'],
   ['body: "通知链路工作正常（此通知来自测试按钮）"', 'body: "Цепочка уведомлений работает (тест из настроек плагина)"'],
 
@@ -257,7 +269,13 @@ export const HOST_TEXT = [
   ['"无"', '"нет"'],
   ['"快照冻结"', '"снимок зафиксирован"'],
   ['"快照兜底"', '"снимок как резерв"'],
-  ['DEFAULT_TITLE = "DSH 通知"', 'DEFAULT_TITLE = "Уведомление DSH"'],
+  // defaultTitle(locale) в 0.2.11 выбирает язык; русская редакция отвечает по-русски всегда.
+  ['return locale === "en" ? "DSH notification" : "DSH 通知";', 'return "Уведомление DSH";'],
+  [
+    'var LOCALE_TEXT = { zh: ZH, en: EN };',
+    '// DSH для 1С: английский каталог не используется — при любой локали хоста тексты русские.\n' +
+      'var LOCALE_TEXT = { zh: ZH, en: ZH };'
+  ],
   ['draft.channels 里没有 channelId 对应的完整条目：', 'в draft.channels нет полной записи для channelId: '],
   ['未知的频道类型：', 'неизвестный тип канала: '],
   ['dry-run 超过 15s 总预算', 'проверка превысила общий бюджет 15 с'],
@@ -276,7 +294,6 @@ export const HOST_TEXT = [
   ['dsh-notifier: api 域只能装配一次', 'dsh-notifier: домен api собирается один раз'],
   ['dsh-notifier: config 域只能装配一次', 'dsh-notifier: домен config собирается один раз'],
   ['dsh-notifier: sdk 域只能装配一次', 'dsh-notifier: домен sdk собирается один раз'],
-  ['dsh-notifier: upgrade 域只能装配一次', 'dsh-notifier: домен upgrade собирается один раз'],
   ['dsh-notifier: pipeline 域只能装配一次', 'dsh-notifier: домен pipeline собирается один раз'],
   ['dsh-notifier: events 域只能装配一次', 'dsh-notifier: домен events собирается один раз'],
   ['dsh-notifier: events 域状态机只能装配一次', 'dsh-notifier: автомат домена events собирается один раз'],
@@ -304,12 +321,15 @@ export const HOST_TEXT = [
   ['投递理由割接写入失败：${file} — ${written.reason}', 'не удалось записать причины доставки: ${file} — ${written.reason}'],
   ['dsh-notifier: 存储版本文件为空', 'dsh-notifier: файл версии хранилища пуст'],
   ['dsh-notifier: 存储版本文件包含非法或不支持的版本号：${JSON.stringify(version)}', 'dsh-notifier: файл версии хранилища содержит недопустимый или неподдерживаемый номер версии: ${JSON.stringify(version)}'],
-  ['dsh-notifier: 不支持的版本号：${JSON.stringify(text)}', 'dsh-notifier: неподдерживаемый номер версии: ${JSON.stringify(text)}'],
-  ['dsh-notifier: 存储版本号回写失败（${finalVersion}）— ${written.reason}', 'dsh-notifier: не удалось записать номер версии хранилища (${finalVersion}) — ${written.reason}'],
-  ['dsh-notifier: 存储升级到 ${step.targetVersion} 失败 — ${cause instanceof Error ? cause.message : "未知原因"}', 'dsh-notifier: не удалось обновить хранилище до ${step.targetVersion} — ${cause instanceof Error ? cause.message : "неизвестная причина"}'],
-  ['dsh-notifier: 存储版本 ${recorded} 落后于插件版本 ${target}，缺少对应的升级步骤', 'dsh-notifier: версия хранилища ${recorded} ниже версии плагина ${target}, нет подходящего шага обновления'],
-  ['dsh-notifier: 升级链的目标版本 ${newest} 高于插件版本 ${target}（存储已升到 ${recorded}）——步骤表与 package.json 不同步', 'dsh-notifier: целевая версия цепочки ${newest} выше версии плагина ${target} (хранилище обновлено до ${recorded}) — таблица шагов не синхронизирована с package.json'],
-  ['dsh-notifier: 存储版本 ${recorded} 高于插件版本 ${target}，本插件的升级链不回退', 'dsh-notifier: версия хранилища ${recorded} выше версии плагина ${target}, цепочка обновлений не откатывается'],
+  // Цепочка обновлений в 0.2.11 берёт префикс из ports.label, поэтому якоря — с ${label}.
+  ['${ports.label}: 存储版本号回写失败（${step.targetVersion}）— ${reasonOf2(cause)}', '${ports.label}: не удалось записать номер версии хранилища (${step.targetVersion}) — ${reasonOf2(cause)}'],
+  ['${ports.label}: 存储升级到 ${step.targetVersion} 失败 — ${reasonOf2(cause)}', '${ports.label}: не удалось обновить хранилище до ${step.targetVersion} — ${reasonOf2(cause)}'],
+  ['${label}: 存储版本 ${recorded} 落后于插件版本 ${target}，缺少对应的升级步骤', '${label}: версия хранилища ${recorded} ниже версии плагина ${target}, нет подходящего шага обновления'],
+  ['${label}: 升级链的目标版本 ${newest} 高于插件版本 ${target}（存储已升到 ${recorded}）——步骤表与 package.json 不同步', '${label}: целевая версия цепочки ${newest} выше версии плагина ${target} (хранилище обновлено до ${recorded}) — таблица шагов не синхронизирована с package.json'],
+  ['${label}: 存储版本 ${recorded} 高于插件版本 ${target}，本插件的升级链不回退', '${label}: версия хранилища ${recorded} выше версии плагина ${target}, цепочка обновлений не откатывается'],
+  ['${label}: upgrade 域只能装配一次', '${label}: домен upgrade собирается один раз'],
+  ['${label}: upgrade 域正在装配中，不能并发装配', '${label}: домен upgrade уже собирается, параллельная сборка невозможна'],
+  ['dsh-notifier: 配置形态清理落盘失败 — ', 'dsh-notifier: не удалось записать очищенный формат конфигурации — '],
   ['dsh-notifier: 配置形态割接落盘失败 — ${written.reason}', 'dsh-notifier: не удалось записать новый формат конфигурации — ${written.reason}'],
   ['配置形态割接读取失败 — ${file}${detail}', 'не удалось прочитать конфигурацию при смене формата — ${file}${detail}'],
   ['配置形态割接解析失败 — ${file}${detail}', 'не удалось разобрать конфигурацию при смене формата — ${file}${detail}'],

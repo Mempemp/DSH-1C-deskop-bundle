@@ -245,7 +245,7 @@ export type ActiveWorkingDirectoryPort = (session: unknown) => string | undefine
  * `loader` 服务本身**不在这里**：它的类型面由不在 catalog 的官方 loader 包经声明合并提供，本包
  * 取不到，`Pick<Context, "loader">` 会直接判 tsc 红；取它走 `get`（见 `compose.ts` 的 `load`）。
  */
-export type HostContextPort = Pick<Context, "logger" | "webServer" | "tools" | "on" | "systemPrompt" | "provide" | "effect" | "plugin" | "get">;
+export type HostContextPort = Pick<Context, "logger" | "webServer" | "tools" | "on" | "systemPrompt" | "provide" | "effect" | "plugin" | "get" | "isolate">;
 /** 组合根收窄后递给各域的宿主能力面：域再从中 `Pick` 自己那一份。 */
 export interface HostFaces {
     readonly logger: LoggerPort;

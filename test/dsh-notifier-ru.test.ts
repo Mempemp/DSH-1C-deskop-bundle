@@ -28,7 +28,6 @@ type RenderOutput = {
   kinds: Record<string, Notification>
   test: Notification
   duration: string
-  tools: Record<string, string>
 }
 type Run = { status: number; stdout: string; stderr: string }
 
@@ -64,7 +63,9 @@ describe('dsh-notifier-ru: русская редакция плагина уве
     expect(JSON.stringify(rendered)).not.toMatch(han)
 
     expect(rendered.kinds.ask?.title).toBe('DSH: нужно подтверждение')
-    expect(rendered.kinds.ask?.body).toContain('ждёт подтверждения (инструмент: команда PowerShell)')
+    // С 0.2.11 prettyToolName возвращает имя инструмента как есть: русских
+    // названий («команда PowerShell») в тексте больше нет — их и не переводим.
+    expect(rendered.kinds.ask?.body).toContain('ждёт подтверждения (инструмент: pwsh)')
     expect(rendered.kinds.ask?.body).toContain('Подтвердите или отклоните в DSH')
     expect(rendered.kinds.question?.title).toBe('DSH: вопрос к вам')
     expect(rendered.kinds.question?.body).toContain('Вопрос: Какой отчёт нужен?')
@@ -72,20 +73,16 @@ describe('dsh-notifier-ru: русская редакция плагина уве
     expect(rendered.kinds.done?.body).toContain('Задача «Отчёт за квартал» выполнена')
     expect(rendered.kinds['subagent-done']?.title).toBe('DSH: подзадача выполнена')
     expect(rendered.kinds.error?.title).toBe('DSH: ошибка задачи')
-    expect(rendered.kinds.error?.body).toContain('Раунд 3, шаг 2: провайдер не ответил')
-    expect(rendered.kinds['turn-end']?.body).toBe('Задача «Отчёт за квартал», раунд 3: работа завершена')
+    expect(rendered.kinds.error?.body).toContain('Ход 3, шаг 2: провайдер не ответил')
+    expect(rendered.kinds['turn-end']?.body).toBe('Задача «Отчёт за квартал»: ход 3 завершён')
     expect(rendered.test.body).toBe('Цепочка уведомлений работает (тест из настроек плагина)')
   })
 
-  it('считает длительность и называет инструменты по-русски', () => {
+  it('считает длительность по-русски', () => {
     const rendered = renderNotifications()
 
     expect(rendered.duration).toBe('1 ч 2 мин 5 с')
     expect(rendered.kinds.done?.body).toContain('Заняло: 1 ч 2 мин 5 с')
-    expect(rendered.tools.pwsh).toBe('команда PowerShell')
-    expect(rendered.tools.read).toBe('чтение файла')
-    expect(rendered.tools.ssh_tunnel).toBe('SSH-туннель')
-    expect(JSON.stringify(rendered.tools)).not.toMatch(han)
   })
 
   it('едет в сборке как локальный компонент с русской локалью в клиенте', async () => {
@@ -106,13 +103,13 @@ describe('dsh-notifier-ru: русская редакция плагина уве
     expect(manifest.name).toBe('dsh-notifier-ru')
     // Сам плагин читает свою версию из этого манифеста и разбирает её
     // собственным строго числовым parseVersion (`lib/index.js`, upgrade-цепочка):
-    // «0.2.7-ru.1» роняет его на активации — «неподдерживаемый номер версии»,
+    // «0.2.12-ru.1» роняет его на активации — «неподдерживаемый номер версии»,
     // и харнесс не стартует. Поэтому свой счётчик правок — только числом
-    // (0.2.8 поверх базы 0.2.7), без суффиксов и префиксов.
+    // (0.2.12 поверх базы 0.2.11), без суффиксов и префиксов.
     expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/)
     expect(manifest.exports['.']).toBe('./lib/index.js')
     expect(manifest.exports['./client']).toBe('./lib/client.js')
-    expect(manifest.peerDependencies['@deepseek-ai/dsh-settings']).toBe('^0.1.7-rc.2 || ^0.2.0-rc.1')
+    expect(manifest.peerDependencies['@deepseek-ai/dsh-settings']).toBe('^0.2.2-rc.1')
     // Точная версия в пире объявляет совместимость ровно с одной сборкой ядра:
     // на 0.2.1 с cordis 4.0.5 такая запись врёт о нём и о нас.
     expect(manifest.peerDependencies['@deepseek-ai/cordis']).toMatch(/^\^/)

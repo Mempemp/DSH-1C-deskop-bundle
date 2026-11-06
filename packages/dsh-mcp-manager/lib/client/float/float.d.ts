@@ -34,7 +34,7 @@ interface RowAction {
 }
 /** 主操作（每行恰好一个）：connected → 断开；disabled → 启用；其余 → 连接。 */
 export declare function primaryRowAction(server: McpServerListEntry, state: McpState, cwdQuery: string): RowAction;
-/** 禁用动作（仅非 disabled 行有）：URL 不带 cwd（历史形状如此，勿补）。 */
+/** 禁用动作（仅非 disabled 行有）：固定当前会话 cwd。 */
 export declare function disableRowAction(server: McpServerListEntry, state: McpState): RowAction;
 /** 请求 init：带载荷的 PATCH 补 content-type；纯 POST 不带头（历史形状）。 */
 export declare function rowRequestInit(action: RowAction): {

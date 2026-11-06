@@ -8,7 +8,13 @@ packages/ppt-runtime/upstream/** -whitespace
 # Файлы-копии апстрима dsh-notifier-ru сверяются по sha256 с опубликованным
 # пакетом (tools/localize.mjs --check): при autocrlf чекаут превращает LF в CRLF
 # и проверка падает, хотя в репозитории байты верные. Храним и выгружаем как есть.
-packages/dsh-notifier-ru/lib/** -text
+# Хвостовые пробелы в комментариях — тоже формат апстрима: git diff --check не
+# должен считать их нашей правкой.
+packages/dsh-notifier-ru/lib/** -text -whitespace
+
+# sources, которые генератор копирует в lib/ побайтно: autocrlf превратил бы их
+# в CRLF на чекауте, и собранная копия разошлась бы с закоммиченной.
+packages/dsh-notifier-ru/tools/*.ps1 -text
 
 # То же для локальной редакции менеджера MCP: tools/patch.mjs --check сверяет весь
 # собранный пакет (включая lib/index.js) с байтами апстрима плюс дельтой, поэтому

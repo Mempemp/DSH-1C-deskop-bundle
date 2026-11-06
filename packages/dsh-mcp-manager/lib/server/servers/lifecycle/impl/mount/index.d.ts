@@ -65,6 +65,8 @@ export interface MountServerInput {
     readonly connectTimeoutMs?: number;
     /** 状态投影出口：窗口在起点与结算点各回调一次；被丢弃的结算不回调。 */
     readonly onState: (state: ServerState) => void;
+    readonly onMounted?: (id: string) => void;
+    readonly shouldMount?: () => boolean;
 }
 /** 一次装载的结果：id 与账本条目供调用方后续定位/拆除，outcome 是等待窗口的结算。 */
 export interface MountServerResult {

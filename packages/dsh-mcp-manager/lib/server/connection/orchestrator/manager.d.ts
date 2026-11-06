@@ -134,6 +134,20 @@ export declare function summarizeAbsent(base: Record<string, unknown>, scope: st
  * 该项目时连接（跟随会话切换）。
  */
 export declare class McpManager {
+    private httpConnections;
+    private httpEpochs;
+    private httpSequence;
+    private userStateQueue;
+    private connectionKey;
+    private invalidateHttpConnection;
+    private markDisabled;
+    rootForRequest(scope: string, cwd?: string): Promise<string>;
+    /** HTTP 受理入口；宿主 connect 仍等待完整连接。 */
+    acceptConnection(name: string, scope: string, cwd?: string): Promise<string>;
+    private validateHttpTarget;
+    private runHttpConnection;
+    private entryForRoot;
+    disconnectForRequest(name: string, scope: string, cwd?: string): Promise<string>;
     ctx: Context;
     store: McpStore;
     listeners: Set<() => void>;
@@ -447,8 +461,13 @@ export declare class McpManager {
      */
     unregisterServer(name: string): Promise<void>;
     add(server: Record<string, unknown>, scope?: string): Promise<ServerConfig>;
-    update(name: string, patch: Record<string, unknown>, scope?: string): Promise<ServerConfig>;
-    remove(name: string, scope?: string): Promise<void>;
+    update(name: string, patch: Record<string, unknown>, scope?: string, cwd?: string): Promise<ServerConfig>;
+    private storeForRoot;
+    private reserveUpdate;
+    private ownsUpdate;
+    private cancelDisabledUpdate;
+    private startUpdatedServer;
+    remove(name: string, scope?: string, cwd?: string): Promise<void>;
     /**
      * 显式连接（浮窗「连接」/ 宿主 API）：解除 userDisabled + force 受控重建。
      *
@@ -473,12 +492,17 @@ export declare class McpManager {
     reconnect(name: string, scope?: string): Promise<void>;
     /** 面板数据：配置 + 实时状态 + 工具列表 + 项目信息。 */
     summary(): Record<string, unknown>;
+    summaryForCwd(cwd: string): Promise<Record<string, unknown>>;
+    summaryForRoot(root: string): Record<string, unknown>;
+    private summaryStoreForRoot;
     /**
      * 投影单元：该 (server, scope) 归属的中间层单元。单池后全部条目都在池里，
      * 只剩「单元还没建出来 / 无项目 root」这两种缺失。
      */
     private middlewareUnitFor;
     summarize(server: ServerConfig, scope: string): Record<string, unknown>;
+    summarizeForRoot(server: ServerConfig, scope: string, root: string): Record<string, unknown>;
+    private httpSummary;
     dispose(): Promise<void>;
 }
 export {};

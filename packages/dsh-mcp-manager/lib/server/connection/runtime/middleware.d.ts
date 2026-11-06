@@ -21,21 +21,25 @@
  * #767 S1-4d：连接栈换成官方 @deepseek-ai/dsh-mcp-client。本类不再自建 transport / client，
  * 也不再自己排重连与防双进程探测——装载、拆卸与六态投影一律经 runtimePorts 的 lifecycle 端口
  * 交还 servers/lifecycle 的账本（官方 serverName 在应用根上活体预留，同 id 未释放就重挂当场抛）。
- * 目录改按 `ctx.tools.schemas()` 里 `mcp__<id>__` 前缀投影（裁定 W/K），执行路径改道
- * `ctx.tools.execute`（见 servers/dispatch）。
+ * 目录仍按 `ctx.tools.schemas()` 里 `mcp__<id>__` 前缀投影（裁定 W/K）；远端执行经
+ * servers/dispatch 从宿主 loader 取得公开 `ToolExecutionPipeline`，并保留完整
+ * `ToolRunContext` identity。
  *
  * W8 端口接线：跨域能力（catalog 新鲜判定与装箱、pipeline 投影/超时/取消息/脱敏/参数归一/
  * 策略裁决、workspace 全名解析与拼装、lifecycle 装载/拆卸/投影）一律经 `impl/service` 的
  * `runtimePorts.get()` 取；server/shared 的公名派生与同子层 limits 直取，跨端层 shared 的
  * MIDDLEWARE_GLOBAL_ROOT 经共享门面取，不占端口——端口只承载跨域能力。
  */
-import type { ToolExecutionInput, ToolExecutionToken } from "@deepseek-ai/dsh-tools";
+import type { ToolExecutionInput, ToolExecutionResult, ToolExecutionToken, ToolRunContext } from "@deepseek-ai/dsh-tools";
 import type { ServerConfig } from "../../config/interface.js";
 import { type ServerState } from "../../../shared/interface.js";
 import type { SchemaView } from "../../catalog/interface.js";
 import type { MiddlewareHost } from "./deps.js";
 import type { ProjectUnit, ConnectionEntry } from "./impl/middleware/type.js";
 import type { DisabledToolsMap } from "../../store/interface.js";
+type NestedModelContent = Extract<ToolExecutionResult, {
+    isError: false;
+}>["content"];
 /** 远端装载的宿主能力面（调用点在类内现造闭包，私有读口不出类）。 */
 interface MountRemoteFaces {
     host: MiddlewareHost;
@@ -85,14 +89,24 @@ export declare class McpMiddleware {
     /** 工具级禁用（root → server → Set<tool>；root=@global 跨工作空间共享）。 */
     disabledTools: DisabledToolsMap;
     /**
-     * 在飞的转发子调用登记表：我方 dispatch 经 `ctx.tools.execute` 派出去的子调用，其
-     * `parent` 就是这次外层调用的 token，派发前登记、结算后注销（try/finally）。
+     * 在飞的转发子调用登记表：我方 dispatch 经公开 nested `ToolExecutionPipeline` 派出去的
+     * 子调用，其 `parent` 就是这次外层调用的 token，派发前登记、结算后注销（try/finally）。
      * pre-execute guard 只按发起者放行（裁定 R/Z）——集合外的一律走工具级裁决，
      * 模型直呼不会因为名字像就被放行。集合随实例消亡，热切换重建中间层即清空。
      */
     forwarding: Set<ToolExecutionToken>;
     constructor(host: MiddlewareHost);
-    /** 读取/创建 root 的单元（root 无项目标记 → undefined）。 */
+    /** 读取/创建 root 的单元（root 无项目标记 → undefined）。
+     *
+     *  #1168 窗口 B（并发初始化去重）：先查在飞 init，再决定要不要建单元——同根的并发
+     *  首次调用共享同一个 init 任务（同一代单元），不再各建一份（后写覆盖先写）。init 在
+     *  **配置读取开始前**就同步占位（Promise.resolve().then 把真正工作推迟一拍，但登记
+     *  在同一同步段完成），堵住「两个调用都越过 units.get 判空」的窗口。
+     *
+     *  init 何时 resolve：目录缓存（last-good）已载入、且 enabled 连接的 in-flight 任务已
+     *  登记之后——不等远端连接本身（连接是 fire-and-forget）。于是并发首次读拿到的一定是
+     *  已完成目录载入的完整单元，而不是半初始化对象。
+     */
     projectUnitFor(root: string | undefined): Promise<ProjectUnit | undefined>;
     /** 连接一个服务器（in-flight 去重；失败后台重连）。
      * @param opts.force 用户显式连接（浮窗「连接」/切回前台恢复）时 true：忽略
@@ -171,6 +185,10 @@ export declare class McpMiddleware {
         callId: ToolExecutionInput["callId"];
         rootCallId?: ToolExecutionInput["rootCallId"];
         parent?: ToolExecutionToken;
+        toolSet?: ToolRunContext["toolSet"];
+        deferContext?: ToolRunContext["deferContext"];
+        concludeTurn?: ToolRunContext["concludeTurn"];
+        onModelContent?: (content: NestedModelContent) => void;
     }): Promise<unknown>;
     /**
      * 拆掉一个 (root, server) 的连接（裁定 X）：换引擎后**账本化拆除的唯一落点**，

@@ -10,6 +10,8 @@
 export declare const zh: {
     readonly stConnected: "运行中";
     readonly stConnecting: "连接中";
+    readonly stDisconnecting: "断开中";
+    readonly sessionUnavailable: "当前项目会话已变化或不可用，请刷新后重试";
     readonly stReconnecting: "重连中";
     readonly stStopped: "未连接";
     readonly stDisabled: "已停用";

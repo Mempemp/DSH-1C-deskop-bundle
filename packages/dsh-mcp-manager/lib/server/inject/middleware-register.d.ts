@@ -26,7 +26,7 @@ interface MiddlewareToolContext {
     resolveRoot: (agent: unknown) => Promise<string | undefined>;
     stats?: McpStatsCollector;
     /**
-     * A+ 图片准入的模型面投影表。键是**本次 exec 对象身份**（宿主在 `execute` 与
+     * A+ 图片策略的模型面投影表。键是**本次 exec 对象身份**（宿主在 `execute` 与
      * `finalizeContent` 之间递的是同一个对象，官方也以它做 WeakMap 键）——不用模块级单例，
      * 并发调用之间不会串投影。
      */

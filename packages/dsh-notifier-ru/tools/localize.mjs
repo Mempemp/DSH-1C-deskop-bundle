@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Сборка русской редакции плагина уведомлений из апстрим-пакета.
 //
-// Генератор берёт опубликованный `@wingsky-1/dsh-notifier@0.2.7` (исходников
+// Генератор берёт опубликованный `@wingsky-1/dsh-notifier@0.2.11` (исходников
 // апстрима у нас нет: плагин публикуется уже собранным), проверяет его файлы по
 // хешам из этой таблицы, применяет русские тексты из `host-texts.mjs` и словарь
-// интерфейса из `ui-ru.json`, и раскладывает готовые `lib/*` в наш пакет.
+// интерфейса из `ui-ru.json`, дельты `deep-link.mjs`, `banner.mjs` и
+// `single-toast.mjs`, и раскладывает готовые `lib/*` в наш пакет.
 //
 // Запуск:  node tools/localize.mjs [--upstream <каталог|tgz>] [--out <каталог>]
 // Проверка: node tools/localize.mjs --check
@@ -20,17 +21,19 @@ import { fileURLToPath } from 'node:url'
 import { HOST_IDENTITY, HOST_TEXT } from './host-texts.mjs'
 import { CLIENT_TEXT } from './client-texts.mjs'
 import { CLIENT_DELTAS, FEATURE_MARKERS, HOST_DELTAS, TOAST_DELTAS } from './deep-link.mjs'
+import { BANNER_CLIENT_DELTAS, BANNER_CSS_DELTAS } from './banner.mjs'
+import { SINGLE_TOAST_DELTAS } from './single-toast.mjs'
 
 export const UPSTREAM = {
   name: '@wingsky-1/dsh-notifier',
-  version: '0.2.7',
-  integrity: 'sha512-wR5uk4nBVyhQ9HEyMpRJc5EKzTAv1YbQDR6tVeUqphJUWED02/OF+YujJctv8TBMIOL8PdtN0V1D8u1ErCnoag=='
+  version: '0.2.11',
+  integrity: 'sha512-kd/0tjgnXODr0zLh1NfF84P44s/OtCaWyzP+Cx9tlYYFo19Nsierwie0+vuh6vDB7PF2s8nWh442NXbduYx6Lg=='
 }
 
 // Хеши исходных файлов апстрима: генерация обязана идти из ровно этих байтов.
 export const UPSTREAM_SHA256 = {
-  'lib/index.js': '87474bc94d70b233be91d20d100bf137182e0a6fbb211203f41dda1f0baf4313',
-  'lib/client.js': '8ad6edc6167adcfbf01816b626e661639baf316a28ad1a7e92d8506f3d0ca0ef',
+  'lib/index.js': '7f8aed2bdfea1ea46ac1c94b6775b934dc1801f0fc06cce8f3ab4c92bb5d5a90',
+  'lib/client.js': '320c6d6f13c8b82b5c9ae746aaa8194bb0d2e2ee7b05f1a4620de340a7aeb359',
   'lib/server/channels/impl/system/toast.ps1': '2e9a8adc100599fd80537a73c23990e2adac3ee8c3d379ce9220064f55e83d6e',
   'lib/THIRD-PARTY-LICENSES': '7631be7cfcd922e26b7e5fa653b75a75f7a7ecd75c18e601281f6b64eae78ac9'
 }
@@ -64,6 +67,14 @@ export function localizeToast(source) {
 }
 
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+// Дельты сверх deep-link: оформление плашек (клиент) и «одно событие — один тост»
+// (хост). Свой ярлык для сообщений об ошибке, проверка якорей — та же, что у
+// CLIENT_DELTAS/HOST_DELTAS.
+const EXTRA_DELTAS = {
+  'lib/client.js': [['вид плашек', [...BANNER_CSS_DELTAS, ...BANNER_CLIENT_DELTAS]]],
+  'lib/index.js': [['один тост на событие', SINGLE_TOAST_DELTAS]]
+}
 
 const CLIENT_ID = 'dsh-notifier-ru'
 const HOST_PACKAGE_DIR = 'dsh-notifier-ru'
@@ -204,9 +215,15 @@ async function resolveUpstream(explicit) {
   const env = process.env.DSH_NOTIFIER_UPSTREAM_DIR
   if (env) return env
   const dir = await mkdtemp(path.join(tmpdir(), 'dsh-notifier-upstream-'))
-  const out = execFileSync('npm', ['pack', `${UPSTREAM.name}@${UPSTREAM.version}`, '--pack-destination', dir], {
-    encoding: 'utf8'
-  }).trim().split('\n').pop()
+  // На Windows `npm` — это npm.cmd, а .cmd нельзя выполнить прямым spawn (нужна
+  // оболочка). Запускаем npm-cli.js тем же node, что и генератор: без cmd.exe и
+  // без экранирования аргументов. Если раскладки npm нет — обычный `npm` (POSIX).
+  const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+  const local = existsSync(npmCli)
+  const command = local ? process.execPath : 'npm'
+  const args = local ? [npmCli, 'pack', `${UPSTREAM.name}@${UPSTREAM.version}`, '--pack-destination', dir]
+    : ['pack', `${UPSTREAM.name}@${UPSTREAM.version}`, '--pack-destination', dir]
+  const out = execFileSync(command, args, { encoding: 'utf8' }).trim().split('\n').pop()
   return unpackTarball(path.join(dir, out))
 }
 
@@ -217,7 +234,13 @@ async function unpackTarball(tarball) {
     throw new Error(`архив ${UPSTREAM.name}@${UPSTREAM.version} не совпал по контрольной сумме: ${integrity}`)
   }
   const dir = await mkdtemp(path.join(tmpdir(), 'dsh-notifier-unpack-'))
-  execFileSync('tar', ['-xzf', tarball, '-C', dir, '--strip-components=1'], { stdio: 'inherit' })
+  // GNU tar принимает «C:\…» за удалённый хост (host:path) и падает с
+  // «Cannot connect to C:» — на Windows просим трактовать имя как локальный файл.
+  // bsdtar (macOS) такой опции не знает, поэтому она только для win32.
+  const tarArgs = process.platform === 'win32'
+    ? ['--force-local', '-xzf', tarball, '-C', dir, '--strip-components=1']
+    : ['-xzf', tarball, '-C', dir, '--strip-components=1']
+  execFileSync('tar', tarArgs, { stdio: 'inherit' })
   return dir
 }
 
@@ -256,6 +279,13 @@ export async function generate({ upstream, out = PACKAGE_ROOT }) {
       throw new Error(`${rel}: в апстриме не найдены якоря deep-link — ${feature.absent.join(' | ')}`)
     }
     result.text = feature.text
+    for (const [label, entries] of EXTRA_DELTAS[rel] ?? []) {
+      const extra = applyEntries(result.text, entries, label)
+      if (extra.absent.length > 0) {
+        throw new Error(`${rel}: в апстриме не найдены якоря (${label}) — ${extra.absent.map((from) => from.slice(0, 80)).join(' | ')}`)
+      }
+      result.text = extra.text
+    }
     const left = rel.endsWith('client.js') ? untranslatedClientLiterals(result.text) : untranslatedLiterals(result.text)
     if (left.length > 0) throw new Error(`${rel}: остались непереведённые строки — ${left.join(' | ')}`)
     const target = path.join(out, rel)

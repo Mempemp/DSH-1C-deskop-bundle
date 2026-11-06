@@ -59,3 +59,22 @@ export declare const OFFICIAL_MCP_CLIENT_SPECIFIER = "@deepseek-ai/dsh-mcp-clien
  * serverName 就是我方 id」这条事实同源——散在消费方里就会随重构复制出第二份。
  */
 export declare const OFFICIAL_MCP_CLIENT_LOG_NAME = "mcp-client";
+/** MCP 图片结果的单张持久化前上限；A+ 投影与官方 client scoped facade 共用。 */
+export declare const MAX_MCP_IMAGE_BYTES: number;
+/** MCP 图片结果的单批张数上限；A+ 投影与官方 client scoped facade 共用。 */
+export declare const MAX_MCP_IMAGES_PER_RESULT = 10;
+/** 单批张数是否越界。 */
+export declare function exceedsMcpImageCount(count: number): boolean;
+/** 单张解码字节数是否越界。 */
+export declare function exceedsMcpImageBytes(byteLength: number): boolean;
+/**
+ * 官方 MCP client 把解码结果交给附件库前的统一硬校验。
+ *
+ * 入参只要求 `data.byteLength`，让 facade 不必依赖附件包类型；A+ 的解码路径用同一个字节判定，
+ * 两处因此不会各自漂移出一套数字。
+ */
+export declare function assertMcpImageBatch(inputs: readonly {
+    readonly data: {
+        readonly byteLength: number;
+    };
+}[]): void;

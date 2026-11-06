@@ -210,7 +210,7 @@ PATH оказывается GNU `tar`, и упаковка падает на `Ca
   работы агента: системный тост Windows, звук и каналы ntfy / Gotify / Bark /
   webhook. В сборке едет русская редакция `dsh-notifier-ru` (MIT, © wingsky-1);
 - [dsh-mcp-manager](https://github.com/wingsky-1/dsh-plugin-hub) — панель
-  MCP-серверов. В сборке едет локальная редакция 0.2.10
+  MCP-серверов. В сборке едет локальная редакция 0.2.12
   ([`packages/dsh-mcp-manager`](packages/dsh-mcp-manager/README.md), MIT, © wingsky-1):
   исправлена очередь записи каталога инструментов, из-за которой хост падал по OOM
   на нескольких MCP-серверах;

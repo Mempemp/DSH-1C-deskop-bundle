@@ -44,7 +44,10 @@ window.__ModuleLoader__.load({
     module.exports = __toCommonJS(index_exports);
 
     // src/client/style.css
-    var style_default = '/* dsh-notifier — стили клиента (отдельный .css, карточка настроек).\n *\n * Сборщик build-client встраивает .css прямо в client.js при сборке. ensureStyle добавляет\n * <style id=dsh-notifier-style>. Префикс dn-; цвета через --dsw-alias-* с запасными светлыми значениями.\n *\n * Интерфейс v3 (направление C + стеклянная оболочка + плотные списки):\n * - сегментированные переключатели / нижняя панель несохранённого / наборы значков: сдержанная стеклянная отделка;\n * - у списков почти плотный фон и лёгкая подсветка при наведении: высокая плотность без слоёв матового стекла;\n * - на всех трёх страницах общий набор значков (dn-ico); цифры через tabular-nums;\n * - плавные переходы переключателей и меток; без вертикальной черты слева; смысловые цвета только точками и короткими статусами.\n *\n * Контрактные якоря сохранены: dn-set-tabs/dn-set-tabActive/dn-set-tabBadge, dn-ch-perm,\n * dn-set-historyTools/dn-set-allowDim/dn-set-allowActions.\n */\n\n/* ============ 设置卡壳 ============ */\n\n.dn-set-card {\n  list-style: none;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 14px;\n  overflow: hidden;\n  font-size: 12px;\n  color: var(--dsw-alias-label-primary, #1f2329);\n  background: var(--dsw-alias-bg-base, #ffffff);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-body {\n  padding: 0 0 4px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n}\n.dn-set-card .dn-set-body > div {\n  padding-left: 14px;\n  padding-right: 14px;\n}\n.dn-set-card .dn-set-body > .dn-set-foot {\n  padding-left: 14px;\n  padding-right: 14px;\n}\n\n/* --- 分段控件 (壳层玻璃) --- */\n.dn-set-card .dn-set-tabs {\n  display: flex;\n  gap: 3px;\n  padding: 10px 12px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  background: var(--dsw-alias-bg-layer-1, rgba(245, 246, 248, 0.72));\n  backdrop-filter: blur(16px) saturate(1.15);\n  -webkit-backdrop-filter: blur(16px) saturate(1.15);\n}\n.dn-set-card .dn-set-tab {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  flex: 1;\n  min-height: 34px;\n  padding: 5px 10px;\n  border: 1px solid transparent;\n  border-radius: 9px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  font-size: 12px;\n  cursor: pointer;\n  transition:\n    background 200ms cubic-bezier(0.25, 0.1, 0.25, 1),\n    color 200ms ease,\n    border-color 200ms ease,\n    box-shadow 200ms ease;\n}\n.dn-set-card .dn-set-tab .dn-ico {\n  width: 16px;\n  height: 16px;\n  border: none;\n  background: transparent;\n  box-shadow: none;\n  padding: 0;\n}\n.dn-set-card .dn-set-tab .dn-ico svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-set-card .dn-set-tabActive {\n  background: var(--dsw-alias-bg-base, rgba(255, 255, 255, 0.88));\n  border-color: var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-weight: 650;\n  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);\n}\n.dn-set-card .dn-set-tabBadge {\n  min-width: 17px;\n  padding: 0 5px;\n  border-radius: 9px;\n  background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.06));\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-size: 10px;\n  line-height: 17px;\n  text-align: center;\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- 分区标题 --- */\n.dn-set-card .dn-sec {\n  margin: 12px 0 6px;\n  padding: 0 14px;\n  display: flex;\n  align-items: baseline;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-set-body > div > .dn-sec {\n  padding-left: 0;\n  padding-right: 0;\n}\n.dn-set-card .dn-sec-title {\n  font-weight: 650;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  letter-spacing: 0.02em;\n}\n.dn-set-card .dn-sec-hint {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n\n/* --- icon 井 --- */\n.dn-ico {\n  width: 28px;\n  height: 28px;\n  border-radius: 8px;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  flex: none;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  background: var(--dsw-alias-bg-layer-1, #f2f2ee);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n}\n.dn-ico svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-ico.dn-sev-success {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-ico.dn-sev-warning {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-ico.dn-sev-failure,\n.dn-ico.dn-sev-error {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n\n/* --- switch: 丝滑过渡 --- */\n.dn-switch {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 44px;\n  height: 32px;\n  flex: none;\n  cursor: pointer;\n}\n.dn-switch input {\n  position: absolute;\n  inset: 0;\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  opacity: 0;\n  cursor: pointer;\n}\n.dn-switch .dn-switch-track {\n  width: 40px;\n  height: 22px;\n  border-radius: 11px;\n  background: var(--dsw-alias-border-l2, #d3d8df);\n  transition: background 200ms cubic-bezier(0.25, 0.1, 0.25, 1);\n  flex: none;\n  position: relative;\n}\n.dn-switch .dn-switch-track::after {\n  content: "";\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 18px;\n  height: 18px;\n  border-radius: 50%;\n  background: #fff;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);\n  transition: transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1);\n}\n.dn-switch input:checked + .dn-switch-track {\n  background: var(--dsw-alias-state-success-primary, #2f8f5f);\n}\n.dn-switch input:checked + .dn-switch-track::after {\n  transform: translateX(18px);\n}\n.dn-switch input:focus-visible + .dn-switch-track {\n  outline: 2px solid var(--dsw-alias-label-primary, #1f2329);\n  outline-offset: 2px;\n}\n\n/* --- 事件行 (连续列表, 近实底) --- */\n.dn-set-card .dn-evt {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px;\n  margin: 0;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  transition: background 160ms ease;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-evt:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-evt-head {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  min-height: 40px;\n}\n.dn-sev {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  flex: none;\n  background: var(--dsw-alias-border-l2, #c5c5c0);\n}\n.dn-set-card .dn-sev-success {\n  background: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-sev-warning {\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-sev-failure {\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-evt-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-evt-kind {\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.38));\n  font-variant-numeric: tabular-nums;\n  background: transparent;\n  border: none;\n  padding: 0;\n  line-height: 1.4;\n}\n.dn-set-card .dn-evt-head .dn-switch {\n  margin-left: auto;\n}\n\n/* 路由: 默认收成摘要, details 展开 chips (近实 chips, 无彩色玻璃) */\n.dn-set-card .dn-evt-routeDisc {\n  margin-top: 0;\n}\n.dn-set-card .dn-evt-routeSum {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 28px;\n  padding: 2px 0 2px 38px;\n  font-size: 12px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.48));\n  user-select: none;\n}\n.dn-set-card .dn-evt-routeSum::-webkit-details-marker {\n  display: none;\n}\n.dn-set-card .dn-evt-routeSum::after {\n  content: "";\n  width: 5px;\n  height: 5px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(-45deg);\n  transition: transform 160ms ease;\n  flex: none;\n  opacity: 0.55;\n}\n.dn-set-card .dn-evt-routeDisc[open] > .dn-evt-routeSum::after {\n  transform: rotate(45deg);\n}\n@media (hover: hover) {\n  .dn-set-card .dn-evt-routeSum:hover {\n    color: var(--dsw-alias-label-primary, #1f2329);\n  }\n}\n.dn-set-card .dn-evt-routes {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 4px;\n  padding: 6px 0 4px 38px;\n  border-top: none;\n}\n.dn-set-card .dn-evt-routesCap {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  flex: none;\n}\n.dn-set-card .dn-route-chip {\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-base, #fff);\n  color: var(--dsw-alias-label-secondary, #555);\n  border-radius: 999px;\n  padding: 4px 10px;\n  min-height: 32px;\n  font-size: 11px;\n  cursor: pointer;\n  transition:\n    border-color 160ms ease,\n    background 160ms ease,\n    color 160ms ease;\n}\n.dn-set-card .dn-route-chip::before {\n  content: none;\n}\n.dn-set-card .dn-route-chip.is-on {\n  background: var(--dsw-alias-bg-layer-1, #f0f0ec);\n  border-color: var(--dsw-alias-label-primary, rgba(30, 30, 30, 0.28));\n  color: var(--dsw-alias-label-primary, #111);\n  font-weight: 600;\n}\n.dn-set-card .dn-route-chip.is-off,\n.dn-set-card .dn-route-chip.is-off.is-on {\n  opacity: 0.4;\n  border-style: dashed;\n  cursor: not-allowed;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  border-color: var(--dsw-alias-border-l1, #e2e5ea);\n  font-weight: 400;\n}\n.dn-set-card .dn-route-chip:disabled {\n  pointer-events: none;\n}\n.dn-set-card .dn-route-chip.is-stale {\n  border-style: dashed;\n  opacity: 0.75;\n  text-decoration: line-through;\n}\n.dn-set-card .dn-route-state {\n  border: none;\n  background: none;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  min-height: 32px;\n  padding: 0 4px;\n  cursor: default;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-route-state.is-custom {\n  color: var(--dsw-alias-label-primary, #1f2329);\n  cursor: pointer;\n  text-decoration: underline dotted;\n  font-weight: 600;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-route-state.is-custom:hover {\n    opacity: 0.85;\n  }\n}\n\n/* --- 动态 kind (无左侧色条, 用浅底 + 字重) --- */\n.dn-set-card .dn-kinds {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px;\n  margin: 0;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n}\n.dn-set-card .dn-kinds-ok {\n  background: var(--dsw-alias-bg-base, #ffffff);\n  opacity: 0.92;\n}\n.dn-set-card .dn-kinds-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  min-height: 40px;\n}\n.dn-set-card .dn-kinds-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-kinds-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 6px;\n}\n.dn-set-card .dn-kind-routeHint {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n  margin-top: 2px;\n  padding-left: 38px;\n}\n\n/* --- 按钮 --- */\n.dn-set-card .dn-set-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 5px;\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-layer-1, #f7f7f4);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  border-radius: 8px;\n  padding: 5px 12px;\n  min-height: 32px;\n  cursor: pointer;\n  font-size: 12px;\n  transition:\n    background 160ms ease,\n    opacity 160ms ease;\n}\n.dn-set-card .dn-set-btnSmall {\n  min-height: 32px;\n  padding: 4px 12px;\n  font-size: 11px;\n  border-radius: 8px;\n}\n.dn-set-card .dn-set-btnPrimary {\n  background: var(--dsw-alias-label-primary, #1f2329);\n  border-color: var(--dsw-alias-label-primary, #1f2329);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-weight: 600;\n}\n.dn-set-card .dn-set-btnDanger {\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n  border-color: var(--dsw-alias-state-error-primary, #8a4f45);\n  color: #fff;\n}\n.dn-set-card .dn-set-btnGhostDanger {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n  border-color: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.15));\n  background: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.08));\n}\n.dn-set-card button:focus-visible,\n.dn-set-card input:focus-visible,\n.dn-set-card select:focus-visible,\n.dn-set-card textarea:focus-visible,\n.dn-set-card summary:focus-visible {\n  outline: 2px solid var(--dsw-alias-label-primary, #1f2329);\n  outline-offset: 2px;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-btn:hover,\n  .dn-set-card .dn-set-save:hover {\n    opacity: 0.9;\n  }\n}\n.dn-set-card .dn-set-btn:disabled,\n.dn-set-card .dn-set-save:disabled {\n  opacity: 0.45;\n  cursor: not-allowed;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-btn:disabled:hover,\n  .dn-set-card .dn-set-save:disabled:hover {\n    opacity: 0.45;\n  }\n}\n\n/* 频道 tab 域保存行 */\n.dn-set-card .dn-ch-domainSave {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 10px;\n  margin-top: 12px;\n  padding-top: 10px;\n  padding-left: 14px;\n  padding-right: 14px;\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-domainSaveHint {\n  flex: 1;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-size: 11px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-domainSave .dn-set-save {\n  min-height: 32px;\n}\n\n/* 409 冲突 */\n.dn-set-card .dn-conflict {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 10px;\n  margin-left: 14px;\n  margin-right: 14px;\n  padding: 8px 10px;\n  border: 1px solid var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.25));\n  background: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.08));\n  border-radius: 8px;\n}\n.dn-set-card .dn-conflictText {\n  flex: 1;\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-conflictActions {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n@media (max-width: 480px) {\n  .dn-set-card .dn-conflict {\n    flex-direction: column;\n    align-items: stretch;\n  }\n  .dn-set-card .dn-conflictActions {\n    justify-content: flex-start;\n  }\n}\n\n/* --- 免打扰 --- */\n.dn-set-card .dn-dnd {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px 12px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  margin: 0;\n}\n.dn-set-card .dn-dnd-head {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 40px;\n}\n.dn-set-card .dn-dnd-head .dn-switch {\n  margin-left: auto;\n}\n.dn-set-card .dn-dnd-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 6px;\n  font-size: 12px;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-dnd-cap {\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n/* --- 免打扰多时间窗行 (#936): v3 风格增量, 只补多窗时间输入 ---\n * 普通行 (不套 details); 复用 dn-set-input/dn-set-btn; 无左侧竖线/渐变/斜体; \n * 颜色只走 --dsw-alias-* (本块不新增颜色, 只收数字与换行); \n * 数字 tabular-nums (时间输入与本机回显对齐; 行级 tabular-nums 已由 939 持有). */\n.dn-set-card .dn-dnd-row .dn-set-input[type="time"] {\n  font-variant-numeric: tabular-nums;\n  min-width: 0;\n  max-width: 140px;\n}\n@media (max-width: 480px) {\n  .dn-set-card .dn-dnd-row .dn-set-input[type="time"] {\n    flex: 1 1 120px;\n  }\n}\n.dn-set-card .dn-set-allows {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n.dn-set-card .dn-set-allowDim {\n  opacity: 0.55;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-set-allowHint {\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-set-allowActions {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n\n/* --- 输入控件 --- */\n.dn-set-card .dn-set-input {\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  padding: 5px 8px;\n  font-size: 12px;\n  min-height: 32px;\n  font-variant-numeric: tabular-nums;\n  transition:\n    border-color 160ms ease,\n    background 160ms ease;\n}\n.dn-set-card .dn-set-inputText {\n  width: 240px;\n  max-width: 100%;\n}\n.dn-set-card .dn-set-select {\n  width: auto;\n  min-width: 120px;\n}\n.dn-set-card .dn-set-numInput {\n  width: 110px;\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- 折叠区 --- */\n.dn-set-card .dn-ch-adv {\n  margin: 10px 14px 0;\n}\n.dn-set-card .dn-ch-adv.dn-sec-adv {\n  margin-top: 12px;\n}\n.dn-set-card .dn-ch-adv > summary {\n  cursor: pointer;\n  list-style: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 32px;\n  padding: 2px 12px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  font-size: 11px;\n  user-select: none;\n  transition:\n    color 160ms ease,\n    background 160ms ease;\n}\n.dn-set-card .dn-ch-adv > summary::-webkit-details-marker {\n  display: none;\n}\n.dn-set-card .dn-ch-adv > summary::before {\n  content: "";\n  width: 5px;\n  height: 5px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(-45deg);\n  transition: transform 160ms ease;\n  flex: none;\n}\n.dn-set-card .dn-ch-adv[open] > summary::before {\n  transform: rotate(45deg);\n}\n@media (hover: hover) {\n  .dn-set-card .dn-ch-adv > summary:hover {\n    color: var(--dsw-alias-label-primary, #1f2329);\n  }\n}\n.dn-set-card .dn-ch-adv-body {\n  margin-top: 8px;\n  border: 1px solid var(--dsw-alias-border-l1, #e8e8e4);\n  border-radius: 10px;\n  padding: 8px 12px;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n}\n.dn-set-card .dn-adv-row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  min-height: 36px;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-adv-row + .dn-adv-row {\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-adv-row .dn-adv-cap {\n  flex: 1;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-set-note-inline {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n}\n\n/* --- 频道卡 (连续行 + 可展开, 无左侧色条) --- */\n.dn-set-card .dn-ch-card {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  margin: 0;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  overflow: visible;\n}\n.dn-set-card .dn-ch-card > summary {\n  cursor: pointer;\n  list-style: none;\n  user-select: none;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 8px 14px;\n  min-height: 52px;\n  flex-wrap: wrap;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-ch-card > summary::-webkit-details-marker {\n  display: none;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-ch-card > summary:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-ch-card > summary::after {\n  content: "";\n  width: 6px;\n  height: 6px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(45deg);\n  transition: transform 180ms ease;\n  opacity: 0.45;\n  flex: none;\n}\n.dn-set-card .dn-ch-card[open] > summary::after {\n  transform: rotate(225deg);\n}\n.dn-ch-icon {\n  width: 28px;\n  height: 28px;\n  border-radius: 8px;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  background: var(--dsw-alias-bg-layer-1, #f2f2ee);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  flex: none;\n}\n.dn-ch-icon svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-set-card .dn-ch-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-ch-type {\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.38));\n  font-variant-numeric: tabular-nums;\n  border: none;\n  background: transparent;\n  padding: 0;\n  line-height: 1.4;\n}\n.dn-set-card .dn-ch-statusDot {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: var(--dsw-alias-border-l2, #c5c5c0);\n  flex: none;\n}\n.dn-set-card .dn-ch-statusDot.ok {\n  background: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-ch-statusDot.fail {\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n  box-shadow: none;\n}\n.dn-set-card .dn-ch-statusTxt {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-ch-summaryRight {\n  margin-left: auto;\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n.dn-set-card .dn-ch-body {\n  padding: 4px 14px 12px 52px;\n  border-top: none;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04));\n}\n.dn-set-card .dn-ch-row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  padding: 6px 0;\n  min-height: 40px;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-ch-row + .dn-ch-row {\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-cap {\n  flex: 0 0 96px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-ctl {\n  flex: 1 1 220px;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-ctl .dn-set-inputText {\n  flex: 1 1 180px;\n  width: auto;\n  min-width: 0;\n}\n.dn-set-card .dn-ch-hint {\n  flex-basis: 100%;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-actions {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding-top: 8px;\n  margin-top: 4px;\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-perm {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-permText {\n  line-height: 1.5;\n}\n/* 诊断行: 无左侧竖线, 用浅底 + 状态字 */\n.dn-set-card .dn-ch-diag {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-top: 8px;\n  padding: 8px 10px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-base, #fff);\n  font-size: 11px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-diag-error .dn-ch-diagText {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-ch-diagText {\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-ch-diagCap {\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-diagItems {\n  margin: 2px 0 0;\n  padding-left: 16px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-diagSrc {\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-diagDetail {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-diagDetailCap {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n/* 三态: 文字必现, 不用左侧色条 */\n.dn-set-card .dn-ch-card.dn-ch-sound .dn-ch-stateTxt,\n.dn-set-card .dn-soundOnly {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-ch-card.dn-ch-off > summary {\n  opacity: 0.72;\n}\n.dn-set-card .dn-ch-stateTxt {\n  font-size: 11px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));\n  border-radius: 6px;\n  padding: 0 6px;\n  line-height: 1.7;\n  flex: none;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-tonePreview {\n  flex: none;\n}\n.dn-set-card .dn-ch-add {\n  margin: 8px 14px 12px;\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-failBadge {\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 10px;\n  border-radius: 6px;\n  padding: 1px 6px;\n  background: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.08));\n  border: 1px solid var(--dsw-alias-state-error-primary, #8a4f45);\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n  flex: none;\n  max-width: 200px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n\n/* secret / auth / template */\n.dn-secret {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.dn-secret .dn-set-inputText {\n  flex: 1 1 auto;\n  font-family: ui-monospace, monospace;\n  letter-spacing: 0.06em;\n}\n.dn-set-card .dn-secret-reveal {\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-layer-1, #f7f7f4);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border-radius: 8px;\n  min-height: 32px;\n  padding: 4px 10px;\n  font-size: 11px;\n  cursor: pointer;\n  flex: none;\n}\n.dn-authFields {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex: 1 1 200px;\n  min-width: 0;\n  flex-wrap: wrap;\n}\n.dn-authFields .dn-set-inputText {\n  flex: 1 1 120px;\n  width: auto;\n  min-width: 0;\n  font-family: ui-monospace, monospace;\n}\n.dn-tpl {\n  width: 100%;\n  min-height: 112px;\n  resize: vertical;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 11px;\n  line-height: 1.7;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  tab-size: 2;\n  font-variant-numeric: tabular-nums;\n}\n.dn-tplChips {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 6px;\n  align-items: center;\n}\n.dn-tplChips .dn-tplCap {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-tpl-chip {\n  font-family: ui-monospace, monospace;\n  font-size: 10px;\n  border: 1px dashed var(--dsw-alias-border-l2, #d3d8df);\n  border-radius: 6px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  padding: 5px 8px;\n  min-height: 32px;\n  cursor: copy;\n}\n.dn-set-card .dn-tpl-chip.is-raw {\n  border-style: solid;\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n  border-color: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.2));\n}\n\n/* levels */\n.dn-set-card .dn-levels-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 6px 0;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-levels-kind {\n  flex: 0 1 150px;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 12px;\n}\n.dn-set-card .dn-levels-row .dn-set-select {\n  flex: 1 1 130px;\n  min-width: 0;\n}\n.dn-set-card .dn-levels-add {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n.dn-set-card .dn-levels-add .dn-set-inputText {\n  flex: 1 1 150px;\n  min-width: 90px;\n}\n.dn-set-card .dn-levels-add .dn-set-select {\n  flex: 1 1 110px;\n  min-width: 90px;\n}\n\n/* --- 通知记录 --- */\n.dn-set-card .dn-set-historyTools {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin: 8px 0 4px;\n  padding: 0;\n}\n.dn-set-card .dn-set-historyCount {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  margin-left: auto;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-history {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  background: var(--dsw-alias-bg-base, #fff);\n}\n.dn-set-card .dn-set-historyItem {\n  display: flex;\n  gap: 10px;\n  align-items: flex-start;\n  padding: 10px 2px;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  transition: background 160ms ease;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-historyItem:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-set-historyItem .dn-sev {\n  margin-top: 10px;\n  flex: none;\n}\n.dn-set-card .dn-set-historyItem > .dn-ico {\n  margin-top: 2px;\n}\n.dn-set-card .dn-set-historyMain {\n  flex: 1;\n  min-width: 0;\n}\n.dn-set-card .dn-set-historyHead {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-set-historyKind {\n  font-weight: 500;\n  font-size: 12px;\n}\n.dn-set-card .dn-set-historyTime {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-historySuppressed {\n  font-size: 10px;\n  border-radius: 6px;\n  padding: 0 6px;\n  border: 1px solid var(--dsw-alias-border-l2, #d3d8df);\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-historyText {\n  font-size: 12px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  margin-top: 3px;\n  line-height: 1.6;\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-set-historyChannels {\n  margin-top: 6px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.04));\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n.dn-set-card .dn-ch-delivery {\n  display: flex;\n  align-items: baseline;\n  gap: 6px;\n  flex-wrap: wrap;\n  font-size: 11px;\n  line-height: 1.6;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-ch-deliveryName {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  background: var(--dsw-alias-bg-base, #fff);\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 4px;\n  padding: 0 5px;\n  flex: none;\n}\n.dn-set-card .dn-ch-deliveryStatus {\n  flex: none;\n  font-weight: 600;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-delivery-ok .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-ch-delivery-failed .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-ch-delivery-skipped .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-ch-deliveryReason {\n  flex: 1 1 160px;\n  min-width: 0;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-ch-reasonRaw {\n  flex-basis: 100%;\n  min-width: 0;\n}\n.dn-set-card .dn-ch-reasonRaw > summary {\n  cursor: pointer;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  user-select: none;\n}\n.dn-set-card .dn-ch-reasonRawText {\n  margin-top: 2px;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  overflow-wrap: anywhere;\n  white-space: pre-wrap;\n}\n\n/* --- 底栏 (壳层玻璃) --- */\n.dn-set-card .dn-set-foot {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 10px 14px;\n  margin-top: 8px;\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  background: var(--dsw-alias-bg-layer-1, rgba(245, 246, 248, 0.72));\n  backdrop-filter: blur(16px) saturate(1.15);\n  -webkit-backdrop-filter: blur(16px) saturate(1.15);\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-dirty {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 11px;\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-dirty::before {\n  content: "";\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-set-foot .dn-spacer {\n  flex: 1;\n}\n.dn-set-card .dn-set-foot .dn-set-saved {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-set-foot .dn-set-error {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-set-save {\n  border: none;\n  background: var(--dsw-alias-label-primary, #1a1a1a);\n  color: var(--dsw-alias-bg-base, #fff);\n  border-radius: 10px;\n  padding: 6px 18px;\n  min-height: 32px;\n  cursor: pointer;\n  font-size: 12px;\n  font-weight: 650;\n  transition:\n    opacity 160ms ease,\n    transform 160ms ease;\n}\n.dn-set-card .dn-set-save:hover {\n  opacity: 0.9;\n}\n\n.dn-set-card .dn-set-notes {\n  margin-top: 8px;\n  padding-left: 14px;\n  padding-right: 14px;\n}\n.dn-set-card .dn-set-note {\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-size: 11px;\n  margin-top: 6px;\n  line-height: 1.7;\n  border-left: none;\n  padding-left: 0;\n}\n\n/* 窄屏 */\n@media (max-width: 480px) {\n  .dn-set-card .dn-set-tabs {\n    padding: 8px 8px;\n  }\n  .dn-set-card .dn-set-tab {\n    flex: 1;\n    justify-content: center;\n    padding: 5px 4px;\n  }\n  .dn-set-card .dn-evt,\n  .dn-set-card .dn-ch-card > summary,\n  .dn-set-card .dn-kinds {\n    padding-left: 10px;\n    padding-right: 10px;\n  }\n  .dn-set-card .dn-ch-body {\n    padding-left: 12px;\n    padding-right: 10px;\n  }\n  .dn-set-card .dn-ch-cap {\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-ctl {\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-ctl .dn-set-inputText {\n    flex: 1 1 100%;\n  }\n  .dn-set-card .dn-ch-actions .dn-set-btn {\n    flex: 1 1 auto;\n  }\n  .dn-set-card .dn-evt-head .dn-switch {\n    margin-left: 0;\n  }\n  .dn-set-card .dn-kinds-actions {\n    margin-left: 0;\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-failBadge {\n    max-width: 140px;\n  }\n  .dn-set-card .dn-ch-card > summary .dn-ch-statusTxt {\n    display: none;\n  }\n}\n\n/* ============ 通知展示 (横幅 / toast) ============ */\n\n.dn-toast {\n  position: fixed;\n  bottom: 20px;\n  right: 20px;\n  padding: 8px 14px;\n  border-radius: 8px;\n  z-index: 9999;\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n  color: #fff;\n  font-size: 12px;\n  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);\n}\n.dn-banner {\n  position: fixed;\n  top: 16px;\n  right: 16px;\n  width: 320px;\n  max-width: min(320px, calc(100vw - 24px));\n  padding: 10px 12px;\n  border-radius: 10px;\n  z-index: 10000;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);\n  cursor: pointer;\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-size: 13px;\n}\n.dn-banner[data-kind="error"] {\n  border-color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-banner[data-kind="ask"],\n.dn-banner[data-kind="question"] {\n  border-color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-test-dirty {\n  border-color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-test-dirtyBadge {\n  margin-left: 6px;\n  padding: 0 6px;\n  border-radius: 6px;\n  font-size: 11px;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n  color: #fff;\n  font-variant-numeric: tabular-nums;\n}\n.dn-dryrun {\n  margin: 8px 14px;\n  padding: 8px 10px;\n  border-radius: 8px;\n  border: 1px solid var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.25));\n  background: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.06));\n  font-size: 12px;\n}\n.dn-dryrunTag {\n  margin-right: 8px;\n  padding: 0 6px;\n  border-radius: 6px;\n  font-size: 11px;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n  color: #fff;\n}\n.dn-dryrunPending {\n  color: var(--dsw-alias-label-secondary, #646a73);\n}\n.dn-dryrunResult {\n  color: var(--dsw-alias-label-primary, #1f2329);\n  overflow-wrap: anywhere;\n  font-variant-numeric: tabular-nums;\n}\n.dn-dryrunActions {\n  margin-left: 8px;\n}\n.dn-dryrunActions .dn-set-btn {\n  margin-left: 6px;\n}\n.dn-dryrunNote {\n  margin-top: 4px;\n  font-size: 11px;\n  color: var(--dsw-alias-label-secondary, #646a73);\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .dn-set-card *,\n  .dn-set-card *::before,\n  .dn-set-card *::after,\n  .dn-switch *,\n  .dn-switch *::before,\n  .dn-switch *::after {\n    transition-duration: 0.01ms !important;\n  }\n}\n';
+    var style_default = '/* dsh-notifier — стили клиента (отдельный .css, карточка настроек).\n *\n * Сборщик build-client встраивает .css прямо в client.js при сборке. ensureStyle добавляет\n * <style id=dsh-notifier-style>. Префикс dn-; цвета через --dsw-alias-* с запасными светлыми значениями.\n *\n * Интерфейс v3 (направление C + стеклянная оболочка + плотные списки):\n * - сегментированные переключатели / нижняя панель несохранённого / наборы значков: сдержанная стеклянная отделка;\n * - у списков почти плотный фон и лёгкая подсветка при наведении: высокая плотность без слоёв матового стекла;\n * - на всех трёх страницах общий набор значков (dn-ico); цифры через tabular-nums;\n * - плавные переходы переключателей и меток; без вертикальной черты слева; смысловые цвета только точками и короткими статусами.\n *\n * Контрактные якоря сохранены: dn-set-tabs/dn-set-tabActive/dn-set-tabBadge, dn-ch-perm,\n * dn-set-historyTools/dn-set-allowDim/dn-set-allowActions.\n */\n\n/* ============ 设置卡壳 ============ */\n\n.dn-set-card {\n  list-style: none;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 14px;\n  overflow: hidden;\n  font-size: 12px;\n  color: var(--dsw-alias-label-primary, #1f2329);\n  background: var(--dsw-alias-bg-base, #ffffff);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-body {\n  padding: 0 0 4px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n}\n.dn-set-card .dn-set-body > div {\n  padding-left: 14px;\n  padding-right: 14px;\n}\n.dn-set-card .dn-set-body > .dn-set-foot {\n  padding-left: 14px;\n  padding-right: 14px;\n}\n\n/* --- 分段控件 (壳层玻璃) --- */\n.dn-set-card .dn-set-tabs {\n  display: flex;\n  gap: 3px;\n  padding: 10px 12px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  background: var(--dsw-alias-bg-layer-1, rgba(245, 246, 248, 0.72));\n  backdrop-filter: blur(16px) saturate(1.15);\n  -webkit-backdrop-filter: blur(16px) saturate(1.15);\n}\n.dn-set-card .dn-set-tab {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  flex: 1;\n  min-height: 34px;\n  padding: 5px 10px;\n  border: 1px solid transparent;\n  border-radius: 9px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  font-size: 12px;\n  cursor: pointer;\n  transition:\n    background 200ms cubic-bezier(0.25, 0.1, 0.25, 1),\n    color 200ms ease,\n    border-color 200ms ease,\n    box-shadow 200ms ease;\n}\n.dn-set-card .dn-set-tab .dn-ico {\n  width: 16px;\n  height: 16px;\n  border: none;\n  background: transparent;\n  box-shadow: none;\n  padding: 0;\n}\n.dn-set-card .dn-set-tab .dn-ico svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-set-card .dn-set-tabActive {\n  background: var(--dsw-alias-bg-base, rgba(255, 255, 255, 0.88));\n  border-color: var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-weight: 650;\n  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);\n}\n.dn-set-card .dn-set-tabBadge {\n  min-width: 17px;\n  padding: 0 5px;\n  border-radius: 9px;\n  background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.06));\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-size: 10px;\n  line-height: 17px;\n  text-align: center;\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- 分区标题 --- */\n.dn-set-card .dn-sec {\n  margin: 12px 0 6px;\n  padding: 0 14px;\n  display: flex;\n  align-items: baseline;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-set-body > div > .dn-sec {\n  padding-left: 0;\n  padding-right: 0;\n}\n.dn-set-card .dn-sec-title {\n  font-weight: 650;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  letter-spacing: 0.02em;\n}\n.dn-set-card .dn-sec-hint {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n\n/* --- icon 井 --- */\n.dn-ico {\n  width: 28px;\n  height: 28px;\n  border-radius: 8px;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  flex: none;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  background: var(--dsw-alias-bg-layer-1, #f2f2ee);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n}\n.dn-ico svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-ico.dn-sev-success {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-ico.dn-sev-warning {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-ico.dn-sev-failure,\n.dn-ico.dn-sev-error {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n\n/* --- switch: 丝滑过渡 --- */\n.dn-switch {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 44px;\n  height: 32px;\n  flex: none;\n  cursor: pointer;\n}\n.dn-switch input {\n  position: absolute;\n  inset: 0;\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  opacity: 0;\n  cursor: pointer;\n}\n.dn-switch .dn-switch-track {\n  width: 40px;\n  height: 22px;\n  border-radius: 11px;\n  background: var(--dsw-alias-border-l2, #d3d8df);\n  transition: background 200ms cubic-bezier(0.25, 0.1, 0.25, 1);\n  flex: none;\n  position: relative;\n}\n.dn-switch .dn-switch-track::after {\n  content: "";\n  position: absolute;\n  top: 2px;\n  left: 2px;\n  width: 18px;\n  height: 18px;\n  border-radius: 50%;\n  background: #fff;\n  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);\n  transition: transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1);\n}\n.dn-switch input:checked + .dn-switch-track {\n  background: var(--dsw-alias-state-success-primary, #2f8f5f);\n}\n.dn-switch input:checked + .dn-switch-track::after {\n  transform: translateX(18px);\n}\n.dn-switch input:focus-visible + .dn-switch-track {\n  outline: 2px solid var(--dsw-alias-label-primary, #1f2329);\n  outline-offset: 2px;\n}\n\n/* --- 事件行 (连续列表, 近实底) --- */\n.dn-set-card .dn-evt {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px;\n  margin: 0;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  transition: background 160ms ease;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-evt:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-evt-head {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  min-height: 40px;\n}\n.dn-sev {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  flex: none;\n  background: var(--dsw-alias-border-l2, #c5c5c0);\n}\n.dn-set-card .dn-sev-success {\n  background: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-sev-warning {\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-sev-failure {\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-evt-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-evt-kind {\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.38));\n  font-variant-numeric: tabular-nums;\n  background: transparent;\n  border: none;\n  padding: 0;\n  line-height: 1.4;\n}\n.dn-set-card .dn-evt-head .dn-switch {\n  margin-left: auto;\n}\n\n/* 路由: 默认收成摘要, details 展开 chips (近实 chips, 无彩色玻璃) */\n.dn-set-card .dn-evt-routeDisc {\n  margin-top: 0;\n}\n.dn-set-card .dn-evt-routeSum {\n  list-style: none;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 28px;\n  padding: 2px 0 2px 38px;\n  font-size: 12px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.48));\n  user-select: none;\n}\n.dn-set-card .dn-evt-routeSum::-webkit-details-marker {\n  display: none;\n}\n.dn-set-card .dn-evt-routeSum::after {\n  content: "";\n  width: 5px;\n  height: 5px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(-45deg);\n  transition: transform 160ms ease;\n  flex: none;\n  opacity: 0.55;\n}\n.dn-set-card .dn-evt-routeDisc[open] > .dn-evt-routeSum::after {\n  transform: rotate(45deg);\n}\n@media (hover: hover) {\n  .dn-set-card .dn-evt-routeSum:hover {\n    color: var(--dsw-alias-label-primary, #1f2329);\n  }\n}\n.dn-set-card .dn-evt-routes {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 4px;\n  padding: 6px 0 4px 38px;\n  border-top: none;\n}\n.dn-set-card .dn-evt-routesCap {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  flex: none;\n}\n.dn-set-card .dn-route-chip {\n  display: inline-flex;\n  align-items: center;\n  gap: 5px;\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-base, #fff);\n  color: var(--dsw-alias-label-secondary, #555);\n  border-radius: 999px;\n  padding: 4px 10px;\n  min-height: 32px;\n  font-size: 11px;\n  cursor: pointer;\n  transition:\n    border-color 160ms ease,\n    background 160ms ease,\n    color 160ms ease;\n}\n.dn-set-card .dn-route-chip::before {\n  content: none;\n}\n.dn-set-card .dn-route-chip.is-on {\n  background: var(--dsw-alias-bg-layer-1, #f0f0ec);\n  border-color: var(--dsw-alias-label-primary, rgba(30, 30, 30, 0.28));\n  color: var(--dsw-alias-label-primary, #111);\n  font-weight: 600;\n}\n.dn-set-card .dn-route-chip.is-off,\n.dn-set-card .dn-route-chip.is-off.is-on {\n  opacity: 0.4;\n  border-style: dashed;\n  cursor: not-allowed;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  border-color: var(--dsw-alias-border-l1, #e2e5ea);\n  font-weight: 400;\n}\n.dn-set-card .dn-route-chip:disabled {\n  pointer-events: none;\n}\n.dn-set-card .dn-route-chip.is-stale {\n  border-style: dashed;\n  opacity: 0.75;\n  text-decoration: line-through;\n}\n.dn-set-card .dn-route-state {\n  border: none;\n  background: none;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  min-height: 32px;\n  padding: 0 4px;\n  cursor: default;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-route-state.is-custom {\n  color: var(--dsw-alias-label-primary, #1f2329);\n  cursor: pointer;\n  text-decoration: underline dotted;\n  font-weight: 600;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-route-state.is-custom:hover {\n    opacity: 0.85;\n  }\n}\n\n/* --- 动态 kind (无左侧色条, 用浅底 + 字重) --- */\n.dn-set-card .dn-kinds {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px;\n  margin: 0;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n}\n.dn-set-card .dn-kinds-ok {\n  background: var(--dsw-alias-bg-base, #ffffff);\n  opacity: 0.92;\n}\n.dn-set-card .dn-kinds-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  min-height: 40px;\n}\n.dn-set-card .dn-kinds-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-kinds-actions {\n  margin-left: auto;\n  display: flex;\n  gap: 6px;\n}\n.dn-set-card .dn-kind-routeHint {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n  margin-top: 2px;\n  padding-left: 38px;\n}\n\n/* --- 按钮 --- */\n.dn-set-card .dn-set-btn {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 5px;\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-layer-1, #f7f7f4);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  border-radius: 8px;\n  padding: 5px 12px;\n  min-height: 32px;\n  cursor: pointer;\n  font-size: 12px;\n  transition:\n    background 160ms ease,\n    opacity 160ms ease;\n}\n.dn-set-card .dn-set-btnSmall {\n  min-height: 32px;\n  padding: 4px 12px;\n  font-size: 11px;\n  border-radius: 8px;\n}\n.dn-set-card .dn-set-btnPrimary {\n  background: var(--dsw-alias-label-primary, #1f2329);\n  border-color: var(--dsw-alias-label-primary, #1f2329);\n  color: var(--dsw-alias-bg-base, #fff);\n  font-weight: 600;\n}\n.dn-set-card .dn-set-btnDanger {\n  background: var(--dsw-alias-state-error-primary, #8a4f45);\n  border-color: var(--dsw-alias-state-error-primary, #8a4f45);\n  color: #fff;\n}\n.dn-set-card .dn-set-btnGhostDanger {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n  border-color: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.15));\n  background: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.08));\n}\n.dn-set-card button:focus-visible,\n.dn-set-card input:focus-visible,\n.dn-set-card select:focus-visible,\n.dn-set-card textarea:focus-visible,\n.dn-set-card summary:focus-visible {\n  outline: 2px solid var(--dsw-alias-label-primary, #1f2329);\n  outline-offset: 2px;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-btn:hover,\n  .dn-set-card .dn-set-save:hover {\n    opacity: 0.9;\n  }\n}\n.dn-set-card .dn-set-btn:disabled,\n.dn-set-card .dn-set-save:disabled {\n  opacity: 0.45;\n  cursor: not-allowed;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-btn:disabled:hover,\n  .dn-set-card .dn-set-save:disabled:hover {\n    opacity: 0.45;\n  }\n}\n\n/* 频道 tab 域保存行 */\n.dn-set-card .dn-ch-domainSave {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 10px;\n  margin-top: 12px;\n  padding-top: 10px;\n  padding-left: 14px;\n  padding-right: 14px;\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-domainSaveHint {\n  flex: 1;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-size: 11px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-domainSave .dn-set-save {\n  min-height: 32px;\n}\n\n/* 409 冲突 */\n.dn-set-card .dn-conflict {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 10px;\n  margin-left: 14px;\n  margin-right: 14px;\n  padding: 8px 10px;\n  border: 1px solid var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.25));\n  background: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.08));\n  border-radius: 8px;\n}\n.dn-set-card .dn-conflictText {\n  flex: 1;\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-size: 12px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-conflictActions {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n}\n@media (max-width: 480px) {\n  .dn-set-card .dn-conflict {\n    flex-direction: column;\n    align-items: stretch;\n  }\n  .dn-set-card .dn-conflictActions {\n    justify-content: flex-start;\n  }\n}\n\n/* --- 免打扰 --- */\n.dn-set-card .dn-dnd {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  padding: 8px 14px 12px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  margin: 0;\n}\n.dn-set-card .dn-dnd-head {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  min-height: 40px;\n}\n.dn-set-card .dn-dnd-head .dn-switch {\n  margin-left: auto;\n}\n.dn-set-card .dn-dnd-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 6px;\n  font-size: 12px;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-dnd-cap {\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n/* --- 免打扰多时间窗行 (#936): v3 风格增量, 只补多窗时间输入 ---\n * 普通行 (不套 details); 复用 dn-set-input/dn-set-btn; 无左侧竖线/渐变/斜体; \n * 颜色只走 --dsw-alias-* (本块不新增颜色, 只收数字与换行); \n * 数字 tabular-nums (时间输入与本机回显对齐; 行级 tabular-nums 已由 939 持有). */\n.dn-set-card .dn-dnd-row .dn-set-input[type="time"] {\n  font-variant-numeric: tabular-nums;\n  min-width: 0;\n  max-width: 140px;\n}\n@media (max-width: 480px) {\n  .dn-set-card .dn-dnd-row .dn-set-input[type="time"] {\n    flex: 1 1 120px;\n  }\n}\n.dn-set-card .dn-set-allows {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n.dn-set-card .dn-set-allowDim {\n  opacity: 0.55;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-set-allowHint {\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-set-allowActions {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n\n/* --- 输入控件 --- */\n.dn-set-card .dn-set-input {\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  padding: 5px 8px;\n  font-size: 12px;\n  min-height: 32px;\n  font-variant-numeric: tabular-nums;\n  transition:\n    border-color 160ms ease,\n    background 160ms ease;\n}\n.dn-set-card .dn-set-inputText {\n  width: 240px;\n  max-width: 100%;\n}\n.dn-set-card .dn-set-select {\n  width: auto;\n  min-width: 120px;\n}\n.dn-set-card .dn-set-numInput {\n  width: 110px;\n  font-variant-numeric: tabular-nums;\n}\n\n/* --- 折叠区 --- */\n.dn-set-card .dn-ch-adv {\n  margin: 10px 14px 0;\n}\n.dn-set-card .dn-ch-adv.dn-sec-adv {\n  margin-top: 12px;\n}\n.dn-set-card .dn-ch-adv > summary {\n  cursor: pointer;\n  list-style: none;\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 32px;\n  padding: 2px 12px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  font-size: 11px;\n  user-select: none;\n  transition:\n    color 160ms ease,\n    background 160ms ease;\n}\n.dn-set-card .dn-ch-adv > summary::-webkit-details-marker {\n  display: none;\n}\n.dn-set-card .dn-ch-adv > summary::before {\n  content: "";\n  width: 5px;\n  height: 5px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(-45deg);\n  transition: transform 160ms ease;\n  flex: none;\n}\n.dn-set-card .dn-ch-adv[open] > summary::before {\n  transform: rotate(45deg);\n}\n@media (hover: hover) {\n  .dn-set-card .dn-ch-adv > summary:hover {\n    color: var(--dsw-alias-label-primary, #1f2329);\n  }\n}\n.dn-set-card .dn-ch-adv-body {\n  margin-top: 8px;\n  border: 1px solid var(--dsw-alias-border-l1, #e8e8e4);\n  border-radius: 10px;\n  padding: 8px 12px;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n}\n.dn-set-card .dn-adv-row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  min-height: 36px;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-adv-row + .dn-adv-row {\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-adv-row .dn-adv-cap {\n  flex: 1;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-set-note-inline {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n}\n\n/* --- 频道卡 (连续行 + 可展开, 无左侧色条) --- */\n.dn-set-card .dn-ch-card {\n  border: none;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  border-radius: 0;\n  margin: 0;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  overflow: visible;\n}\n.dn-set-card .dn-ch-card > summary {\n  cursor: pointer;\n  list-style: none;\n  user-select: none;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 8px 14px;\n  min-height: 52px;\n  flex-wrap: wrap;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-ch-card > summary::-webkit-details-marker {\n  display: none;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-ch-card > summary:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-ch-card > summary::after {\n  content: "";\n  width: 6px;\n  height: 6px;\n  border-right: 1.5px solid currentColor;\n  border-bottom: 1.5px solid currentColor;\n  transform: rotate(45deg);\n  transition: transform 180ms ease;\n  opacity: 0.45;\n  flex: none;\n}\n.dn-set-card .dn-ch-card[open] > summary::after {\n  transform: rotate(225deg);\n}\n.dn-ch-icon {\n  width: 28px;\n  height: 28px;\n  border-radius: 8px;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  background: var(--dsw-alias-bg-layer-1, #f2f2ee);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  flex: none;\n}\n.dn-ch-icon svg {\n  width: 14px;\n  height: 14px;\n}\n.dn-set-card .dn-ch-name {\n  font-weight: 500;\n  font-size: 13px;\n}\n.dn-set-card .dn-ch-type {\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.38));\n  font-variant-numeric: tabular-nums;\n  border: none;\n  background: transparent;\n  padding: 0;\n  line-height: 1.4;\n}\n/* R2: 状态点本体迁到跨包原语 <Status> (dsu-status), 这三条 .dn-ch-statusDot* 规则\n   随之零消费者, 故一并删除——留着就是«零消费者的永久别名», 与本轮在 provider-usage\n   删 .dou-pane 别名是同一条纪律.状态文字 .dn-ch-statusTxt 仍是本包领域样式, 不动. */\n.dn-set-card .dn-ch-statusTxt {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-ch-summaryRight {\n  margin-left: auto;\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n}\n.dn-set-card .dn-ch-body {\n  padding: 4px 14px 12px 52px;\n  border-top: none;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.04));\n}\n.dn-set-card .dn-ch-row {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  flex-wrap: wrap;\n  padding: 6px 0;\n  min-height: 40px;\n  transition: background 160ms ease;\n}\n.dn-set-card .dn-ch-row + .dn-ch-row {\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-cap {\n  flex: 0 0 96px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-ctl {\n  flex: 1 1 220px;\n  min-width: 0;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-ctl .dn-set-inputText {\n  flex: 1 1 180px;\n  width: auto;\n  min-width: 0;\n}\n.dn-set-card .dn-ch-hint {\n  flex-basis: 100%;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-actions {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding-top: 8px;\n  margin-top: 4px;\n  border-top: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n}\n.dn-set-card .dn-ch-perm {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-permText {\n  line-height: 1.5;\n}\n/* 诊断行: 无左侧竖线, 用浅底 + 状态字 */\n.dn-set-card .dn-ch-diag {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  margin-top: 8px;\n  padding: 8px 10px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-base, #fff);\n  font-size: 11px;\n  line-height: 1.6;\n}\n.dn-set-card .dn-ch-diag-error .dn-ch-diagText {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-ch-diagText {\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-ch-diagCap {\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-diagItems {\n  margin: 2px 0 0;\n  padding-left: 16px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-diagSrc {\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-ch-diagDetail {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-diagDetailCap {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n/* 三态: 文字必现, 不用左侧色条 */\n.dn-set-card .dn-ch-card.dn-ch-sound .dn-ch-stateTxt,\n.dn-set-card .dn-soundOnly {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-ch-card.dn-ch-off > summary {\n  opacity: 0.72;\n}\n.dn-set-card .dn-ch-stateTxt {\n  font-size: 11px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));\n  border-radius: 6px;\n  padding: 0 6px;\n  line-height: 1.7;\n  flex: none;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-tonePreview {\n  flex: none;\n}\n.dn-set-card .dn-ch-add {\n  margin: 8px 14px 12px;\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-ch-failBadge {\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 10px;\n  border-radius: 6px;\n  padding: 1px 6px;\n  background: var(--dsw-alias-state-error-soft, rgba(138, 79, 69, 0.08));\n  border: 1px solid var(--dsw-alias-state-error-primary, #8a4f45);\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n  flex: none;\n  max-width: 200px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n\n/* secret / auth / template */\n.dn-secret {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex: 1 1 180px;\n  min-width: 0;\n}\n.dn-secret .dn-set-inputText {\n  flex: 1 1 auto;\n  font-family: ui-monospace, monospace;\n  letter-spacing: 0.06em;\n}\n.dn-set-card .dn-secret-reveal {\n  border: 1px solid var(--dsw-alias-border-l1, #ddd);\n  background: var(--dsw-alias-bg-layer-1, #f7f7f4);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  border-radius: 8px;\n  min-height: 32px;\n  padding: 4px 10px;\n  font-size: 11px;\n  cursor: pointer;\n  flex: none;\n}\n.dn-authFields {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex: 1 1 200px;\n  min-width: 0;\n  flex-wrap: wrap;\n}\n.dn-authFields .dn-set-inputText {\n  flex: 1 1 120px;\n  width: auto;\n  min-width: 0;\n  font-family: ui-monospace, monospace;\n}\n.dn-tpl {\n  width: 100%;\n  min-height: 112px;\n  resize: vertical;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 11px;\n  line-height: 1.7;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 8px;\n  padding: 8px 10px;\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  tab-size: 2;\n  font-variant-numeric: tabular-nums;\n}\n.dn-tplChips {\n  display: flex;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-top: 6px;\n  align-items: center;\n}\n.dn-tplChips .dn-tplCap {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dn-set-card .dn-tpl-chip {\n  font-family: ui-monospace, monospace;\n  font-size: 10px;\n  border: 1px dashed var(--dsw-alias-border-l2, #d3d8df);\n  border-radius: 6px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  padding: 5px 8px;\n  min-height: 32px;\n  cursor: copy;\n}\n.dn-set-card .dn-tpl-chip.is-raw {\n  border-style: solid;\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n  border-color: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.2));\n}\n\n/* levels */\n.dn-set-card .dn-levels-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 6px 0;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-levels-kind {\n  flex: 0 1 150px;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-family: ui-monospace, Menlo, Consolas, monospace;\n  font-size: 12px;\n}\n.dn-set-card .dn-levels-row .dn-set-select {\n  flex: 1 1 130px;\n  min-width: 0;\n}\n.dn-set-card .dn-levels-add {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin-top: 8px;\n}\n.dn-set-card .dn-levels-add .dn-set-inputText {\n  flex: 1 1 150px;\n  min-width: 90px;\n}\n.dn-set-card .dn-levels-add .dn-set-select {\n  flex: 1 1 110px;\n  min-width: 90px;\n}\n\n/* --- 通知记录 --- */\n.dn-set-card .dn-set-historyTools {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n  margin: 8px 0 4px;\n  padding: 0;\n}\n.dn-set-card .dn-set-historyCount {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  margin-left: auto;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-history {\n  list-style: none;\n  margin: 0;\n  padding: 0;\n  background: var(--dsw-alias-bg-base, #fff);\n}\n.dn-set-card .dn-set-historyItem {\n  display: flex;\n  gap: 10px;\n  align-items: flex-start;\n  padding: 10px 2px;\n  border-bottom: 1px solid var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.055));\n  transition: background 160ms ease;\n}\n@media (hover: hover) {\n  .dn-set-card .dn-set-historyItem:hover {\n    background: var(--dsw-alias-bg-layer-1, #f7f7f5);\n  }\n}\n.dn-set-card .dn-set-historyItem .dn-sev {\n  margin-top: 10px;\n  flex: none;\n}\n.dn-set-card .dn-set-historyItem > .dn-ico {\n  margin-top: 2px;\n}\n.dn-set-card .dn-set-historyMain {\n  flex: 1;\n  min-width: 0;\n}\n.dn-set-card .dn-set-historyHead {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-set-historyKind {\n  font-weight: 500;\n  font-size: 12px;\n}\n.dn-set-card .dn-set-historyTime {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-historySuppressed {\n  font-size: 10px;\n  border-radius: 6px;\n  padding: 0 6px;\n  border: 1px solid var(--dsw-alias-border-l2, #d3d8df);\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-set-historyText {\n  font-size: 12px;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  margin-top: 3px;\n  line-height: 1.6;\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-set-historyChannels {\n  margin-top: 6px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-layer-1, #fafaf8);\n  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.04));\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n.dn-set-card .dn-ch-delivery {\n  display: flex;\n  align-items: baseline;\n  gap: 6px;\n  flex-wrap: wrap;\n  font-size: 11px;\n  line-height: 1.6;\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-ch-deliveryName {\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  background: var(--dsw-alias-bg-base, #fff);\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 4px;\n  padding: 0 5px;\n  flex: none;\n}\n.dn-set-card .dn-ch-deliveryStatus {\n  flex: none;\n  font-weight: 600;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n}\n.dn-set-card .dn-ch-delivery-ok .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-ch-delivery-failed .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-ch-delivery-skipped .dn-ch-deliveryStatus {\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-ch-deliveryReason {\n  flex: 1 1 160px;\n  min-width: 0;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  overflow-wrap: anywhere;\n}\n.dn-set-card .dn-ch-reasonRaw {\n  flex-basis: 100%;\n  min-width: 0;\n}\n.dn-set-card .dn-ch-reasonRaw > summary {\n  cursor: pointer;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  user-select: none;\n}\n.dn-set-card .dn-ch-reasonRawText {\n  margin-top: 2px;\n  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n  font-size: 10px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  overflow-wrap: anywhere;\n  white-space: pre-wrap;\n}\n\n/* --- 底栏 (壳层玻璃) --- */\n.dn-set-card .dn-set-foot {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  padding: 10px 14px;\n  margin-top: 8px;\n  border-top: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));\n  background: var(--dsw-alias-bg-layer-1, rgba(245, 246, 248, 0.72));\n  backdrop-filter: blur(16px) saturate(1.15);\n  -webkit-backdrop-filter: blur(16px) saturate(1.15);\n  flex-wrap: wrap;\n}\n.dn-set-card .dn-dirty {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 11px;\n  color: var(--dsw-alias-state-warning-primary, #8a7340);\n  font-variant-numeric: tabular-nums;\n}\n.dn-set-card .dn-dirty::before {\n  content: "";\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-set-card .dn-set-foot .dn-spacer {\n  flex: 1;\n}\n.dn-set-card .dn-set-foot .dn-set-saved {\n  color: var(--dsw-alias-state-success-primary, #3d7a4e);\n}\n.dn-set-card .dn-set-foot .dn-set-error {\n  color: var(--dsw-alias-state-error-primary, #8a4f45);\n}\n.dn-set-card .dn-set-save {\n  border: none;\n  background: var(--dsw-alias-label-primary, #1a1a1a);\n  color: var(--dsw-alias-bg-base, #fff);\n  border-radius: 10px;\n  padding: 6px 18px;\n  min-height: 32px;\n  cursor: pointer;\n  font-size: 12px;\n  font-weight: 650;\n  transition:\n    opacity 160ms ease,\n    transform 160ms ease;\n}\n.dn-set-card .dn-set-save:hover {\n  opacity: 0.9;\n}\n\n.dn-set-card .dn-set-notes {\n  margin-top: 8px;\n  padding-left: 14px;\n  padding-right: 14px;\n}\n.dn-set-card .dn-set-note {\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  font-size: 11px;\n  margin-top: 6px;\n  line-height: 1.7;\n  border-left: none;\n  padding-left: 0;\n}\n\n/* 窄屏 */\n@media (max-width: 480px) {\n  .dn-set-card .dn-set-tabs {\n    padding: 8px 8px;\n  }\n  .dn-set-card .dn-set-tab {\n    flex: 1;\n    justify-content: center;\n    padding: 5px 4px;\n  }\n  .dn-set-card .dn-evt,\n  .dn-set-card .dn-ch-card > summary,\n  .dn-set-card .dn-kinds {\n    padding-left: 10px;\n    padding-right: 10px;\n  }\n  .dn-set-card .dn-ch-body {\n    padding-left: 12px;\n    padding-right: 10px;\n  }\n  .dn-set-card .dn-ch-cap {\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-ctl {\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-ctl .dn-set-inputText {\n    flex: 1 1 100%;\n  }\n  .dn-set-card .dn-ch-actions .dn-set-btn {\n    flex: 1 1 auto;\n  }\n  .dn-set-card .dn-evt-head .dn-switch {\n    margin-left: 0;\n  }\n  .dn-set-card .dn-kinds-actions {\n    margin-left: 0;\n    flex-basis: 100%;\n  }\n  .dn-set-card .dn-ch-failBadge {\n    max-width: 140px;\n  }\n  .dn-set-card .dn-ch-card > summary .dn-ch-statusTxt {\n    display: none;\n  }\n}\n\n/* ============ 通知展示 (横幅 / toast) ============ */\n\n/* Поверхность взята у тоста самого DSH (перенос чата в архив): тёмная в обеих\n   темах, крупный радиус, подпись 14/22 и значок слева. Цвет значка говорит,\n   что это за событие, — сама плашка от темы и от важности не зависит. */\n.dn-toast {\n  position: fixed;\n  bottom: 20px;\n  right: 20px;\n  z-index: 9999;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  max-width: min(640px, calc(100vw - 48px));\n  padding: 12px 16px;\n  border-radius: var(--dsw-radius-lg, 16px);\n  background: var(--dsw-alias-toast-bg, #353638);\n  color: var(--dsw-alias-toast-label, #fff);\n  font-family: var(--dsw-font-family, inherit);\n  font-size: 14px;\n  line-height: 22px;\n  box-shadow: var(--dsw-shadow-lv3, 0 0 1px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.16));\n  animation: dn-toast-in 160ms ease-out;\n}\n.dn-banner {\n  position: fixed;\n  top: 16px;\n  right: 16px;\n  width: 320px;\n  max-width: min(320px, calc(100vw - 24px));\n  z-index: 10000;\n  display: flex;\n  align-items: flex-start;\n  gap: 10px;\n  padding: 12px 16px;\n  border-radius: var(--dsw-radius-lg, 16px);\n  background: var(--dsw-alias-toast-bg, #353638);\n  color: var(--dsw-alias-toast-label, #fff);\n  font-family: var(--dsw-font-family, inherit);\n  font-size: 14px;\n  line-height: 22px;\n  box-shadow: var(--dsw-shadow-lv3, 0 0 1px rgba(0, 0, 0, 0.2), 0 12px 32px rgba(0, 0, 0, 0.16));\n  cursor: pointer;\n  animation: dn-toast-in 160ms ease-out;\n}\n.dn-banner-icon {\n  display: grid;\n  place-items: center;\n  flex: none;\n  margin-top: 3px;\n  opacity: 0.7;\n  color: var(--dsw-alias-toast-label, #fff);\n}\n.dn-banner-icon[data-tone="success"] {\n  opacity: 1;\n  color: var(--dsw-alias-state-success-primary, #22c55e);\n}\n.dn-banner-icon[data-tone="warning"] {\n  opacity: 1;\n  color: var(--dsw-alias-state-warn-label, #dd8629);\n}\n.dn-banner-main {\n  flex: 1;\n  min-width: 0;\n}\n.dn-banner-title {\n  font-weight: 600;\n}\n.dn-banner-text {\n  margin-top: 2px;\n  font-size: 13px;\n  line-height: 20px;\n  opacity: 0.8;\n  white-space: pre-line;\n  overflow-wrap: anywhere;\n}\n@keyframes dn-toast-in {\n  from {\n    opacity: 0;\n    transform: translateY(-6px);\n  }\n  to {\n    opacity: 1;\n    transform: none;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .dn-toast,\n  .dn-banner {\n    animation: none;\n  }\n}\n.dn-test-dirty {\n  border-color: var(--dsw-alias-state-warning-primary, #8a7340);\n}\n.dn-test-dirtyBadge {\n  margin-left: 6px;\n  padding: 0 6px;\n  border-radius: 6px;\n  font-size: 11px;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n  color: #fff;\n  font-variant-numeric: tabular-nums;\n}\n.dn-dryrun {\n  margin: 8px 14px;\n  padding: 8px 10px;\n  border-radius: 8px;\n  border: 1px solid var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.25));\n  background: var(--dsw-alias-state-warning-soft, rgba(138, 115, 64, 0.06));\n  font-size: 12px;\n}\n.dn-dryrunTag {\n  margin-right: 8px;\n  padding: 0 6px;\n  border-radius: 6px;\n  font-size: 11px;\n  background: var(--dsw-alias-state-warning-primary, #8a7340);\n  color: #fff;\n}\n.dn-dryrunPending {\n  color: var(--dsw-alias-label-secondary, #646a73);\n}\n.dn-dryrunResult {\n  color: var(--dsw-alias-label-primary, #1f2329);\n  overflow-wrap: anywhere;\n  font-variant-numeric: tabular-nums;\n}\n.dn-dryrunActions {\n  margin-left: 8px;\n}\n.dn-dryrunActions .dn-set-btn {\n  margin-left: 6px;\n}\n.dn-dryrunNote {\n  margin-top: 4px;\n  font-size: 11px;\n  color: var(--dsw-alias-label-secondary, #646a73);\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .dn-set-card *,\n  .dn-set-card *::before,\n  .dn-set-card *::after,\n  .dn-switch *,\n  .dn-switch *::before,\n  .dn-switch *::after {\n    transition-duration: 0.01ms !important;\n  }\n}\n\n/* ---- T1 五原语层 (dsu-*)不再在本文件 ----\n * R3 起这段原语规则的**唯一副本**在 shared/client/ui/ui.css, 由本包\n * src/client/index.tsx 经 ts 侧拼接注入 (import UI_CSS + cssText: STYLE + UI_CSS).\n * 此前这里是人手复制的第 N 份拷贝——改一处要同步 N 处, 漏改不会有任何测试报红.\n * 领域样式 (.dn-* / .dou-* 等)仍全部留在本文件, 本包产物依旧是自包含单文件.\n */\n';
+
+    // ../../shared/client/ui/ui.css
+    var ui_default = '/* ================= T1 五原语层 (dsu-*)唯一副本 =================\n * 职责: Surface / Field / SegmentedControl / Status+Badge 的唯一表现面.\n *   Button 的视觉本体由**调用点自带的领域类**承担 (见块尾说明), 本块不出 dsu-btn 规则.\n *\n * 【怎么进到浏览器: ts 侧拼接, 不是 @import】\n * 各包 src/client/index.ts 两行接缝: \n *     import UI_CSS from "<到仓库根的相对路径>/shared/client/ui/ui.css";\n *     ensureStyle({ id: STYLE_ID, cssText: UI_CSS + STYLE, version: CSS_VERSION });\n * **顺序不可颠倒**: 原语层在前 (当底座), 各包 style.css 在后, 这样包内针对原语钩子的\n * 窄屏/领域覆盖 (同优先级靠后者胜)才压得住——provider-usage 的 @media 480px 段正是\n * 靠这条把 .dsu-badge 的 max-width 放宽到 100%, .dsu-surface-pane 的 padding 收到 10px.\n * 写成 STYLE + UI_CSS 时这两条覆盖会变死规则, build 仍 exit 0, 窄屏却悄悄变回原样.\n * build-client 的 .css text-loader (scripts/build/build-client.ts)把本文件当**纯文本**\n * 内联进各包 client.js, 产物仍自包含单文件, 零运行时依赖, 无独立请求.\n *\n * 【为什么不是 @import: R3 实测证伪, 勿再提】\n * 试过在各包 style.css 顶部写 @import 指向本文件: text-loader 不解析 CSS, @import 会\n * 原样留在产物字符串里 (实测 `grep -c \'@import\' lib/client.js` → 1), 而探针规则\n * `grep -c \'dsu-probe\' lib/client.js` → 0; 浏览器随后按**页面相对 URL** 去请求那个\n * 路径 → 404 → 规则静默消失, **而 build 仍 exit 0, 测试仍全绿**.这是最坏的失败模式.\n *\n * 【与«各包 style.css 单文件»约定的关系】\n * DEVELOPMENT §3 要求样式不写进 ts, 留在各包 style.css.本文件不违反它: 本文件**不含\n * 任何包的领域样式**, 只是跨包共享的那一段原语规则的单一事实源, 由 ts 侧拼接注入; \n * 各包 style.css 仍是该包领域样式的唯一位置.\n *\n * 纪律: 颜色全走 --dsw-alias-* + 浅色回退 (禁裸 hex); 悬停一律 @media (hover: hover)\n *   包裹 (#128 规格第 7 条), 断点机制全仓只有这一套; 禁 role="navigation" (语义层在\n *   shared/client/ui/index.tsx 冻结, 本块只管表现, 结构不冻结).\n * 消费包不必逐档消费: 未消费的档位在本包是死规则, 属有意接受的冗余——宁可一段没人用的\n *   规则, 也不要给原语层开出«按包裁剪规则块»这条会立刻分叉的机制.\n */\n.dsu-surface-pane {\n  margin-bottom: 16px;\n  padding: 12px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 10px;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  font-size: 12px;\n  line-height: 1.7;\n}\n/* 极窄容器降级 (#1015 A+C 的 C-3 配套): 宿主设置弹窗在 375px 下不折叠左侧导航, \n   内容列被压到约 139px, 再经 pane padding 12px×2 层层扣减后趋势区只剩 56px——\n   实测装 dsh-web-mobile@3.0.3 亦然 (nav 仍 flex:0 0 auto 固定 188px), 故根因在宿主\n   布局, 插件侧无法获得更多宽度.此处能做的唯一有效动作是**把容器自身的 padding 让给内容**: \n   收掉 padding 后可用宽度翻倍 (56px → 104px 量级), 标题/控件不再逐词竖排.\n   断点判据用 trend.tsx 已有的 data-dou-col (由 ResizeObserver 量**本窗格实测宽**写入), \n   不用视口断点也不依赖 container-type: 宿主把内容列压到多窄与视口宽度无关, \n   桌面窄窗同样会命中, 这是刻意的. */\n.dou-trend-body[data-dou-col="s"] .dsu-surface-pane {\n  padding: 6px 4px;\n  border-radius: 8px;\n}\n/* 极窄档再让出设置区外壳的 padding: 实测宿主 375px 下 content 仅 139px, 经 set-body\n   padding 14 与 pane padding 各扣一轮后, 内容实得 34px——不足一行中文.窄档下这些\n   padding 是纯损失 (外壳描边已提供视觉边界), 一并收掉. */\n/* set-body 是所有设置区窗格共用的外壳, :has() 把作用域限死在«含窄档趋势窗格»的那一个, \n   不影响 usage/report/history/providers 等其他窗格 (宿主与本仓均已在用 :has()). */\n.dou-set-body:has(.dou-trend-body[data-dou-col="s"]) {\n  padding: 4px 2px;\n}\n.dsu-surface-card {\n  /* 壳宽 560px 是外壳卡独有的约束 (原 settings/index.tsx 内联 maxWidth, 行为不变收敛进样式表) */\n  max-width: 560px;\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  border-radius: 12px;\n  overflow: hidden;\n  background: var(--dsw-alias-bg-base, #ffffff);\n  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);\n}\n\n/* ---- Field: 标签 + 控件 ----\n   行内字段 nowrap 横排, 换行能力由 .dsu-field-row 的 flex-wrap 承担\n    (约 350px 内容宽度下 nowrap 横排必然溢出, 四个数字输入行必须能折行). */\n.dsu-field {\n  margin-right: 12px;\n  white-space: nowrap;\n}\n.dsu-field-block {\n  /* 标签在上, 控件在下: 与 .dsu-field (行内标签)并存会让同一行里出现两种排版结构, \n     跨字段换行时左边缘对不齐.此处统一为竖排, 行内字段若需保持原样走 .dsu-field. */\n  display: flex;\n  flex-direction: column;\n  align-items: flex-start;\n  gap: 4px;\n  margin-bottom: 8px;\n}\n/* 标签文本是 <label> 内的裸文本节点 (隐式关联 select), 不是子元素——\n   故只能用 font/ ::first-line 类手段无法精确命中.改为给 label 本身定排版, \n   并让 select 独占一行: 裸文本节点会生成匿名 flex item, 与 select 同行.\n   这里把 label 设为 flex column, 裸文本成为它的匿名 item, select 成为第二个. */\n.dsu-field-block > select {\n  margin-top: 4px;\n  align-self: flex-start;\n}\n.dsu-field-block {\n  font-size: 11px;\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n}\n.dsu-field-block > select {\n  font-size: 12px;\n  color: var(--dsw-alias-label-primary, #1f2329);\n}\n.dsu-field-row {\n  display: flex;\n  flex-wrap: wrap;\n  row-gap: 6px;\n  margin-bottom: 8px;\n}\n.dsu-input {\n  margin-left: 6px;\n  padding: 2px 6px;\n  border: 1px solid var(--dsw-alias-border-l2, #e8eaf0);\n  border-radius: 4px;\n}\n.dsu-input-number {\n  width: 64px;\n}\n\n/* ---- SegmentedControl: bar=顶部导航条 / pill=行内药丸组 / plain=朴素按钮组 ----\n * 窄屏: bar 靠 overflow-x + nowrap 横滑 (与收敛前一致), pill/plain 靠 flex-wrap 折行.\n * 激活项由 [data-dsu-seg-active] 定位而非类名, 换实现不会打坏«激活档滚进视野». */\n.dsu-seg {\n  display: flex;\n}\n.dsu-seg-bar {\n  gap: 4px;\n  padding: 10px 14px;\n  border-bottom: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  overflow-x: auto;\n  white-space: nowrap;\n  scrollbar-width: none;\n}\n.dsu-seg-bar::-webkit-scrollbar {\n  display: none;\n}\n.dsu-seg-bar .dsu-seg-item {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 32px;\n  padding: 5px 14px;\n  flex: none;\n  white-space: nowrap;\n  border: 1px solid transparent;\n  border-radius: 8px;\n  background: transparent;\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  font-size: 12px;\n  cursor: pointer;\n  font-family: inherit;\n}\n.dsu-seg-bar .dsu-seg-item[data-dsu-seg-active="true"] {\n  background: var(--dsw-alias-bg-base, #ffffff);\n  border-color: var(--dsw-alias-border-l1, #e2e5ea);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-weight: 600;\n  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);\n}\n.dsu-seg-bar .dsu-seg-item:focus-visible {\n  outline: 2px solid var(--dsw-alias-state-info-primary, #4a7dd6);\n  outline-offset: 2px;\n}\n@media (hover: hover) {\n  .dsu-seg-bar .dsu-seg-item:hover {\n    color: var(--dsw-alias-label-primary, #1f2329);\n  }\n}\n.dsu-seg-pill {\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  margin-bottom: 10px;\n}\n.dsu-seg-pill .dsu-seg-item {\n  border: 1px solid var(--dsw-alias-border-l1, #e2e5ea);\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-tertiary, #6d7480);\n  border-radius: 999px;\n  padding: 3px 12px;\n  min-height: 28px;\n  font-size: 11px;\n  cursor: pointer;\n  font-family: inherit;\n}\n.dsu-seg-pill .dsu-seg-item[data-dsu-seg-active="true"] {\n  background: var(--dsw-alias-state-info-soft, rgba(47, 111, 237, 0.1));\n  border-color: var(--dsw-alias-state-info-primary, #4a7dd6);\n  color: var(--dsw-alias-state-info-primary, #4a7dd6);\n  font-weight: 600;\n}\n.dsu-seg-plain {\n  gap: 6px;\n  flex-wrap: wrap;\n  /* 档内项距 6px, 档与档之间靠外层 .dou-trend-controls 的 row-gap 拉开——\n     两级间距必须分层: 项距 6 太挤会让«日/周/月»和«7d/30d/90d»读成一串. */\n  margin-bottom: 6px;\n}\n/* 段内项的视觉分组: 给«粒度/范围»这类**同类单选**加一个共同的浅底槽, \n   与«口径/指标»这类**独立选择器**在形状上分开——此前四组控件全是同样的\n   透明圆角按钮平铺, 视觉上分不出哪几个是一组.槽只描边不填色, \n   保持与设置页底色同调, 不与已选态的 brand 底色抢注意力. */\n.dsu-seg-plain > .dsu-seg-item {\n  border: 1px solid var(--dsw-alias-border-l3, #d7dae0);\n  background: var(--dsw-alias-bg-layer-1, #f5f6f8);\n  color: var(--dsw-alias-label-secondary, #5f6672);\n  padding: 3px 12px;\n  border-radius: 6px;\n  font-size: 12.5px;\n  min-height: 26px;\n}\n.dsu-seg-plain > .dsu-seg-item:hover {\n  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04));\n}\n.dsu-seg-plain > .dsu-seg-item[data-dsu-seg-active="true"] {\n  background: var(--dsw-alias-bg-base, #ffffff);\n  color: var(--dsw-alias-label-primary, #1f2329);\n  font-weight: 600;\n  border-color: var(--dsw-alias-border-l3, #d7dae0);\n  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);\n}\n/* plain 档的项**不出规则**: 视觉与触控热区由消费包自己的按钮类承担——\n   本包调用点传 itemClassName="dou-btn", 命中 #128 触控热区\n    (.dou-panel[data-dou-bp="narrow"] .dou-btn::before 外扩)与既有按钮规则. */\n\n/* ---- Status: 状态点 (无 label 时为装饰点, 语义由 aria-hidden 承担)---- */\n.dsu-status {\n  display: inline-block;\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  margin-right: 6px;\n  vertical-align: middle;\n  flex: none;\n}\n.dsu-status[data-dsu-tone="ok"] {\n  background: var(--dsw-alias-state-success-primary, #0f9d6e);\n}\n.dsu-status[data-dsu-tone="warn"] {\n  background: var(--dsw-alias-state-warn-primary, #c9820b);\n}\n.dsu-status[data-dsu-tone="err"] {\n  background: var(--dsw-alias-state-error-primary, #d64545);\n}\n.dsu-status[data-dsu-tone="off"],\n.dsu-status[data-dsu-tone="neutral"] {\n  background: var(--dsw-alias-label-tertiary, #9aa0ab);\n}\n\n/* ---- Badge: 状态徽标 ----\n * 色与边由两个自定义属性承载, 尺寸档与色调档各改其一, 避免 tone×size 组合爆炸.\n * 规则顺序即优先级: size (定中性底)→ tone (定色)→ muted (定弱化, 末位覆盖 tone).\n * sm 档承载 provider 身份药丸 (含窄屏 100% 让位, 由既有 480px 段改写本选择器). */\n.dsu-badge {\n  --dsu-badge-fg: inherit;\n  --dsu-badge-bd: var(--dsw-alias-border-l1, #d7dae0);\n  flex: none;\n  line-height: 1.5;\n  color: var(--dsu-badge-fg);\n  border: 1px solid var(--dsu-badge-bd);\n}\n.dsu-badge[data-dsu-size="sm"] {\n  max-width: 55%;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  font-size: 11px;\n  padding: 0 8px;\n  border-radius: 99px;\n  background: var(--dsw-alias-bg-layer-1, #f8f9fb);\n}\n.dsu-badge[data-dsu-size="xs"] {\n  --dsu-badge-bd: transparent;\n  font-size: 10px;\n  padding: 1px 6px;\n  border-radius: 8px;\n  background: transparent;\n}\n.dsu-badge[data-dsu-tone="ok"] {\n  --dsu-badge-fg: var(--dsw-alias-state-success-primary, #3f9d63);\n  --dsu-badge-bd: var(--dsw-alias-state-success-primary, #3f9d63);\n}\n.dsu-badge[data-dsu-tone="warn"] {\n  --dsu-badge-fg: var(--dsw-alias-state-warn-primary, #c9820b);\n  --dsu-badge-bd: var(--dsw-alias-state-warn-primary, #c9820b);\n}\n.dsu-badge[data-dsu-tone="err"] {\n  --dsu-badge-fg: var(--dsw-alias-state-error-primary, #d64545);\n  --dsu-badge-bd: var(--dsw-alias-state-error-primary, #d64545);\n}\n.dsu-badge[data-dsu-tone="off"] {\n  --dsu-badge-fg: var(--dsw-alias-label-tertiary, #9aa0ab);\n}\n.dsu-badge[data-dsu-muted="true"] {\n  --dsu-badge-fg: var(--dsw-alias-label-tertiary, #9aa0ab);\n  border-style: dashed;\n}\n\n/* ---- Button: 本块不出规则 ----\n   Button 原语只出 dsu-btn 钩子与恒定的 type="button" 语义; 视觉与触控热区由**调用点\n   传入的领域类**承担 (provider-usage 传 .dou-btn, lan-proxy 传 .lp-set-save……).\n   R1 时 Button 曾硬编码 .dou-btn, 但原语层上提到档 C 后, 那条类名就成了«provider-usage\n   的领域契约写在跨包层里»——别的包挂上去只会得到一条永远命不中的死类.#128 触控目标\n   契约又是按**类名**选中的 (.dou-panel[data-dou-bp="narrow"] .dou-btn::before 的\n   inset:-4px 把 narrow 档的 min-height:36px 外扩到约 44px 命中区), 所以各包的按钮类\n   必须仍挂在按钮元素上; 在这里重复一份 dsu-btn 规则只会制造第二事实源. */\n';
 
     // ../../shared/client/ensure-style.js
     function ensureStyle(options) {
@@ -57,18 +60,23 @@ window.__ModuleLoader__.load({
       }
       const dispose = function() {
         const node = document.getElementById(id);
-        if (node !== null) node.remove();
+        if (node !== null)
+          node.remove();
       };
-      if (document.head == null) return dispose;
+      if (document.head == null)
+        return dispose;
       const existing = document.getElementById(id);
       if (existing !== null) {
-        if (version === void 0) return dispose;
-        if (existing.dataset.version === version) return dispose;
+        if (version === void 0)
+          return dispose;
+        if (existing.dataset.version === version)
+          return dispose;
         existing.remove();
       }
       const style = document.createElement("style");
       style.id = id;
-      if (version !== void 0) style.dataset.version = version;
+      if (version !== void 0)
+        style.dataset.version = version;
       style.textContent = cssText;
       document.head.appendChild(style);
       return dispose;
@@ -134,6 +142,54 @@ window.__ModuleLoader__.load({
       return typeof value === "string" && SOUND_ID_LIST.includes(value);
     }
 
+    // src/shared/channel-compare.ts
+    var CHANNEL_OPTIONAL_STRING_KEYS = [
+      "name",
+      "baseUrl",
+      "deviceKey",
+      "token",
+      "username",
+      "password",
+      "headerName",
+      "headerValue",
+      "template",
+      "sound",
+      "group",
+      "icon",
+      "url"
+    ];
+    function stripChannelEmpties(ch) {
+      if (typeof ch !== "object" || ch === null || Array.isArray(ch)) return ch;
+      const out = Object.assign({}, ch);
+      for (const key of CHANNEL_OPTIONAL_STRING_KEYS) {
+        if (typeof out[key] === "string" && out[key].length === 0) delete out[key];
+      }
+      return out;
+    }
+    function normalizeChannelForCompare(ch) {
+      const stripped = stripChannelEmpties(ch);
+      if (typeof stripped !== "object" || stripped === null || Array.isArray(stripped)) return stripped;
+      const out = stripped;
+      const defaults = CHANNEL_COMPARE_DEFAULTS.find((entry) => entry.type === out.type)?.defaults;
+      if (defaults === void 0) return out;
+      for (const field of Object.keys(defaults)) {
+        if (out[field] === void 0) out[field] = defaults[field];
+      }
+      return out;
+    }
+    var CHANNEL_COMPARE_DEFAULTS = [
+      { type: "bark", defaults: { levels: {}, timeoutMs: 0 } },
+      { type: "webhook", defaults: { headers: {}, timeoutSec: 0, preset: "custom", auth: "none" } }
+    ];
+    function canonicalChannelsForCompare(channels) {
+      return channels.map(normalizeChannelForCompare);
+    }
+    function canonicalSettingsForCompare(settings) {
+      const out = Object.assign({}, settings);
+      if (Array.isArray(out.channels)) out.channels = canonicalChannelsForCompare(out.channels);
+      return out;
+    }
+
     // src/shared/kinds.ts
     var BUILTIN_KINDS = [
       "ask",
@@ -197,6 +253,14 @@ window.__ModuleLoader__.load({
 
     // src/shared/reason-codes.ts
     var REASON_LEGACY = "reasonLegacy";
+    var SOUND_WARNING_CODES = [
+      "reasonSkipEnvironment",
+      "reasonSystemSoundFailed",
+      "reasonSystemToneUnwritable"
+    ];
+    function isSoundWarningCode(code) {
+      return SOUND_WARNING_CODES.includes(code);
+    }
 
     // src/shared/quiet.ts
     var QUIET_WINDOWS_LIMIT = 5;
@@ -221,6 +285,8 @@ window.__ModuleLoader__.load({
     var REFUSAL_CODES = {
       /** 非回环来源 (含 Host 头不是回环): 回环围栏拒绝. */
       FORBIDDEN_LOOPBACK: "FORBIDDEN_LOOPBACK",
+      /** 非回环调用未通过官方 connection 的 cookie / API peer 认证. */
+      UNAUTHORIZED: "UNAUTHORIZED",
       /** 方法不在端点的方法表里: 方法围栏拒绝. */
       METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED"
     };
@@ -269,6 +335,9 @@ window.__ModuleLoader__.load({
         }
       };
     }
+
+    // src/shared/config-schema.ts
+    var BARK_LEVELS = ["active", "timeSensitive", "passive", "critical"];
 
     // src/client/notify/audio.ts
     var PLAY_THROTTLE_MS = 1500;
@@ -544,7 +613,7 @@ window.__ModuleLoader__.load({
     }
 
     // src/client/index.tsx
-    var React14 = __toESM(require("react"), 1);
+    var React15 = __toESM(require("react"), 1);
 
     // src/client/locales.ts
     var zh = {
@@ -555,6 +624,7 @@ window.__ModuleLoader__.load({
       evtSubagentDone: "子任务完成",
       evtTaskError: "任务出错",
       evtTurnEnd: "轮次完成",
+      evtTurnEndHint: "轮次完成每轮都触发, 非常频繁, 默认关闭; 开启后可能与任务完成通知相邻; 若同时投递多个频道, 各频道会分别提醒 (仍受节流与路由约束).",
       // 通道开关 (CHANNEL_KEYS label)
       chSystemNotify: "系统通知",
       chBrowserNotify: "浏览器通知",
@@ -588,7 +658,7 @@ window.__ModuleLoader__.load({
       kTurnEnd: "轮次完成",
       kTest: "测试",
       // 403 引导 (accessHint)
-      lanAccessHint: " (若为局域网直连访问, 通知服务仅允许回环调用而被拒: 请用 dsh-lan-proxy 的 https://<局域网IP>:3443 或 ssh -L 3080:127.0.0.1:3080 隧道访问后刷新)",
+      lanAccessHint: " (若为局域网直连访问: 请先通过 dsh web 打印的登录地址建立官方会话, 并确认 Host/Origin 与当前地址一致; 仍无法访问时可用 SSH 端口转发到回环地址)",
       // 设置卡
       settingsLoading: "通知: 加载中…",
       settingsUnavailable: "设置服务不可用",
@@ -608,6 +678,9 @@ window.__ModuleLoader__.load({
       // 测试/清理动作
       testSent: "测试通知已发送 (服务端未释放句柄 {n} 条)",
       testFail: "发送测试通知失败: {msg}{hint}",
+      // 请求层失败 (400/408/429/中断)走独立结果行, 那一行此前直接写英文 `failure.message` (#1016 残留 4).
+      // 形态与 testFail 同族: 本地化前缀 + 原文细节, `{msg}` 留宿主原话供排查.
+      testRequestFail: "测试请求失败: {msg}{hint}",
       cleared: "已清空 {n} 条通知记录",
       clearFail: "清空失败: {msg}{hint}",
       // 配置行
@@ -632,11 +705,11 @@ window.__ModuleLoader__.load({
       dndPreviewNote: "按本机时间推算, 仅供参考; 实际是否拦截以服务端裁决与通知记录为准",
       // 权限/降级说明
       settingsSvcDown: "设置服务不可用: 当前无法保存配置 (settings 服务未挂载).插件通知功能不受影响, 但更改将被拒绝.",
-      httpDegraded: "当前为局域网 HTTP 访问 (非安全上下文), 浏览器禁止系统级弹窗, 已启用«页面内横幅 + 提示音 + 标题提醒»降级通道.如需系统弹窗, 请改用 dsh-lan-proxy 的 https://<局域网IP>:3443 或 localhost 隧道访问 (如 ssh -L 3080:127.0.0.1:3080)后刷新页面.",
+      httpDegraded: "当前为局域网 HTTP 访问 (非安全上下文), 浏览器禁止系统级弹窗, 已启用«页面内横幅 + 提示音 + 标题提醒»降级通道.如需系统弹窗, 请改用提供有效证书的原生 HTTPS 地址, 并在设备上信任该证书后刷新页面.",
       permGranted: "浏览器通知权限: 已授权 ✓",
-      permDenied: "浏览器通知权限: 已拒绝 (请在浏览器站点设置中允许本页通知)",
-      permDefault: "浏览器通知权限: 未授权 (点击下方按钮在浏览器弹窗中允许)",
-      iosUnsupported: "当前设备不支持系统级通知 (如 iOS Safari 普通标签页无 Web Notifications).可用通道: 页面可见时的横幅 + 提示音 (需保持页面打开), 或经 dsh-lan-proxy 的 https://<局域网IP>:3443 访问并«添加到主屏幕»后获得 PWA 级通知能力.",
+      permDenied: "浏览器通知权限: 已拒绝.未授权时不会弹浏览器系统通知; 页面隐藏时只更新标题, 页面可见且通知策略允许时显示页内横幅.请在浏览器站点设置中允许本页通知.",
+      permDefault: "浏览器通知权限: 未授权.未授权时不会弹浏览器系统通知; 页面隐藏时只更新标题, 页面可见且通知策略允许时显示页内横幅.可点击下方按钮请求授权.",
+      iosUnsupported: "当前设备不支持系统级通知 (如 iOS Safari 普通标签页无 Web Notifications).可用通道: 页面可见时的横幅 + 提示音 (需保持页面打开); 如需系统通知, 请改用提供有效证书的原生 HTTPS 地址, 信任证书后将页面添加到主屏幕.",
       // 动作区
       clearConfirm: "确认清理记录？",
       clearLabel: "清理记录",
@@ -662,6 +735,11 @@ window.__ModuleLoader__.load({
       reasonSystemSoundFailed: "提示音播放命令执行失败 ({bin})",
       reasonSystemToastScriptMissing: "插件自带的 Windows 通知脚本缺失 (打包缺陷), 本次未发出",
       reasonSystemToneUnwritable: "系统提示音无法写入临时目录, 本次未发声",
+      // 声音警告 (ok 随行): 主 reason 的同名 code 在失败/跳过支上另有文案 (见上), 警告位必须用
+      // 自有上下文——复用它们会把«弹窗已发出»说成«本次未发出».
+      soundWarnPlaybackFailed: "提示音播放命令执行失败 ({bin}, 弹窗已发送)",
+      soundWarnToneUnwritable: "提示音未能准备 (临时文件写不进去, 本次仅弹窗成功)",
+      soundWarnNoPlayback: "提示音无法执行 (缺少可用播放器或音频素材, 本次仅弹窗成功)",
       reasonBarkRequestFailed: "Bark 请求失败 (网络或超时)",
       reasonBarkHttp: "Bark 服务返回 HTTP {status}",
       reasonBarkRejected: "Bark 拒绝这次推送 (业务码 {code})",
@@ -672,6 +750,7 @@ window.__ModuleLoader__.load({
       reasonUnknownTarget: "未知的投递目标类型 ({kind})",
       reasonChannelThrew: "投递出口内部错误",
       reasonThrottled: "距上一条不足 1 秒, 本次未投递 (结论见上一条记录)",
+      reasonDispatchCanceled: "插件卸载时这条还在排队, 未投递",
       // 分区/tab (设置卡 title/副标题已移除; secEvents/secChannels 现为
       // 卡内双 tab 文案, 术语统一为«通知频道»)
       secEvents: "通知事件",
@@ -769,25 +848,25 @@ window.__ModuleLoader__.load({
       whPresetNtfy: "ntfy (ntfy.sh 或自建)",
       whPresetGotify: "Gotify",
       whPresetCustom: "自建推送网关",
-      whPresetHint: "预设填充 URL 形态 / 认证方式 / 消息模板",
+      whPresetHint: "预设填充认证方式与消息模板; ntfy 发往服务根地址 (旧 topic URL 自动兼容改写)",
       whUrl: "目标 URL",
-      whUrlPlaceholder: "https://ntfy.sh/<topic>",
-      whUrlHint: "POST JSON; 仅允许 http(s) 且 URL 不得内嵌凭据; ntfy 主题名建议带随机后缀防遍历",
+      whUrlPlaceholder: "https://ntfy.sh/ (topic 写进模板)",
+      whUrlHint: "POST JSON; ntfy 发往服务根地址, 模板内填真实 topic, 旧 topic URL 自动兼容 (末段明确时改写为根地址), 自托管前缀根地址原样保留; 仅允许 http(s) 且 URL 不得内嵌凭据; ntfy 主题名建议带随机后缀防遍历",
       whAuth: "认证",
       whAuthNone: "无",
       whAuthBearer: "Bearer Token (Authorization 头)",
       whAuthBasic: "Basic 用户名/密码",
       whAuthHeader: "自定义请求头",
-      whAuthHint: "凭据只走请求头 (ntfy / Gotify 均支持 Authorization 头, 不拼 URL); 仅存本机配置并掩码回显; 留空即不修改已保存的凭据",
-      whAuthToken: "访问令牌",
+      whAuthHint: "Bearer 模式只填裸 token (不含 Bearer 前缀, 插件自动添加); 自定义请求头的值则原样发送; 凭据仅走请求头, 不拼 URL, 仅在本机保存且掩码回显; 留空保持已保存凭据",
+      whAuthToken: "裸 token (不含 Bearer 前缀)",
       whAuthUsername: "用户名",
       whAuthPassword: "密码",
       whAuthHeaderName: "请求头名 (如 X-Gotify-Key)",
-      whAuthHeaderValue: "头值 (令牌)",
+      whAuthHeaderValue: "原样发送的请求头值",
       whTimeout: "投递超时",
       whTimeoutHint: "秒 · 1–60 (超限按边界取值, 默认 10); 超时与失败均落记录, 不自动重试",
       whTemplate: "消息模板 (JSON body, 占位符点击插入)",
-      whTemplateHint: "{{priority}} 由服务端按频道映射渲染 (ntfy: info→default / success→low / warning→high / failure→urgent); 文本占位符 JSON-aware 转义, {{ts}} 数字直出",
+      whTemplateHint: "ntfy 发往服务根地址, 模板内须填真实 topic; {{priority}} 由服务端按频道映射渲染 (ntfy 数字: info→3 / success→2 / warning→4 / failure→5; gotify 沿用既有映射); 文本占位符 JSON-aware 转义, {{ts}} 数字直出",
       whTemplateFailHint: "模板非法或渲染失败按该频道投递失败落记录, 不阻断其他频道",
       whTplRestore: "恢复预设模板",
       // ===== 能力自检 (宿主能力面读 /diagnostics, 浏览器面在本页本地判定)=====
@@ -829,8 +908,8 @@ window.__ModuleLoader__.load({
       diagBrowserLine: "本页浏览器: 弹窗 {popup} · 声音 {sound}",
       diagBrowserNoNotificationApi: "此浏览器没有通知 API, 系统级弹窗不可用",
       diagBrowserInsecureContext: "非安全上下文 (明文 HTTP), 浏览器禁止系统级弹窗",
-      diagBrowserPermissionDenied: "通知权限已被拒绝, 请在浏览器站点设置中允许",
-      diagBrowserPermissionDefault: "通知权限尚未请求, 可点«请求通知权限»授权",
+      diagBrowserPermissionDenied: "未授权时不会弹浏览器系统通知; 页面隐藏时只更新标题, 页面可见且通知策略允许时显示页内横幅.权限已被拒绝, 请在浏览器站点设置中允许",
+      diagBrowserPermissionDefault: "未授权时不会弹浏览器系统通知; 页面隐藏时只更新标题, 页面可见且通知策略允许时显示页内横幅.权限尚未请求, 可点«请求通知权限»授权",
       diagBrowserAudioNeverUnlocked: "音频尚未解锁: 页面还没有过用户点击, 点击页面后即可自播",
       diagBrowserAudioAutoSuspended: "音频上下文被浏览器挂起: 曾经解锁过, 或本次恢复被浏览器拒绝, 下次用户交互时会再尝试",
       diagBrowserAudioClosed: "音频上下文已关闭, 本页生命周期内无法再自播提示音",
@@ -843,6 +922,7 @@ window.__ModuleLoader__.load({
       evtSubagentDone: "Subtask completed",
       evtTaskError: "Task failed",
       evtTurnEnd: "Turn completed",
+      evtTurnEndHint: "Turn completions fire every turn and are very frequent, so this stays off by default; once enabled, they may sit next to Task completed notifications; delivering to multiple channels reminds once per channel (still subject to throttling and routing).",
       chSystemNotify: "System notification",
       chBrowserNotify: "Browser notification",
       chWhenVisible: "Also banner when visible",
@@ -872,7 +952,7 @@ window.__ModuleLoader__.load({
       kError: "Task failed",
       kTurnEnd: "Turn completed",
       kTest: "Test",
-      lanAccessHint: " (If you are on a LAN connection: the notify service only accepts loopback calls — open via dsh-lan-proxy https://<LAN-IP>:3443 or an ssh -L 3080:127.0.0.1:3080 tunnel, then refresh)",
+      lanAccessHint: " (If you are on a LAN connection: first establish an official session through the login URL printed by dsh web, and make sure Host/Origin match the current address; an SSH tunnel to the loopback address remains a fallback)",
       settingsLoading: "Notifier: loading…",
       settingsUnavailable: "Settings service unavailable",
       loadFail: "Failed to load settings: {msg}{hint}",
@@ -890,6 +970,7 @@ window.__ModuleLoader__.load({
       conflictLoadedLatest: "Loaded latest configuration",
       testSent: "Test notification sent ({n} unreleased server handles)",
       testFail: "Failed to send test notification: {msg}{hint}",
+      testRequestFail: "Test request failed: {msg}{hint}",
       cleared: "Cleared {n} history entries",
       clearFail: "Clear failed: {msg}{hint}",
       historyRetention: "History retention (days, 0=no daily cleanup)",
@@ -910,11 +991,11 @@ window.__ModuleLoader__.load({
       dndPreviewOff: "Do-not-disturb is off",
       dndPreviewNote: "Estimated from this device clock, for reference only; actual suppression follows the server verdict and history",
       settingsSvcDown: "Settings service unavailable: cannot save configuration (settings service not mounted). Plugin notifications are unaffected, but changes will be rejected.",
-      httpDegraded: "You are on a LAN HTTP connection (insecure context) — the browser blocks system notifications; in-page banner + sound + title reminders are active instead. For system notifications, use dsh-lan-proxy https://<LAN-IP>:3443 or a localhost tunnel (e.g. ssh -L 3080:127.0.0.1:3080), then refresh.",
+      httpDegraded: "You are on a LAN HTTP connection (insecure context) — the browser blocks system notifications; in-page banner + sound + title reminders are active instead. For system notifications, switch to a native HTTPS address with a valid certificate, trust it on this device, then refresh the page.",
       permGranted: "Browser notification permission: granted ✓",
-      permDenied: "Browser notification permission: denied (allow notifications for this site in the browser site settings)",
-      permDefault: "Browser notification permission: not asked (click the button below and allow in the browser prompt)",
-      iosUnsupported: 'This device does not support system notifications (e.g. iOS Safari in a normal tab). Available channels: in-page banner + sound while the page is open, or PWA-grade notifications via dsh-lan-proxy https://<LAN-IP>:3443 with "Add to Home Screen".',
+      permDenied: "Browser notification permission: denied. Without permission, browser system notifications cannot appear; while the page is hidden, only the title is updated. When the page is visible, an in-page banner appears only if the notification policy allows it. Allow notifications for this site in the browser site settings.",
+      permDefault: "Browser notification permission: not granted. Without permission, browser system notifications cannot appear; while the page is hidden, only the title is updated. When the page is visible, an in-page banner appears only if the notification policy allows it. Click the button below to request permission.",
+      iosUnsupported: "This device does not support system notifications (e.g. iOS Safari in a normal tab). Available channels: in-page banner + sound while the page is open. For system notifications, switch to a native HTTPS address with a valid certificate, trust it on this device, then add the page to Home Screen.",
       clearConfirm: "Clear history?",
       clearLabel: "Clear history",
       requestPerm: "Request permission",
@@ -936,6 +1017,11 @@ window.__ModuleLoader__.load({
       reasonSystemSoundFailed: "Sound playback command failed ({bin})",
       reasonSystemToastScriptMissing: "The plugin's bundled Windows notification script is missing (packaging defect); nothing was sent",
       reasonSystemToneUnwritable: "Could not write the synthesized tone to the temp directory; nothing was played",
+      // Sound warnings (carried by ok): the same codes have different copies on the failed/skipped
+      // branch (see above) — reusing them would describe an issued popup as "nothing was sent".
+      soundWarnPlaybackFailed: "Sound playback command failed ({bin}); the popup was sent",
+      soundWarnToneUnwritable: "Could not prepare the sound (temp file unwritable; only the popup succeeded)",
+      soundWarnNoPlayback: "Could not play the sound (no usable player or audio material; only the popup succeeded)",
       reasonBarkRequestFailed: "Bark request failed (network or timeout)",
       reasonBarkHttp: "Bark server returned HTTP {status}",
       reasonBarkRejected: "Bark rejected this push (business code {code})",
@@ -946,6 +1032,7 @@ window.__ModuleLoader__.load({
       reasonUnknownTarget: "Unknown delivery target type ({kind})",
       reasonChannelThrew: "Delivery channel raised an internal error",
       reasonThrottled: "Less than 1s since the previous one; not delivered (see the previous record)",
+      reasonDispatchCanceled: "Still queued when the plugin was unloaded; not delivered",
       secEvents: "Events",
       secChannels: "Channels",
       secDedup: "Limits",
@@ -1035,25 +1122,25 @@ window.__ModuleLoader__.load({
       whPresetNtfy: "ntfy (ntfy.sh or self-hosted)",
       whPresetGotify: "Gotify",
       whPresetCustom: "Custom push gateway",
-      whPresetHint: "Preset fills URL shape / auth method / message template",
+      whPresetHint: "Preset fills the auth method and message template; ntfy publishes to the service root URL (legacy topic URLs are auto-rewritten)",
       whUrl: "Target URL",
-      whUrlPlaceholder: "https://ntfy.sh/<topic>",
-      whUrlHint: "POST JSON; http(s) only, no embedded credentials in the URL; add a random suffix to ntfy topic names",
+      whUrlPlaceholder: "https://ntfy.sh/ (put the topic in the template)",
+      whUrlHint: "POST JSON; ntfy publishes to the service root URL with the real topic in the template, legacy topic URLs are auto-compat (rewritten to the root when the trailing segment is unambiguous), and self-hosted prefixed roots are kept as-is; http(s) only, no embedded credentials in the URL; add a random suffix to ntfy topic names",
       whAuth: "Auth",
       whAuthNone: "None",
       whAuthBearer: "Bearer Token (Authorization header)",
       whAuthBasic: "Basic username/password",
       whAuthHeader: "Custom header",
-      whAuthHint: "Credentials go in request headers only (ntfy / Gotify both support the Authorization header), never in the URL; stored locally and shown masked; leave empty to keep the saved value",
-      whAuthToken: "Access token",
+      whAuthHint: "Bearer mode takes a raw token only (no Bearer prefix; the plugin adds it); custom header values are sent exactly as entered; credentials stay in headers, never URLs; stored locally and shown masked; leave empty to keep the saved value",
+      whAuthToken: "Raw token (without Bearer prefix)",
       whAuthUsername: "Username",
       whAuthPassword: "Password",
       whAuthHeaderName: "Header name (e.g. X-Gotify-Key)",
-      whAuthHeaderValue: "Header value (token)",
+      whAuthHeaderValue: "Header value (sent verbatim)",
       whTimeout: "Delivery timeout",
       whTimeoutHint: "seconds · 1–60 (clamped, default 10); timeouts and failures are recorded, no auto-retry",
       whTemplate: "Message template (JSON body, click to insert placeholders)",
-      whTemplateHint: "{{priority}} is rendered by the server per-channel map (ntfy: info→default / success→low / warning→high / failure→urgent); text placeholders are JSON-aware escaped, {{ts}} is raw number",
+      whTemplateHint: "ntfy publishes to the service root URL with the real topic in the template; {{priority}} is rendered by the server per-channel map (ntfy numbers: info→3 / success→2 / warning→4 / failure→5; gotify keeps its existing map); text placeholders are JSON-aware escaped, {{ts}} is raw number",
       whTemplateFailHint: "Invalid template or render failure counts as a failed delivery for this channel only; other channels are unaffected",
       whTplRestore: "Reset preset template",
       diagHostLine: "Host capability self-check: {verdict} · popup {popup} · sound {sound}",
@@ -1094,8 +1181,8 @@ window.__ModuleLoader__.load({
       diagBrowserLine: "This browser page: popup {popup} · sound {sound}",
       diagBrowserNoNotificationApi: "this browser has no notification API, so system popups are unavailable",
       diagBrowserInsecureContext: "insecure context (plain HTTP), the browser blocks system popups",
-      diagBrowserPermissionDenied: "notification permission was denied; allow it in the browser site settings",
-      diagBrowserPermissionDefault: 'notification permission has not been requested; click "Request permission" to grant it',
+      diagBrowserPermissionDenied: "Without permission, browser system notifications cannot appear; while the page is hidden, only the title is updated. When the page is visible, an in-page banner appears only if the notification policy allows it. Permission was denied; allow it in the browser site settings",
+      diagBrowserPermissionDefault: 'Without permission, browser system notifications cannot appear; while the page is hidden, only the title is updated. When the page is visible, an in-page banner appears only if the notification policy allows it. Permission has not been requested; click "Request permission" to grant it',
       diagBrowserAudioNeverUnlocked: "audio is not unlocked yet: the page has not seen a user click; a click enables self-playback",
       diagBrowserAudioAutoSuspended: "the audio context is suspended by the browser: it was unlocked before, or this resume was refused; the next user interaction retries",
       diagBrowserAudioClosed: "the audio context is closed; this page cannot self-play sounds for the rest of its lifetime",
@@ -1108,6 +1195,7 @@ window.__ModuleLoader__.load({
       evtSubagentDone: "Подзадача выполнена",
       evtTaskError: "Ошибка задачи",
       evtTurnEnd: "Ход завершён",
+      evtTurnEndHint: "Ход завершён срабатывает на каждом ходу и очень часто, поэтому по умолчанию выключен; после включения может стоять рядом с «Задача выполнена»; при доставке в несколько каналов каждый напомнит отдельно (ограничения и маршрутизация действуют).",
       chSystemNotify: "Системное уведомление",
       chBrowserNotify: "Уведомление браузера",
       chWhenVisible: "Показывать и при видимой странице",
@@ -1154,6 +1242,7 @@ window.__ModuleLoader__.load({
       conflictLoadedLatest: "Последняя конфигурация загружена",
       testSent: "Тестовое уведомление отправлено (сервер не освободил дескрипторов: {n})",
       testFail: "Не удалось отправить тестовое уведомление: {msg}{hint}",
+      testRequestFail: "Запрос проверки не удался: {msg}{hint}",
       cleared: "Очищено записей истории уведомлений: {n}",
       clearFail: "Не удалось очистить: {msg}{hint}",
       historyRetention: "Срок хранения истории, дней (0 — не очищать по дням)",
@@ -1200,6 +1289,9 @@ window.__ModuleLoader__.load({
       reasonSystemSoundFailed: "Команда воспроизведения сигнала завершилась ошибкой ({bin})",
       reasonSystemToastScriptMissing: "Встроенный скрипт уведомлений Windows в плагине отсутствует (дефект сборки), ничего не отправлено",
       reasonSystemToneUnwritable: "Не удалось записать системный сигнал во временный каталог, звук не воспроизведён",
+      soundWarnPlaybackFailed: "Не удалось воспроизвести сигнал ({bin}), всплывающее окно отправлено",
+      soundWarnToneUnwritable: "Не удалось подготовить сигнал (временный файл не записался; окно отправлено успешно)",
+      soundWarnNoPlayback: "Сигнал не прозвучал (нет доступного плеера или аудиофайла; окно отправлено успешно)",
       reasonBarkRequestFailed: "Запрос Bark завершился ошибкой (сеть или тайм-аут)",
       reasonBarkHttp: "Служба Bark вернула HTTP {status}",
       reasonBarkRejected: "Bark отклонил эту отправку (код бизнес-логики {code})",
@@ -1210,6 +1302,7 @@ window.__ModuleLoader__.load({
       reasonUnknownTarget: "Неизвестный тип цели доставки ({kind})",
       reasonChannelThrew: "Внутренняя ошибка канала доставки",
       reasonThrottled: "С предыдущей записи прошло менее 1 секунды, доставка не выполнена (результат см. в предыдущей записи)",
+      reasonDispatchCanceled: "Плагин выгружался, когда эта запись стояла в очереди, — доставка не выполнена",
       secEvents: "События уведомлений",
       secChannels: "Каналы уведомлений",
       secDedup: "Пределы параметров",
@@ -1679,7 +1772,49 @@ var KIND_KEY_TABLE = {
       }
       return node;
     }
-    function showBanner(kind, title, message) {
+    // Поверхность уведомления — как у тоста самого DSH: тёмная плашка в обеих
+    // темах, крупный радиус, подпись 14/22 и значок слева. Значки — те же 16×16
+    // глифы: круг с галочкой (сделано), круг с восклицательным знаком (нужен
+    // ответ или что-то не вышло) и колокол (событие без оценки).
+    var BANNER_GLYPH = {
+      success: [
+        { d: "M12.5303 6.53027L8.80273 10.2578C8.54967 10.5109 8.31796 10.7439 8.10645 10.9141C7.88375 11.0932 7.616 11.2602 7.27344 11.3145C7.09229 11.3431 6.90771 11.3431 6.72656 11.3145C6.384 11.2602 6.11625 11.0932 5.89355 10.9141C5.68204 10.7439 5.45033 10.5109 5.19727 10.2578L3.46973 8.53027L4.53027 7.46973L6.25781 9.19727C6.53457 9.47402 6.70036 9.63859 6.83398 9.74609C6.95637 9.84453 6.98241 9.83644 6.96094 9.83301C6.98679 9.83709 7.01321 9.83709 7.03906 9.83301C7.01759 9.83644 7.04363 9.84453 7.16602 9.74609C7.29964 9.63859 7.46543 9.47402 7.74219 9.19727L11.4697 5.46973L12.5303 6.53027Z", fill: "currentColor" },
+        { d: "M14.5996 8C14.5996 4.35492 11.6451 1.40039 8 1.40039C4.35492 1.40039 1.40039 4.35492 1.40039 8C1.40039 11.6451 4.35492 14.5996 8 14.5996C11.6451 14.5996 14.5996 11.6451 14.5996 8ZM15.9004 8C15.9004 12.363 12.363 15.9004 8 15.9004C3.63695 15.9004 0.0996094 12.363 0.0996094 8C0.0996094 3.63695 3.63695 0.0996094 8 0.0996094C12.363 0.0996094 15.9004 3.63695 15.9004 8Z", fill: "currentColor" },
+      ],
+      warning: [
+        { d: "M8 14.5C11.5899 14.5 14.5 11.5899 14.5 8C14.5 4.41015 11.5899 1.5 8 1.5C4.41015 1.5 1.5 4.41015 1.5 8C1.5 11.5899 4.41015 14.5 8 14.5Z", stroke: "currentColor", fill: "none" },
+        { d: "M8 4.29199V9.79199", stroke: "currentColor", fill: "none" },
+        { d: "M8 10.708V11.708", stroke: "currentColor", fill: "none" },
+      ],
+      info: [
+        { d: "M8 2.4a3.1 3.1 0 0 0-3.1 3.1c0 3.2-1.2 4.1-1.2 4.1h8.6s-1.2-.9-1.2-4.1A3.1 3.1 0 0 0 8 2.4Z", stroke: "currentColor", fill: "none" },
+        { d: "M6.9 11.9a1.15 1.15 0 0 0 2.2 0", stroke: "currentColor", fill: "none" },
+      ],
+    };
+    // Что сообщает событие: «сделано» — галочка, «нужен ответ» и ошибка —
+    // восклицательный знак, остальные события — колокол без оценки.
+    function bannerTone(kind) {
+      if (kind === "done" || kind === "subagent-done") return "success";
+      if (kind === "ask" || kind === "question" || kind === "error") return "warning";
+      return "info";
+    }
+    function bannerIcon(kind) {
+      const tone = bannerTone(kind);
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      const box = [["width", "16"], ["height", "16"], ["viewBox", "0 0 16 16"], ["fill", "none"], ["stroke-width", "1"]];
+      for (const [name, value] of box) svg.setAttribute(name, value);
+      for (const spec of BANNER_GLYPH[tone]) {
+        const path = document.createElementNS(ns, "path");
+        for (const name of Object.keys(spec)) path.setAttribute(name, spec[name]);
+        svg.appendChild(path);
+      }
+      const seat = el("span", { class: "dn-banner-icon", dataset: { tone } });
+      seat.setAttribute("aria-hidden", "true");
+      seat.appendChild(svg);
+      return seat;
+    }
+    function showBanner(kind, title, message, sessionId) {
       const kindKey = String(kind);
       const existing = Array.prototype.slice.call(
         document.querySelectorAll(".dn-banner")
@@ -1694,19 +1829,26 @@ var KIND_KEY_TABLE = {
       banner.addEventListener("click", () => {
         window.focus();
         banner.remove();
+        // Уведомление ведёт туда, о чём оно: без этого клик только закрывал
+        // плашку, и нужную сессию приходилось искать в списке руками.
+        if (typeof sessionId === "string" && sessionId.length > 0 && uiWorkspaceRef.current) {
+          try {
+            uiWorkspaceRef.current.openSession(sessionId);
+          } catch (error) {
+            console.warn("[dsh-notifier] не удалось переключить сессию: ", error);
+          }
+        }
       });
-      banner.appendChild(
-        el("div", { style: "display:flex;align-items:center;gap:6px" }, [
-          el("span", { text: "🔔" }),
-          el("span", { text: title, style: "font-weight:600" })
-        ])
-      );
-      banner.appendChild(
-        el("div", {
-          text: message,
-          style: "margin-top:4px;font-size:12px;line-height:1.5;white-space:pre-line"
-        })
-      );
+      if (typeof sessionId === "string" && sessionId.length > 0) banner.title = "Перейти в сессию";
+      banner.appendChild(bannerIcon(kindKey));
+      const main = el("div", { class: "dn-banner-main" }, [
+        el("div", { class: "dn-banner-title", text: title })
+      ]);
+      // Пустая строка под заголовком читалась бы как лишний отступ.
+      if (message !== void 0 && message !== null && String(message).length > 0) {
+        main.appendChild(el("div", { class: "dn-banner-text", text: String(message) }));
+      }
+      banner.appendChild(main);
       document.body.appendChild(banner);
       setTimeout(() => {
         banner.remove();
@@ -1734,29 +1876,8 @@ var KIND_KEY_TABLE = {
       }
       return payload;
     }
-    var CHANNEL_OPTIONAL_STRING_KEYS = [
-      "name",
-      "token",
-      "username",
-      "password",
-      "headerName",
-      "headerValue",
-      "template",
-      "sound",
-      "group",
-      "icon",
-      "url"
-    ];
-    function stripChannelEmpties(ch) {
-      if (typeof ch !== "object" || ch === null || Array.isArray(ch)) return ch;
-      const out = Object.assign({}, ch);
-      for (const key of CHANNEL_OPTIONAL_STRING_KEYS) {
-        if (typeof out[key] === "string" && out[key].length === 0) delete out[key];
-      }
-      return out;
-    }
     function canonicalForCompare(key, value) {
-      if (key === "channels" && Array.isArray(value)) return value.map(normalizeChannelForCompare);
+      if (key === "channels" && Array.isArray(value)) return canonicalChannelsForCompare(value);
       return value;
     }
     function stableJsonValue(value) {
@@ -1773,26 +1894,6 @@ var KIND_KEY_TABLE = {
     }
     function stableEqual(a, b) {
       return stableJsonValue(a) === stableJsonValue(b);
-    }
-    function normalizeChannelForCompare(ch) {
-      const stripped = stripChannelEmpties(ch);
-      if (typeof stripped !== "object" || stripped === null || Array.isArray(stripped)) return stripped;
-      const out = stripped;
-      const defaults = CHANNEL_COMPARE_DEFAULTS.find((entry) => entry.type === out.type)?.defaults;
-      if (defaults === void 0) return out;
-      for (const field of Object.keys(defaults)) {
-        if (out[field] === void 0) out[field] = defaults[field];
-      }
-      return out;
-    }
-    var CHANNEL_COMPARE_DEFAULTS = [
-      { type: "bark", defaults: { levels: {}, timeoutMs: 0 } },
-      { type: "webhook", defaults: { headers: {}, timeoutSec: 0, preset: "custom", auth: "none" } }
-    ];
-    function canonicalSettingsForCompare(settings) {
-      const out = Object.assign({}, settings);
-      if (Array.isArray(out.channels)) out.channels = out.channels.map(normalizeChannelForCompare);
-      return out;
     }
     function snapshotBaseline(effective) {
       return canonicalSettingsForCompare(effective);
@@ -1812,8 +1913,7 @@ var KIND_KEY_TABLE = {
       const out = Object.assign({}, target);
       for (const key of Object.keys(part)) {
         const value = part[key];
-        if (value === "" || value === void 0) delete out[key];
-        else out[key] = value;
+        out[key] = value === "" || value === void 0 ? null : value;
       }
       return out;
     }
@@ -1885,7 +1985,7 @@ var KIND_KEY_TABLE = {
       if (code !== void 0 && REFUSAL_VALUES.includes(code)) {
         return {
           refused: true,
-          hint: code === REFUSAL_CODES.FORBIDDEN_LOOPBACK ? t2("lanAccessHint") : "",
+          hint: code === REFUSAL_CODES.FORBIDDEN_LOOPBACK || code === REFUSAL_CODES.UNAUTHORIZED ? t2("lanAccessHint") : "",
           message
         };
       }
@@ -1945,7 +2045,8 @@ var KIND_KEY_TABLE = {
       reasonWebhookHttp: "reasonWebhookHttp",
       reasonUnknownTarget: "reasonUnknownTarget",
       reasonChannelThrew: "reasonChannelThrew",
-      reasonThrottled: "reasonThrottled"
+      reasonThrottled: "reasonThrottled",
+      reasonDispatchCanceled: "reasonDispatchCanceled"
     };
     function reasonText(value, t2) {
       if (typeof value === "string") return value;
@@ -1972,17 +2073,50 @@ var KIND_KEY_TABLE = {
       if (typeof source.channelId !== "string" || source.channelId === "") return void 0;
       const status = source.status;
       if (status !== "ok" && status !== "failed" && status !== "skipped") return void 0;
-      return { channelId: source.channelId, status, reason: source.reason };
+      return {
+        channelId: source.channelId,
+        status,
+        reason: source.reason,
+        soundWarning: source.soundWarning
+      };
+    }
+    function soundWarningViewOf(value) {
+      const view = reasonViewOf(value);
+      if (view === void 0) return void 0;
+      return isSoundWarningCode(view.code) ? view : void 0;
+    }
+    var SOUND_WARNING_KEYS = {
+      reasonSystemSoundFailed: "soundWarnPlaybackFailed",
+      reasonSystemToneUnwritable: "soundWarnToneUnwritable",
+      reasonSkipEnvironment: "soundWarnNoPlayback"
+    };
+    function soundWarningText(value, t2) {
+      const view = soundWarningViewOf(value);
+      if (view === void 0) return "";
+      const key = SOUND_WARNING_KEYS[view.code];
+      if (key === void 0) return "";
+      return t2(key, view.params);
+    }
+    function soundWarningDetail(value) {
+      const view = soundWarningViewOf(value);
+      return view?.detail ?? "";
     }
     function projectDelivery(row, t2) {
       if (row.status === "ok") {
-        return {
+        const view = {
           channelId: row.channelId,
           status: row.status,
           statusText: t2("chStatusOk"),
           reason: "",
           detail: ""
         };
+        const warning = soundWarningText(row.soundWarning, t2);
+        if (warning !== "") {
+          view.soundWarning = warning;
+          const warningDetail = soundWarningDetail(row.soundWarning);
+          if (warningDetail !== "") view.soundWarningDetail = warningDetail;
+        }
+        return view;
       }
       return {
         channelId: row.channelId,
@@ -1992,9 +2126,17 @@ var KIND_KEY_TABLE = {
         detail: reasonDetail(row.reason)
       };
     }
-    function dryRunReasonText(status, reason, t2) {
-      if (status === "ok") return "";
-      return reasonText(reason, t2);
+    var DETAIL_SEPARATOR = " | ";
+    function dryRunReasonText(status, reason, t2, soundWarning) {
+      if (status === "ok") {
+        const warning = soundWarningText(soundWarning, t2);
+        if (warning === "") return "";
+        const detail2 = soundWarningDetail(soundWarning);
+        return detail2 === "" || detail2 === warning ? warning : warning + DETAIL_SEPARATOR + detail2;
+      }
+      const text = reasonText(reason, t2);
+      const detail = reasonDetail(reason);
+      return detail === "" || detail === text ? text : text + DETAIL_SEPARATOR + detail;
     }
     function reasonViewOf(value) {
       if (typeof value !== "object" || value === null || Array.isArray(value)) return void 0;
@@ -2015,10 +2157,10 @@ var KIND_KEY_TABLE = {
     }
 
     // src/client/settings/panes/channels.tsx
-    var React10 = __toESM(require("react"), 1);
+    var React11 = __toESM(require("react"), 1);
 
     // src/client/settings/channels/bark-card.tsx
-    var React5 = __toESM(require("react"), 1);
+    var React6 = __toESM(require("react"), 1);
 
     // src/client/settings/mask.ts
     var CREDENTIAL_MASK_PLACEHOLDER = "••••••••";
@@ -2067,7 +2209,9 @@ var KIND_KEY_TABLE = {
           /* @__PURE__ */ React.createElement("span", { className: "dn-ch-deliveryName" }, view.channelId),
           /* @__PURE__ */ React.createElement("span", { className: "dn-ch-deliveryStatus" }, view.statusText),
           view.reason ? /* @__PURE__ */ React.createElement("span", { className: "dn-ch-deliveryReason" }, view.reason) : null,
-          view.detail ? /* @__PURE__ */ React.createElement("details", { className: "dn-ch-reasonRaw" }, /* @__PURE__ */ React.createElement("summary", null, t2("reasonDetailLabel")), /* @__PURE__ */ React.createElement("div", { className: "dn-ch-reasonRawText" }, view.detail)) : null
+          view.soundWarning ? /* @__PURE__ */ React.createElement("span", { className: "dn-ch-deliveryReason" }, view.soundWarning) : null,
+          view.detail ? /* @__PURE__ */ React.createElement("details", { className: "dn-ch-reasonRaw" }, /* @__PURE__ */ React.createElement("summary", null, t2("reasonDetailLabel")), /* @__PURE__ */ React.createElement("div", { className: "dn-ch-reasonRawText" }, view.detail)) : null,
+          view.soundWarningDetail && view.soundWarningDetail !== view.soundWarning ? /* @__PURE__ */ React.createElement("details", { className: "dn-ch-reasonRaw" }, /* @__PURE__ */ React.createElement("summary", null, t2("reasonDetailLabel")), /* @__PURE__ */ React.createElement("div", { className: "dn-ch-reasonRawText" }, view.soundWarningDetail)) : null
         );
       }));
     }
@@ -2134,7 +2278,17 @@ var KIND_KEY_TABLE = {
     }
 
     // src/client/settings/parts/status.tsx
+    var React4 = __toESM(require("react"), 1);
+
+    // ../../shared/client/ui/index.js
     var React3 = __toESM(require("react"), 1);
+    function Status(props) {
+      const cls = `dsu-status${props.className ? ` ${props.className}` : ""}`;
+      const a11y = props.label === void 0 ? { "aria-hidden": "true" } : { role: "img", "aria-label": props.label };
+      return React3.createElement("span", { className: cls, "data-dsu-tone": props.tone, ...a11y });
+    }
+
+    // src/client/settings/parts/status.tsx
     function padTime(ts) {
       const d = new Date(ts);
       const pad = function(n) {
@@ -2155,6 +2309,11 @@ var KIND_KEY_TABLE = {
       }
       return void 0;
     }
+    function soundWarningCodeOf(raw) {
+      if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return void 0;
+      const code = raw.code;
+      return typeof code === "string" && isSoundWarningCode(code) ? code : void 0;
+    }
     function statusText(channelKey, statusMap, t2, history) {
       const st = statusMap[channelKey];
       if (!st || !st.lastTs) {
@@ -2163,17 +2322,25 @@ var KIND_KEY_TABLE = {
         const skippedWhy = reasonText(skipped.reason, t2);
         return t2("chNeverSent") + (skippedWhy ? " · " + skippedWhy : "") + t2("chSkippedSeeHistory");
       }
-      if (st.lastStatus === "ok") return t2("chLastOk") + " · " + padTime(st.lastTs);
+      if (st.lastStatus === "ok") {
+        const base = t2("chLastOk") + " · " + padTime(st.lastTs);
+        const warning = soundWarningText(st.lastSoundWarning, t2);
+        return warning === "" ? base : base + " · " + warning;
+      }
       const why = reasonText(st.lastError, t2);
       return t2("chLastFail") + " · " + padTime(st.lastTs) + (why ? ": " + why : "");
     }
-    function statusDotClass(channelKey, statusMap) {
+    function statusTone(channelKey, statusMap) {
       const st = statusMap[channelKey];
-      if (!st || !st.lastTs) return "";
-      return st.lastStatus === "ok" ? "ok" : "fail";
+      if (!st || !st.lastTs) return "off";
+      if (st.lastStatus !== "ok") return "err";
+      return soundWarningCodeOf(st.lastSoundWarning) === void 0 ? "ok" : "warn";
+    }
+    function statusDot(channelKey, statusMap) {
+      return /* @__PURE__ */ React4.createElement(Status, { tone: statusTone(channelKey, statusMap) });
     }
     function testBtn(channelId, sendTest, t2, dirty) {
-      return /* @__PURE__ */ React3.createElement(
+      return /* @__PURE__ */ React4.createElement(
         "button",
         {
           type: "button",
@@ -2184,11 +2351,11 @@ var KIND_KEY_TABLE = {
           }
         },
         dirty === true ? t2("chTestDraft") : t2("chTest"),
-        dirty === true ? /* @__PURE__ */ React3.createElement("span", { className: "dn-test-dirtyBadge" }, t2("chTestDraftBadge")) : null
+        dirty === true ? /* @__PURE__ */ React4.createElement("span", { className: "dn-test-dirtyBadge" }, t2("chTestDraftBadge")) : null
       );
     }
     function delArmedBtn(armed, channelId, remove, setArmedId, t2) {
-      return /* @__PURE__ */ React3.createElement(
+      return /* @__PURE__ */ React4.createElement(
         "button",
         {
           type: "button",
@@ -2211,17 +2378,17 @@ var KIND_KEY_TABLE = {
     function failBadge(channelKey, statusMap, t2) {
       const st = statusMap[channelKey];
       if (!st || !st.lastTs || st.lastStatus !== "failed") return null;
-      return /* @__PURE__ */ React3.createElement("span", { className: "dn-ch-failBadge" }, t2("chLastFail") + " · " + padTime(st.lastTs));
+      return /* @__PURE__ */ React4.createElement("span", { className: "dn-ch-failBadge" }, t2("chLastFail") + " · " + padTime(st.lastTs));
     }
 
     // src/client/settings/channels/channel-icon.tsx
-    var React4 = __toESM(require("react"), 1);
+    var React5 = __toESM(require("react"), 1);
     function iconEl(channelType) {
       let paths;
       if (channelType === "browser") {
         paths = [
-          /* @__PURE__ */ React4.createElement("circle", { cx: 12, cy: 12, r: 9, key: "c" }),
-          /* @__PURE__ */ React4.createElement(
+          /* @__PURE__ */ React5.createElement("circle", { cx: 12, cy: 12, r: 9, key: "c" }),
+          /* @__PURE__ */ React5.createElement(
             "path",
             {
               d: "M3 12h18M12 3c2.5 2.6 4 5.7 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.7-4-9s1.5-6.4 4-9z",
@@ -2231,22 +2398,21 @@ var KIND_KEY_TABLE = {
         ];
       } else if (channelType === "system") {
         paths = [
-          /* @__PURE__ */ React4.createElement("rect", { x: 3, y: 4, width: 18, height: 12, rx: 2, key: "r" }),
-          /* @__PURE__ */ React4.createElement("path", { d: "M8 20h8M12 16v4", key: "p" })
+          /* @__PURE__ */ React5.createElement("rect", { x: 3, y: 4, width: 18, height: 12, rx: 2, key: "r" }),
+          /* @__PURE__ */ React5.createElement("path", { d: "M8 20h8M12 16v4", key: "p" })
         ];
       } else if (channelType === "webhook") {
-        paths = [/* @__PURE__ */ React4.createElement("path", { d: "M13 2 4.5 13.5H11l-1 8.5L19.5 10H13l0-8z", key: "p", strokeLinejoin: "round" })];
+        paths = [/* @__PURE__ */ React5.createElement("path", { d: "M13 2 4.5 13.5H11l-1 8.5L19.5 10H13l0-8z", key: "p", strokeLinejoin: "round" })];
       } else {
         paths = [
-          /* @__PURE__ */ React4.createElement("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9", key: "a" }),
-          /* @__PURE__ */ React4.createElement("path", { d: "M13.7 21a2 2 0 0 1-3.4 0", key: "b" })
+          /* @__PURE__ */ React5.createElement("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9", key: "a" }),
+          /* @__PURE__ */ React5.createElement("path", { d: "M13.7 21a2 2 0 0 1-3.4 0", key: "b" })
         ];
       }
-      return /* @__PURE__ */ React4.createElement("span", { className: "dn-ch-icon" }, /* @__PURE__ */ React4.createElement("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, paths));
+      return /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-icon" }, /* @__PURE__ */ React5.createElement("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, paths));
     }
 
     // src/client/settings/channels/bark-card.tsx
-    var LEVEL_VALUES = ["active", "timeSensitive", "passive", "critical"];
     function suggestKindsOf(kindsList) {
       const suggestKinds = Object.keys(KIND_KEYS);
       (kindsList || []).forEach(function(k) {
@@ -2259,7 +2425,7 @@ var KIND_KEY_TABLE = {
       const dlId = "dn-levels-suggest-" + chId;
       const levelKeys = Object.keys(levels);
       const levelsRows = levelKeys.map(function(kind) {
-        return /* @__PURE__ */ React5.createElement("div", { className: "dn-levels-row", key: "lv-" + kind }, /* @__PURE__ */ React5.createElement("span", { className: "dn-levels-kind" }, KIND_KEYS[kind] !== void 0 ? t2(KIND_KEYS[kind]) + " (" + kind + ")" : kind), /* @__PURE__ */ React5.createElement(
+        return /* @__PURE__ */ React6.createElement("div", { className: "dn-levels-row", key: "lv-" + kind }, /* @__PURE__ */ React6.createElement("span", { className: "dn-levels-kind" }, KIND_KEYS[kind] !== void 0 ? t2(KIND_KEYS[kind]) + " (" + kind + ")" : kind), /* @__PURE__ */ React6.createElement(
           "select",
           {
             className: "dn-set-input dn-set-select",
@@ -2269,7 +2435,7 @@ var KIND_KEY_TABLE = {
             }
           },
           levelOpts
-        ), /* @__PURE__ */ React5.createElement(
+        ), /* @__PURE__ */ React6.createElement(
           "button",
           {
             type: "button",
@@ -2282,7 +2448,7 @@ var KIND_KEY_TABLE = {
         ));
       });
       const newKindKnown = suggestKinds.indexOf(newRow.kind) !== -1;
-      return /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "dn-set-note-inline" }, t2("chLevelsHint")), levelKeys.length === 0 ? /* @__PURE__ */ React5.createElement("div", { className: "dn-set-note-inline" }, t2("chLevelsEmpty")) : levelsRows, /* @__PURE__ */ React5.createElement("div", { className: "dn-levels-add", key: "lv-add" }, /* @__PURE__ */ React5.createElement(
+      return /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, t2("chLevelsHint")), levelKeys.length === 0 ? /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, t2("chLevelsEmpty")) : levelsRows, /* @__PURE__ */ React6.createElement("div", { className: "dn-levels-add", key: "lv-add" }, /* @__PURE__ */ React6.createElement(
         "input",
         {
           type: "text",
@@ -2294,7 +2460,7 @@ var KIND_KEY_TABLE = {
             setNewRow({ kind: e.target.value, level: newRow.level });
           }
         }
-      ), /* @__PURE__ */ React5.createElement(
+      ), /* @__PURE__ */ React6.createElement(
         "select",
         {
           className: "dn-set-input dn-set-select",
@@ -2304,7 +2470,7 @@ var KIND_KEY_TABLE = {
           }
         },
         levelOpts
-      ), /* @__PURE__ */ React5.createElement(
+      ), /* @__PURE__ */ React6.createElement(
         "button",
         {
           type: "button",
@@ -2317,8 +2483,8 @@ var KIND_KEY_TABLE = {
           }
         },
         t2("chLevelsAdd")
-      ), newRow.kind && !newKindKnown ? /* @__PURE__ */ React5.createElement("span", { className: "dn-set-note-inline" }, t2("chLevelsUnknown")) : null), /* @__PURE__ */ React5.createElement("datalist", { id: dlId }, suggestKinds.map(function(k) {
-        return /* @__PURE__ */ React5.createElement("option", { value: k, key: k }, k);
+      ), newRow.kind && !newKindKnown ? /* @__PURE__ */ React6.createElement("span", { className: "dn-set-note-inline" }, t2("chLevelsUnknown")) : null), /* @__PURE__ */ React6.createElement("datalist", { id: dlId }, suggestKinds.map(function(k) {
+        return /* @__PURE__ */ React6.createElement("option", { value: k, key: k }, k);
       })));
     }
     function barkCard(ch, idx, kindsList, delArmedId, setDelArmedId, levelsNew, setLevelsNew, secretEdited, markSecretEdited, chPatch, chLevelsSet, chRemove, sendTest, statusMap, t2, history, testDirty) {
@@ -2326,31 +2492,31 @@ var KIND_KEY_TABLE = {
       const armed = delArmedId === ch.id;
       const deviceKeyKey = credentialFieldKey(String(ch.id), "deviceKey");
       const levelOpts = [
-        /* @__PURE__ */ React5.createElement("option", { value: "", key: "auto" }, t2("chLevelAuto"))
+        /* @__PURE__ */ React6.createElement("option", { value: "", key: "auto" }, t2("chLevelAuto"))
       ];
-      LEVEL_VALUES.forEach(function(lv) {
+      BARK_LEVELS.forEach(function(lv) {
         levelOpts.push(
-          /* @__PURE__ */ React5.createElement("option", { value: lv, key: lv }, lv)
+          /* @__PURE__ */ React6.createElement("option", { value: lv, key: lv }, lv)
         );
       });
       const setNewRow = (next) => {
         setLevelsNew(Object.assign({}, levelsNew, { [String(ch.id)]: next }));
       };
-      return /* @__PURE__ */ React5.createElement(
+      return /* @__PURE__ */ React6.createElement(
         "details",
         {
           className: "dn-ch-card" + (ch.enabled ? "" : " dn-ch-off"),
           key: channelKey + ":" + (ch.enabled === true),
           open: ch.enabled === true
         },
-        /* @__PURE__ */ React5.createElement("summary", null, iconEl("bark"), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-name" }, ch.name || ch.id), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-type" }, "bark"), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-stateTxt" }, ch.enabled === true ? t2("chStateOn") : t2("chStateOff")), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-statusDot " + statusDotClass(channelKey, statusMap) }), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelKey, statusMap, t2, history) }, statusText(channelKey, statusMap, t2, history)), failBadge(channelKey, statusMap, t2), /* @__PURE__ */ React5.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
+        /* @__PURE__ */ React6.createElement("summary", null, iconEl("bark"), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-name" }, ch.name || ch.id), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-type" }, "bark"), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-stateTxt" }, ch.enabled === true ? t2("chStateOn") : t2("chStateOff")), statusDot(channelKey, statusMap), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelKey, statusMap, t2, history) }, statusText(channelKey, statusMap, t2, history)), failBadge(channelKey, statusMap, t2), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
           ch.enabled === true,
           function(v) {
             chPatch(idx, { enabled: v });
           },
           (ch.enabled ? t2("chToggleOff") : t2("chToggleOn")) + (ch.name || ch.id)
         ))),
-        /* @__PURE__ */ React5.createElement("div", { className: "dn-ch-body" }, chRow(
+        /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-body" }, chRow(
           t2("chBarkName"),
           textInput(
             ch.name,
@@ -2371,7 +2537,7 @@ var KIND_KEY_TABLE = {
           t2("chBarkBaseUrlHint")
         ), chRow(
           t2("chBarkDeviceKey"),
-          /* @__PURE__ */ React5.createElement("span", { className: "dn-secret", key: "deviceKey" }, /* @__PURE__ */ React5.createElement(
+          /* @__PURE__ */ React6.createElement("span", { className: "dn-secret", key: "deviceKey" }, /* @__PURE__ */ React6.createElement(
             "input",
             {
               type: "password",
@@ -2394,7 +2560,7 @@ var KIND_KEY_TABLE = {
             }
           )),
           t2("chBarkDeviceKeyHint")
-        ), /* @__PURE__ */ React5.createElement("details", { className: "dn-ch-adv", key: "adv-" + ch.id }, /* @__PURE__ */ React5.createElement("summary", null, t2("chAdvanced")), /* @__PURE__ */ React5.createElement("div", { className: "dn-ch-adv-body" }, advRow(
+        ), /* @__PURE__ */ React6.createElement("details", { className: "dn-ch-adv", key: "adv-" + ch.id }, /* @__PURE__ */ React6.createElement("summary", null, t2("chAdvanced")), /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-adv-body" }, advRow(
           t2("chBarkSound"),
           textInput(
             ch.sound,
@@ -2412,7 +2578,7 @@ var KIND_KEY_TABLE = {
             },
             { ariaLabel: t2("chBarkGroup") }
           )
-        ), /* @__PURE__ */ React5.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkGroupHint")), advRow(
+        ), /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkGroupHint")), advRow(
           t2("chBarkIcon"),
           textInput(
             ch.icon,
@@ -2421,7 +2587,7 @@ var KIND_KEY_TABLE = {
             },
             { ariaLabel: t2("chBarkIcon") }
           )
-        ), /* @__PURE__ */ React5.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkIconHint")), advRow(
+        ), /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkIconHint")), advRow(
           t2("chBarkUrl"),
           textInput(
             ch.url,
@@ -2441,7 +2607,7 @@ var KIND_KEY_TABLE = {
           )
         ), advRow(
           t2("chBarkLevel"),
-          /* @__PURE__ */ React5.createElement(
+          /* @__PURE__ */ React6.createElement(
             "select",
             {
               className: "dn-set-input dn-set-select",
@@ -2453,7 +2619,7 @@ var KIND_KEY_TABLE = {
             },
             levelOpts
           )
-        ), /* @__PURE__ */ React5.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkLevelHint")), levelsEditor({
+        ), /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, t2("chBarkLevelHint")), levelsEditor({
           idx,
           chId: String(ch.id),
           levels: ch.levels || {},
@@ -2463,7 +2629,7 @@ var KIND_KEY_TABLE = {
           t: t2,
           chLevelsSet,
           setNewRow
-        }))), /* @__PURE__ */ React5.createElement("div", { className: "dn-ch-actions" }, testBtn(channelKey, sendTest, t2, testDirty), delArmedBtn(
+        }))), /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-actions" }, testBtn(channelKey, sendTest, t2, testDirty), delArmedBtn(
           armed,
           ch.id,
           function() {
@@ -2476,10 +2642,10 @@ var KIND_KEY_TABLE = {
     }
 
     // src/client/settings/channels/builtin-card.tsx
-    var React8 = __toESM(require("react"), 1);
+    var React9 = __toESM(require("react"), 1);
 
     // src/client/settings/parts/diagnostics.tsx
-    var React6 = __toESM(require("react"), 1);
+    var React7 = __toESM(require("react"), 1);
     function browserPermLine(t2, secureContext, onRequestPermission) {
       if (!("Notification" in window) || !secureContext) return null;
       let text = "";
@@ -2490,7 +2656,7 @@ var KIND_KEY_TABLE = {
         text = t2("permDefault");
         pending = true;
       }
-      return /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-perm" }, /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-permText" }, text), pending ? /* @__PURE__ */ React6.createElement(
+      return /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-perm" }, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-permText" }, text), pending ? /* @__PURE__ */ React7.createElement(
         "button",
         {
           type: "button",
@@ -2508,24 +2674,24 @@ var KIND_KEY_TABLE = {
       else if (hostPlatform === "darwin") text = t2("sysPlatformMac");
       else if (hostPlatform === "linux") text = t2("sysPlatformLinux");
       else text = t2("sysPlatformOther");
-      return /* @__PURE__ */ React6.createElement("div", { className: "dn-set-note-inline" }, text);
+      return /* @__PURE__ */ React7.createElement("div", { className: "dn-set-note-inline" }, text);
     }
     function hostDiagnosticsBlock(diag) {
       const view = diag.host;
       if (!view) return null;
-      return /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-diag dn-ch-diag-" + view.tone }, /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagText" }, view.line), view.unknownLine ? /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagText" }, view.unknownLine) : null, view.remediationLines.length === 0 ? null : /* @__PURE__ */ React6.createElement("div", null, /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagCap" }, view.remediationTitle), /* @__PURE__ */ React6.createElement("ul", { className: "dn-ch-diagItems" }, view.remediationLines.map(function(text, i) {
-        return /* @__PURE__ */ React6.createElement("li", { key: "rem-" + i }, text);
-      }))), /* @__PURE__ */ React6.createElement("details", { className: "dn-ch-reasonRaw" }, /* @__PURE__ */ React6.createElement("summary", null, view.detailsLabel), /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-reasonRawText" }, /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-diagSrc" }, view.sourceLabel), view.details.map(function(row, i) {
-        return /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-diagDetail", key: "det-" + i }, /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagDetailCap" }, row.label), /* @__PURE__ */ React6.createElement("span", null, row.value));
+      return /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-diag dn-ch-diag-" + view.tone }, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagText" }, view.line), view.unknownLine ? /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagText" }, view.unknownLine) : null, view.remediationLines.length === 0 ? null : /* @__PURE__ */ React7.createElement("div", null, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagCap" }, view.remediationTitle), /* @__PURE__ */ React7.createElement("ul", { className: "dn-ch-diagItems" }, view.remediationLines.map(function(text, i) {
+        return /* @__PURE__ */ React7.createElement("li", { key: "rem-" + i }, text);
+      }))), /* @__PURE__ */ React7.createElement("details", { className: "dn-ch-reasonRaw" }, /* @__PURE__ */ React7.createElement("summary", null, view.detailsLabel), /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-reasonRawText" }, /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-diagSrc" }, view.sourceLabel), view.details.map(function(row, i) {
+        return /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-diagDetail", key: "det-" + i }, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagDetailCap" }, row.label), /* @__PURE__ */ React7.createElement("span", null, row.value));
       }))));
     }
     function browserDiagnosticsLine(diag) {
       const view = diag.browser;
-      return /* @__PURE__ */ React6.createElement("div", { className: "dn-ch-diag dn-ch-diag-" + view.tone }, /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagText" }, view.line), /* @__PURE__ */ React6.createElement("span", { className: "dn-ch-diagSrc" }, view.sourceLabel));
+      return /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-diag dn-ch-diag-" + view.tone }, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagText" }, view.line), /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-diagSrc" }, view.sourceLabel));
     }
 
     // src/client/settings/channels/sound-row.tsx
-    var React7 = __toESM(require("react"), 1);
+    var React8 = __toESM(require("react"), 1);
     var SOUND_OPTION_KEYS = {
       ding: "toneDing",
       bell: "toneBell",
@@ -2536,20 +2702,20 @@ var KIND_KEY_TABLE = {
       const soundVal = ch.sound;
       const toneValue = isSoundId(soundVal) ? soundVal : "";
       const toneOpts = [
-        /* @__PURE__ */ React7.createElement("option", { value: "", key: "sys" }, t2("chSoundFollow"))
+        /* @__PURE__ */ React8.createElement("option", { value: "", key: "sys" }, t2("chSoundFollow"))
       ].concat(
         SOUND_IDS.map(function(id) {
-          return /* @__PURE__ */ React7.createElement("option", { value: id, key: id }, t2(SOUND_OPTION_KEYS[id]));
+          return /* @__PURE__ */ React8.createElement("option", { value: id, key: id }, t2(SOUND_OPTION_KEYS[id]));
         })
       );
-      return /* @__PURE__ */ React7.createElement("div", { className: "dn-ch-row", key: "sound-" + channelIdOf(ch) }, /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-cap" }, t2("chSound")), /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-ctl" }, switchToggle(
+      return /* @__PURE__ */ React8.createElement("div", { className: "dn-ch-row", key: "sound-" + channelIdOf(ch) }, /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-cap" }, t2("chSound")), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-ctl" }, switchToggle(
         soundOn,
         function(v) {
           audioEngine2.unlock();
           chPatch(index, { sound: v });
         },
         t2("chSound") + " " + channelLabel
-      ), soundOn ? /* @__PURE__ */ React7.createElement(
+      ), soundOn ? /* @__PURE__ */ React8.createElement(
         "select",
         {
           className: "dn-set-input dn-set-select",
@@ -2561,7 +2727,7 @@ var KIND_KEY_TABLE = {
           }
         },
         toneOpts
-      ) : null, soundOn ? /* @__PURE__ */ React7.createElement(
+      ) : null, soundOn ? /* @__PURE__ */ React8.createElement(
         "button",
         {
           type: "button",
@@ -2573,7 +2739,7 @@ var KIND_KEY_TABLE = {
         },
         "▶ ",
         t2("chSoundPreview")
-      ) : null, toneValue === "" && soundOn ? /* @__PURE__ */ React7.createElement("span", { className: "dn-ch-hint" }, t2("chSoundFollowHint")) : null));
+      ) : null, toneValue === "" && soundOn ? /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-hint" }, t2("chSoundFollowHint")) : null));
     }
 
     // src/client/settings/channels/builtin-card.tsx
@@ -2587,15 +2753,15 @@ var KIND_KEY_TABLE = {
     }
     function builtinSoundNote(enabled, popup, soundOn, t2) {
       if (!enabled || popup) return null;
-      return /* @__PURE__ */ React8.createElement("div", { className: "dn-set-note-inline dn-soundOnly" }, soundOn ? t2("chSoundOnlyNote") : t2("chPopupSoundOffNote"));
+      return /* @__PURE__ */ React9.createElement("div", { className: "dn-set-note-inline dn-soundOnly" }, soundOn ? t2("chSoundOnlyNote") : t2("chPopupSoundOffNote"));
     }
     function builtinTypeRows(props) {
       const { type, t: t2, diag, hostPlatform, isSecureContext: isSecureContext2, requestNotificationPermission } = props;
       if (type === "browser") {
-        return /* @__PURE__ */ React8.createElement(React8.Fragment, null, browserPermLine(t2, isSecureContext2(), requestNotificationPermission), browserDiagnosticsLine(diag));
+        return /* @__PURE__ */ React9.createElement(React9.Fragment, null, browserPermLine(t2, isSecureContext2(), requestNotificationPermission), browserDiagnosticsLine(diag));
       }
       if (type === "system") {
-        return /* @__PURE__ */ React8.createElement(React8.Fragment, null, systemPlatformHint(hostPlatform, t2), hostDiagnosticsBlock(diag));
+        return /* @__PURE__ */ React9.createElement(React9.Fragment, null, systemPlatformHint(hostPlatform, t2), hostDiagnosticsBlock(diag));
       }
       return null;
     }
@@ -2633,33 +2799,33 @@ var KIND_KEY_TABLE = {
         );
       }
       extras.push(soundRow(index, ch, label, soundOn, t2, chPatch, audioEngine2));
-      return /* @__PURE__ */ React8.createElement(
+      return /* @__PURE__ */ React9.createElement(
         "details",
         {
           className: "dn-ch-card" + state.stateClass,
           key: "ch-" + channelId + ":" + enabled + ":" + popup + ":" + soundOn,
           open: enabled
         },
-        /* @__PURE__ */ React8.createElement("summary", null, iconEl(String(ch.type)), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-name" }, label), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-type" }, t2("chTypeBuiltin")), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-stateTxt" }, state.stateText), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-statusDot " + statusDotClass(channelId, statusMap) }), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelId, statusMap, t2, history) }, statusText(channelId, statusMap, t2, history)), failBadge(channelId, statusMap, t2), /* @__PURE__ */ React8.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
+        /* @__PURE__ */ React9.createElement("summary", null, iconEl(String(ch.type)), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-name" }, label), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-type" }, t2("chTypeBuiltin")), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-stateTxt" }, state.stateText), statusDot(channelId, statusMap), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelId, statusMap, t2, history) }, statusText(channelId, statusMap, t2, history)), failBadge(channelId, statusMap, t2), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
           enabled,
           function(v) {
             chPatch(index, { enabled: v });
           },
           (enabled ? t2("chToggleOff") : t2("chToggleOn")) + label
         ))),
-        /* @__PURE__ */ React8.createElement("div", { className: "dn-ch-body" }, extras, builtinSoundNote(enabled, popup, soundOn, t2), builtinTypeRows({
+        /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-body" }, extras, builtinSoundNote(enabled, popup, soundOn, t2), builtinTypeRows({
           type: String(ch.type),
           t: t2,
           diag,
           hostPlatform,
           isSecureContext: isSecureContext2,
           requestNotificationPermission
-        }), /* @__PURE__ */ React8.createElement("div", { className: "dn-ch-actions" }, testBtn(channelId, sendTest, t2, testDirty)))
+        }), /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-actions" }, testBtn(channelId, sendTest, t2, testDirty)))
       );
     }
 
     // src/client/settings/channels/webhook-card.tsx
-    var React9 = __toESM(require("react"), 1);
+    var React10 = __toESM(require("react"), 1);
     var WEBHOOK_PRESETS2 = {
       ntfy: { auth: "bearer", template: webhookTemplateOf("ntfy") },
       gotify: { auth: "bearer", template: webhookTemplateOf("gotify") },
@@ -2677,7 +2843,7 @@ var KIND_KEY_TABLE = {
         const shown2 = revealMap[key] === true;
         const fieldView = credentialFieldView(ch[field], secretEdited[key] === true, t2(placeholderKey));
         const part = {};
-        return /* @__PURE__ */ React9.createElement("span", { className: "dn-secret", key: field }, /* @__PURE__ */ React9.createElement(
+        return /* @__PURE__ */ React10.createElement("span", { className: "dn-secret", key: field }, /* @__PURE__ */ React10.createElement(
           "input",
           {
             type: shown2 ? "text" : "password",
@@ -2691,7 +2857,7 @@ var KIND_KEY_TABLE = {
               whPatch(part);
             }
           }
-        ), /* @__PURE__ */ React9.createElement(
+        ), /* @__PURE__ */ React10.createElement(
           "button",
           {
             type: "button",
@@ -2706,7 +2872,7 @@ var KIND_KEY_TABLE = {
         ));
       }
       const controls = [
-        /* @__PURE__ */ React9.createElement(
+        /* @__PURE__ */ React10.createElement(
           "select",
           {
             key: "auth-select",
@@ -2717,10 +2883,10 @@ var KIND_KEY_TABLE = {
               whPatch({ auth: e.target.value });
             }
           },
-          /* @__PURE__ */ React9.createElement("option", { value: "none" }, t2("whAuthNone")),
-          /* @__PURE__ */ React9.createElement("option", { value: "bearer" }, t2("whAuthBearer")),
-          /* @__PURE__ */ React9.createElement("option", { value: "basic" }, t2("whAuthBasic")),
-          /* @__PURE__ */ React9.createElement("option", { value: "header" }, t2("whAuthHeader"))
+          /* @__PURE__ */ React10.createElement("option", { value: "none" }, t2("whAuthNone")),
+          /* @__PURE__ */ React10.createElement("option", { value: "bearer" }, t2("whAuthBearer")),
+          /* @__PURE__ */ React10.createElement("option", { value: "basic" }, t2("whAuthBasic")),
+          /* @__PURE__ */ React10.createElement("option", { value: "header" }, t2("whAuthHeader"))
         )
       ];
       if (authValue === "bearer") {
@@ -2747,7 +2913,7 @@ var KIND_KEY_TABLE = {
       return controls;
     }
     function plainInput(key, value, label, onValue) {
-      return /* @__PURE__ */ React9.createElement(
+      return /* @__PURE__ */ React10.createElement(
         "input",
         {
           key,
@@ -2803,7 +2969,7 @@ var KIND_KEY_TABLE = {
         });
       };
       const tplChips = textTokens.map(function(tok) {
-        return /* @__PURE__ */ React9.createElement(
+        return /* @__PURE__ */ React10.createElement(
           "button",
           {
             type: "button",
@@ -2818,7 +2984,7 @@ var KIND_KEY_TABLE = {
         );
       });
       tplChips.push(
-        /* @__PURE__ */ React9.createElement(
+        /* @__PURE__ */ React10.createElement(
           "button",
           {
             type: "button",
@@ -2832,23 +2998,23 @@ var KIND_KEY_TABLE = {
           "{{ts}}"
         )
       );
-      return /* @__PURE__ */ React9.createElement(
+      return /* @__PURE__ */ React10.createElement(
         "details",
         {
           className: "dn-ch-card" + (ch.enabled ? "" : " dn-ch-off"),
           key: channelKey + ":" + (ch.enabled === true),
           open: ch.enabled === true
         },
-        /* @__PURE__ */ React9.createElement("summary", null, iconEl("webhook"), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-name" }, ch.name || ch.id), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-type" }, "webhook"), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-stateTxt" }, ch.enabled === true ? t2("chStateOn") : t2("chStateOff")), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-statusDot " + statusDotClass(channelKey, statusMap) }), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelKey, statusMap, t2, history) }, statusText(channelKey, statusMap, t2, history)), failBadge(channelKey, statusMap, t2), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
+        /* @__PURE__ */ React10.createElement("summary", null, iconEl("webhook"), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-name" }, ch.name || ch.id), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-type" }, "webhook"), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-stateTxt" }, ch.enabled === true ? t2("chStateOn") : t2("chStateOff")), statusDot(channelKey, statusMap), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-statusTxt", title: statusText(channelKey, statusMap, t2, history) }, statusText(channelKey, statusMap, t2, history)), failBadge(channelKey, statusMap, t2), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-summaryRight" }, switchToggle(
           ch.enabled === true,
           function(v) {
             whPatch({ enabled: v });
           },
           (ch.enabled ? t2("chToggleOff") : t2("chToggleOn")) + (ch.name || ch.id)
         ))),
-        /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-body" }, chRow(
+        /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-body" }, chRow(
           t2("whPreset"),
-          /* @__PURE__ */ React9.createElement(
+          /* @__PURE__ */ React10.createElement(
             "select",
             {
               className: "dn-set-input dn-set-select",
@@ -2860,10 +3026,10 @@ var KIND_KEY_TABLE = {
                 whPatch({ preset: e.target.value, auth: p.auth, template: p.template });
               }
             },
-            /* @__PURE__ */ React9.createElement("option", { value: "" }, t2("whPreset")),
-            /* @__PURE__ */ React9.createElement("option", { value: "ntfy" }, t2("whPresetNtfy")),
-            /* @__PURE__ */ React9.createElement("option", { value: "gotify" }, t2("whPresetGotify")),
-            /* @__PURE__ */ React9.createElement("option", { value: "custom" }, t2("whPresetCustom"))
+            /* @__PURE__ */ React10.createElement("option", { value: "" }, t2("whPreset")),
+            /* @__PURE__ */ React10.createElement("option", { value: "ntfy" }, t2("whPresetNtfy")),
+            /* @__PURE__ */ React10.createElement("option", { value: "gotify" }, t2("whPresetGotify")),
+            /* @__PURE__ */ React10.createElement("option", { value: "custom" }, t2("whPresetCustom"))
           ),
           t2("whPresetHint")
         ), chRow(
@@ -2885,7 +3051,7 @@ var KIND_KEY_TABLE = {
             { placeholder: t2("whUrlPlaceholder"), ariaLabel: t2("whUrl") }
           ),
           t2("whUrlHint")
-        ), chRow(t2("whAuth"), /* @__PURE__ */ React9.createElement("span", { className: "dn-authFields" }, authCtl), t2("whAuthHint")), chRow(
+        ), chRow(t2("whAuth"), /* @__PURE__ */ React10.createElement("span", { className: "dn-authFields" }, authCtl), t2("whAuthHint")), chRow(
           t2("whTimeout"),
           numInput(
             ch.timeoutSec,
@@ -2897,7 +3063,7 @@ var KIND_KEY_TABLE = {
             { ariaLabel: t2("whTimeout"), min: 1, max: 60 }
           ),
           t2("whTimeoutHint")
-        ), /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-row", style: { display: "block" } }, /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-cap", style: { marginBottom: "6px" } }, t2("whTemplate")), /* @__PURE__ */ React9.createElement(
+        ), /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-row", style: { display: "block" } }, /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-cap", style: { marginBottom: "6px" } }, t2("whTemplate")), /* @__PURE__ */ React10.createElement(
           "textarea",
           {
             id: "dn-tpl-" + chId,
@@ -2909,7 +3075,7 @@ var KIND_KEY_TABLE = {
               whPatch({ template: e.target.value });
             }
           }
-        ), /* @__PURE__ */ React9.createElement("div", { className: "dn-tplChips" }, /* @__PURE__ */ React9.createElement("span", { className: "dn-tplCap" }, t2("routeCap") + ":"), tplChips, /* @__PURE__ */ React9.createElement(
+        ), /* @__PURE__ */ React10.createElement("div", { className: "dn-tplChips" }, /* @__PURE__ */ React10.createElement("span", { className: "dn-tplCap" }, t2("routeCap") + ":"), tplChips, /* @__PURE__ */ React10.createElement(
           "button",
           {
             type: "button",
@@ -2920,7 +3086,7 @@ var KIND_KEY_TABLE = {
             }
           },
           t2("whTplRestore")
-        )), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-hint" }, t2("whTemplateHint")), /* @__PURE__ */ React9.createElement("span", { className: "dn-ch-hint" }, t2("whTemplateFailHint"))), /* @__PURE__ */ React9.createElement("div", { className: "dn-ch-actions" }, testBtn(channelKey, sendTest, t2, testDirty), delArmedBtn(
+        )), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-hint" }, t2("whTemplateHint")), /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-hint" }, t2("whTemplateFailHint"))), /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-actions" }, testBtn(channelKey, sendTest, t2, testDirty), delArmedBtn(
           armed,
           ch.id,
           function() {
@@ -3025,7 +3191,7 @@ var KIND_KEY_TABLE = {
         );
       });
       channelsChildren.push(
-        /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-add", key: "ch-add" }, /* @__PURE__ */ React10.createElement(
+        /* @__PURE__ */ React11.createElement("div", { className: "dn-ch-add", key: "ch-add" }, /* @__PURE__ */ React11.createElement(
           "button",
           {
             type: "button",
@@ -3035,7 +3201,7 @@ var KIND_KEY_TABLE = {
             }
           },
           t2("chAddBark")
-        ), /* @__PURE__ */ React10.createElement(
+        ), /* @__PURE__ */ React11.createElement(
           "button",
           {
             type: "button",
@@ -3047,7 +3213,7 @@ var KIND_KEY_TABLE = {
           t2("chAddWebhook")
         ))
       );
-      const channelsDomainSave = /* @__PURE__ */ React10.createElement("div", { className: "dn-ch-domainSave", key: "ch-domain-save" }, /* @__PURE__ */ React10.createElement("span", { className: "dn-ch-domainSaveHint" }, t2("channelsDomainHint")), /* @__PURE__ */ React10.createElement(
+      const channelsDomainSave = /* @__PURE__ */ React11.createElement("div", { className: "dn-ch-domainSave", key: "ch-domain-save" }, /* @__PURE__ */ React11.createElement("span", { className: "dn-ch-domainSaveHint" }, t2("channelsDomainHint")), /* @__PURE__ */ React11.createElement(
         "button",
         {
           type: "button",
@@ -3063,27 +3229,27 @@ var KIND_KEY_TABLE = {
     }
 
     // src/client/settings/panes/events.tsx
-    var React12 = __toESM(require("react"), 1);
+    var React13 = __toESM(require("react"), 1);
 
     // src/client/settings/parts/kind-icons.tsx
-    var React11 = __toESM(require("react"), 1);
+    var React12 = __toESM(require("react"), 1);
     function wrap(paths, extraCls, title) {
-      return /* @__PURE__ */ React11.createElement(
+      return /* @__PURE__ */ React12.createElement(
         "span",
         {
           className: "dn-ico" + (extraCls ? " " + extraCls : ""),
           "aria-hidden": title ? void 0 : "true",
           title
         },
-        /* @__PURE__ */ React11.createElement("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 }, paths)
+        /* @__PURE__ */ React12.createElement("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 }, paths)
       );
     }
     function kindIcon(kind, extraCls) {
       let paths;
       if (kind === "ask") {
         paths = [
-          /* @__PURE__ */ React11.createElement("path", { d: "M8 10h8M8 14h5", key: "t" }),
-          /* @__PURE__ */ React11.createElement(
+          /* @__PURE__ */ React12.createElement("path", { d: "M8 10h8M8 14h5", key: "t" }),
+          /* @__PURE__ */ React12.createElement(
             "path",
             {
               d: "M7 5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4l-4 3v-3H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
@@ -3093,28 +3259,28 @@ var KIND_KEY_TABLE = {
         ];
       } else if (kind === "question") {
         paths = [
-          /* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }),
-          /* @__PURE__ */ React11.createElement("path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.9-1.2 1.6v.3", key: "q" }),
-          /* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "17", r: ".8", fill: "currentColor", stroke: "none", key: "d" })
+          /* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }),
+          /* @__PURE__ */ React12.createElement("path", { d: "M9.5 9.5a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.9-1.2 1.6v.3", key: "q" }),
+          /* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "17", r: ".8", fill: "currentColor", stroke: "none", key: "d" })
         ];
       } else if (kind === "done") {
-        paths = [/* @__PURE__ */ React11.createElement("path", { d: "M5 12l4 4L19 6", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("path", { d: "M5 12l4 4L19 6", key: "p" })];
       } else if (kind === "subagent-done") {
         paths = [
-          /* @__PURE__ */ React11.createElement("circle", { cx: "9", cy: "10", r: "3", key: "a" }),
-          /* @__PURE__ */ React11.createElement("circle", { cx: "16", cy: "12", r: "2.5", key: "b" }),
-          /* @__PURE__ */ React11.createElement("path", { d: "M5 18c.8-2 2.2-3 4-3s3.2 1 4 3", key: "p" })
+          /* @__PURE__ */ React12.createElement("circle", { cx: "9", cy: "10", r: "3", key: "a" }),
+          /* @__PURE__ */ React12.createElement("circle", { cx: "16", cy: "12", r: "2.5", key: "b" }),
+          /* @__PURE__ */ React12.createElement("path", { d: "M5 18c.8-2 2.2-3 4-3s3.2 1 4 3", key: "p" })
         ];
       } else if (kind === "error") {
-        paths = [/* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React11.createElement("path", { d: "M12 8v5M12 16h.01", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React12.createElement("path", { d: "M12 8v5M12 16h.01", key: "p" })];
       } else if (kind === "turn-end") {
-        paths = [/* @__PURE__ */ React11.createElement("path", { d: "M7 7h10v4l3 2-3 2v2H7v-2l-3-2 3-2V7z", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("path", { d: "M7 7h10v4l3 2-3 2v2H7v-2l-3-2 3-2V7z", key: "p" })];
       } else if (kind === "test") {
-        paths = [/* @__PURE__ */ React11.createElement("path", { d: "M9 3h6M10 3v6l-4 8a3 3 0 0 0 2.6 4.5h6.8A3 3 0 0 0 18 17l-4-8V3", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("path", { d: "M9 3h6M10 3v6l-4 8a3 3 0 0 0 2.6 4.5h6.8A3 3 0 0 0 18 17l-4-8V3", key: "p" })];
       } else {
         paths = [
-          /* @__PURE__ */ React11.createElement("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9", key: "a" }),
-          /* @__PURE__ */ React11.createElement("path", { d: "M13.7 21a2 2 0 0 1-3.4 0", key: "b" })
+          /* @__PURE__ */ React12.createElement("path", { d: "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9", key: "a" }),
+          /* @__PURE__ */ React12.createElement("path", { d: "M13.7 21a2 2 0 0 1-3.4 0", key: "b" })
         ];
       }
       return wrap(paths, extraCls);
@@ -3122,28 +3288,28 @@ var KIND_KEY_TABLE = {
     function tabIcon(which) {
       if (which === "events") {
         return wrap([
-          /* @__PURE__ */ React11.createElement("path", { d: "M12 3v3M8 6h8l1 3H7l1-3z", key: "a" }),
-          /* @__PURE__ */ React11.createElement("path", { d: "M6 9h12v7a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V9z", key: "b" })
+          /* @__PURE__ */ React12.createElement("path", { d: "M12 3v3M8 6h8l1 3H7l1-3z", key: "a" }),
+          /* @__PURE__ */ React12.createElement("path", { d: "M6 9h12v7a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V9z", key: "b" })
         ]);
       }
       if (which === "channels") {
         return wrap([
-          /* @__PURE__ */ React11.createElement("rect", { x: "4", y: "5", width: "16", height: "12", rx: "2", key: "r" }),
-          /* @__PURE__ */ React11.createElement("path", { d: "M8 21h8", key: "p" })
+          /* @__PURE__ */ React12.createElement("rect", { x: "4", y: "5", width: "16", height: "12", rx: "2", key: "r" }),
+          /* @__PURE__ */ React12.createElement("path", { d: "M8 21h8", key: "p" })
         ]);
       }
-      return wrap([/* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React11.createElement("path", { d: "M12 8v4l2.5 2.5", key: "p" })]);
+      return wrap([/* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React12.createElement("path", { d: "M12 8v4l2.5 2.5", key: "p" })]);
     }
     function sevIcon(sev, extraCls) {
       let paths;
       if (sev === "failure" || sev === "error") {
-        paths = [/* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React11.createElement("path", { d: "M12 8v5M12 16h.01", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React12.createElement("path", { d: "M12 8v5M12 16h.01", key: "p" })];
       } else if (sev === "warning") {
-        paths = [/* @__PURE__ */ React11.createElement("path", { d: "M12 4l9 16H3L12 4z", key: "t" }), /* @__PURE__ */ React11.createElement("path", { d: "M12 10v4M12 17h.01", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("path", { d: "M12 4l9 16H3L12 4z", key: "t" }), /* @__PURE__ */ React12.createElement("path", { d: "M12 10v4M12 17h.01", key: "p" })];
       } else if (sev === "success") {
-        paths = [/* @__PURE__ */ React11.createElement("path", { d: "M5 12l4 4L19 6", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("path", { d: "M5 12l4 4L19 6", key: "p" })];
       } else {
-        paths = [/* @__PURE__ */ React11.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React11.createElement("path", { d: "M12 11v5M12 8h.01", key: "p" })];
+        paths = [/* @__PURE__ */ React12.createElement("circle", { cx: "12", cy: "12", r: "8", key: "c" }), /* @__PURE__ */ React12.createElement("path", { d: "M12 11v5M12 8h.01", key: "p" })];
       }
       return wrap(paths, extraCls, "severity: " + sev);
     }
@@ -3169,19 +3335,19 @@ var KIND_KEY_TABLE = {
         const kindId = EVENT_KIND_MAP[key];
         const sev = severityOf2(kindId);
         eventChildren.push(
-          /* @__PURE__ */ React12.createElement("div", { className: "dn-evt", key: "ev-" + key }, /* @__PURE__ */ React12.createElement("div", { className: "dn-evt-head" }, kindIcon(kindId), /* @__PURE__ */ React12.createElement("span", { className: "dn-evt-name" }, t2(labelKey)), /* @__PURE__ */ React12.createElement("span", { className: "dn-evt-kind" }, kindId), /* @__PURE__ */ React12.createElement(
+          /* @__PURE__ */ React13.createElement("div", { className: "dn-evt", key: "ev-" + key }, /* @__PURE__ */ React13.createElement("div", { className: "dn-evt-head" }, kindIcon(kindId), /* @__PURE__ */ React13.createElement("span", { className: "dn-evt-name" }, t2(labelKey)), /* @__PURE__ */ React13.createElement("span", { className: "dn-evt-kind" }, kindId), /* @__PURE__ */ React13.createElement(
             "span",
             {
               className: "dn-sev" + (sev !== "info" ? " dn-sev-" + sev : ""),
               title: "severity: " + sev
             }
-          ), switchControl(key, t2("evtSwitch", { name: t2(labelKey) }), settings, patch)), routeChipsRow(kindId))
+          ), switchControl(key, t2("evtSwitch", { name: t2(labelKey) }), settings, patch)), routeChipsRow(kindId), key === "notifyTurnEnd" ? /* @__PURE__ */ React13.createElement("div", { className: "dn-sec-hint" }, t2("evtTurnEndHint")) : null)
         );
       });
       const kindRows = kindsList.map(function(k) {
         const nameText = k.label && k.label !== k.id ? k.label : k.id;
         if (k.confirmed) {
-          return /* @__PURE__ */ React12.createElement("div", { className: "dn-kinds dn-kinds-ok", key: k.id }, /* @__PURE__ */ React12.createElement("div", { className: "dn-kinds-head" }, kindIcon(k.id), /* @__PURE__ */ React12.createElement("span", { className: "dn-kinds-name" }, nameText), /* @__PURE__ */ React12.createElement("span", { className: "dn-evt-kind" }, k.id), /* @__PURE__ */ React12.createElement("span", { className: "dn-kinds-actions" }, /* @__PURE__ */ React12.createElement(
+          return /* @__PURE__ */ React13.createElement("div", { className: "dn-kinds dn-kinds-ok", key: k.id }, /* @__PURE__ */ React13.createElement("div", { className: "dn-kinds-head" }, kindIcon(k.id), /* @__PURE__ */ React13.createElement("span", { className: "dn-kinds-name" }, nameText), /* @__PURE__ */ React13.createElement("span", { className: "dn-evt-kind" }, k.id), /* @__PURE__ */ React13.createElement("span", { className: "dn-kinds-actions" }, /* @__PURE__ */ React13.createElement(
             "button",
             {
               type: "button",
@@ -3193,7 +3359,7 @@ var KIND_KEY_TABLE = {
             t2("kindRevoke")
           ))), routeChipsRow(k.id));
         }
-        return /* @__PURE__ */ React12.createElement("div", { className: "dn-kinds", key: k.id }, /* @__PURE__ */ React12.createElement("div", { className: "dn-kinds-head" }, kindIcon(k.id), /* @__PURE__ */ React12.createElement("span", { className: "dn-kinds-name" }, nameText), /* @__PURE__ */ React12.createElement("span", { className: "dn-evt-kind" }, k.id), /* @__PURE__ */ React12.createElement("span", { className: "dn-kinds-actions" }, /* @__PURE__ */ React12.createElement(
+        return /* @__PURE__ */ React13.createElement("div", { className: "dn-kinds", key: k.id }, /* @__PURE__ */ React13.createElement("div", { className: "dn-kinds-head" }, kindIcon(k.id), /* @__PURE__ */ React13.createElement("span", { className: "dn-kinds-name" }, nameText), /* @__PURE__ */ React13.createElement("span", { className: "dn-evt-kind" }, k.id), /* @__PURE__ */ React13.createElement("span", { className: "dn-kinds-actions" }, /* @__PURE__ */ React13.createElement(
           "button",
           {
             type: "button",
@@ -3203,7 +3369,7 @@ var KIND_KEY_TABLE = {
             }
           },
           t2("kindAllow")
-        ), /* @__PURE__ */ React12.createElement(
+        ), /* @__PURE__ */ React13.createElement(
           "button",
           {
             type: "button",
@@ -3213,14 +3379,14 @@ var KIND_KEY_TABLE = {
             }
           },
           t2("kindDeny")
-        ))), /* @__PURE__ */ React12.createElement("div", { className: "dn-kind-routeHint" }, t2("kindRouteHint")));
+        ))), /* @__PURE__ */ React13.createElement("div", { className: "dn-kind-routeHint" }, t2("kindRouteHint")));
       });
       eventChildren.push(
-        /* @__PURE__ */ React12.createElement("div", { key: "kinds" }, /* @__PURE__ */ React12.createElement("div", { className: "dn-sec", style: { marginTop: "14px" } }, /* @__PURE__ */ React12.createElement("span", { className: "dn-sec-title" }, t2("kindsTitle")), /* @__PURE__ */ React12.createElement("span", { className: "dn-sec-hint" }, t2("kindsHint"))), kindsList.length === 0 ? /* @__PURE__ */ React12.createElement("div", { className: "dn-set-note" }, t2("kindsEmpty")) : kindRows)
+        /* @__PURE__ */ React13.createElement("div", { key: "kinds" }, /* @__PURE__ */ React13.createElement("div", { className: "dn-sec", style: { marginTop: "14px" } }, /* @__PURE__ */ React13.createElement("span", { className: "dn-sec-title" }, t2("kindsTitle")), /* @__PURE__ */ React13.createElement("span", { className: "dn-sec-hint" }, t2("kindsHint"))), kindsList.length === 0 ? /* @__PURE__ */ React13.createElement("div", { className: "dn-set-note" }, t2("kindsEmpty")) : kindRows)
       );
-      const dedupFold = /* @__PURE__ */ React12.createElement("details", { className: "dn-ch-adv dn-sec-adv", key: "adv-params" }, /* @__PURE__ */ React12.createElement("summary", null, t2("secDedup")), /* @__PURE__ */ React12.createElement("div", { className: "dn-ch-adv-body" }, advRow(
+      const dedupFold = /* @__PURE__ */ React13.createElement("details", { className: "dn-ch-adv dn-sec-adv", key: "adv-params" }, /* @__PURE__ */ React13.createElement("summary", null, t2("secDedup")), /* @__PURE__ */ React13.createElement("div", { className: "dn-ch-adv-body" }, advRow(
         t2("historyRetention"),
-        /* @__PURE__ */ React12.createElement(
+        /* @__PURE__ */ React13.createElement(
           "input",
           {
             type: "number",
@@ -3269,7 +3435,7 @@ var KIND_KEY_TABLE = {
       });
       const allowChips = quietAllowChoices.map(function(c) {
         const checked = allows.indexOf(c.kind) !== -1;
-        return /* @__PURE__ */ React12.createElement(
+        return /* @__PURE__ */ React13.createElement(
           "button",
           {
             type: "button",
@@ -3286,7 +3452,7 @@ var KIND_KEY_TABLE = {
             }
           },
           t2(c.labelKey),
-          c.enabled ? null : /* @__PURE__ */ React12.createElement("span", { className: "dn-set-allowHint" }, t2("allowDisabledHint"))
+          c.enabled ? null : /* @__PURE__ */ React13.createElement("span", { className: "dn-set-allowHint" }, t2("allowDisabledHint"))
         );
       });
       const windowRows = (function() {
@@ -3342,14 +3508,14 @@ var KIND_KEY_TABLE = {
         return inWindowMinutes(nowMinutes, w.start, w.end);
       });
       const dndPreview = qh.enabled !== true ? t2("dndPreviewOff") : hitRow !== void 0 ? t2("dndPreviewHit", { now: nowText, start: hitRow.start, end: hitRow.end }) : t2("dndPreviewMiss", { now: nowText });
-      const dndCard = /* @__PURE__ */ React12.createElement("div", { className: "dn-dnd", key: "dnd" }, /* @__PURE__ */ React12.createElement("div", { className: "dn-dnd-head" }, sevIcon("warning", "dn-sev-warning"), /* @__PURE__ */ React12.createElement("span", { className: "dn-evt-name" }, t2("dndEnable")), switchToggle(
+      const dndCard = /* @__PURE__ */ React13.createElement("div", { className: "dn-dnd", key: "dnd" }, /* @__PURE__ */ React13.createElement("div", { className: "dn-dnd-head" }, sevIcon("warning", "dn-sev-warning"), /* @__PURE__ */ React13.createElement("span", { className: "dn-evt-name" }, t2("dndEnable")), switchToggle(
         qh.enabled === true,
         function(v) {
           patch({ quietHours: Object.assign({}, qh, { enabled: v }) });
         },
         t2("dndEnable")
-      )), qh.enabled === true ? /* @__PURE__ */ React12.createElement("div", null, windowRows.map(function(w, i) {
-        return /* @__PURE__ */ React12.createElement("div", { className: "dn-dnd-row", key: "win-" + i }, tabIcon("history"), /* @__PURE__ */ React12.createElement("span", { className: "dn-dnd-cap" }, t2("dndWindow", { n: i + 1 })), /* @__PURE__ */ React12.createElement(
+      )), qh.enabled === true ? /* @__PURE__ */ React13.createElement("div", null, windowRows.map(function(w, i) {
+        return /* @__PURE__ */ React13.createElement("div", { className: "dn-dnd-row", key: "win-" + i }, tabIcon("history"), /* @__PURE__ */ React13.createElement("span", { className: "dn-dnd-cap" }, t2("dndWindow", { n: i + 1 })), /* @__PURE__ */ React13.createElement(
           "input",
           {
             type: "time",
@@ -3360,7 +3526,7 @@ var KIND_KEY_TABLE = {
               setWindowAt(i, "start", e.target.value);
             }
           }
-        ), /* @__PURE__ */ React12.createElement("span", { className: "dn-dnd-cap" }, t2("dndEnd")), /* @__PURE__ */ React12.createElement(
+        ), /* @__PURE__ */ React13.createElement("span", { className: "dn-dnd-cap" }, t2("dndEnd")), /* @__PURE__ */ React13.createElement(
           "input",
           {
             type: "time",
@@ -3371,7 +3537,7 @@ var KIND_KEY_TABLE = {
               setWindowAt(i, "end", e.target.value);
             }
           }
-        ), /* @__PURE__ */ React12.createElement(
+        ), /* @__PURE__ */ React13.createElement(
           "button",
           {
             type: "button",
@@ -3383,7 +3549,7 @@ var KIND_KEY_TABLE = {
           },
           t2("dndRemoveWindow")
         ));
-      }), windowRows.length === 0 ? /* @__PURE__ */ React12.createElement("div", { className: "dn-set-note" }, t2("dndEmptyHint")) : null, /* @__PURE__ */ React12.createElement("div", { className: "dn-dnd-row" }, /* @__PURE__ */ React12.createElement(
+      }), windowRows.length === 0 ? /* @__PURE__ */ React13.createElement("div", { className: "dn-set-note" }, t2("dndEmptyHint")) : null, /* @__PURE__ */ React13.createElement("div", { className: "dn-dnd-row" }, /* @__PURE__ */ React13.createElement(
         "button",
         {
           type: "button",
@@ -3393,7 +3559,7 @@ var KIND_KEY_TABLE = {
           title: t2("dndLimitHint")
         },
         t2("dndAddWindow")
-      ), /* @__PURE__ */ React12.createElement("span", { className: "dn-sec-hint" }, t2("dndLimitHint"))), /* @__PURE__ */ React12.createElement("div", { className: "dn-set-note" }, dndPreview), /* @__PURE__ */ React12.createElement("div", { className: "dn-set-note" }, t2("dndPreviewNote")), /* @__PURE__ */ React12.createElement("div", { className: "dn-dnd-row", style: { display: "block" } }, /* @__PURE__ */ React12.createElement("span", { className: "dn-dnd-cap" }, t2("dndStillLabel") + ": "), /* @__PURE__ */ React12.createElement("div", { className: "dn-set-allows" }, allowChips), /* @__PURE__ */ React12.createElement("div", { className: "dn-set-allowActions" }, /* @__PURE__ */ React12.createElement(
+      ), /* @__PURE__ */ React13.createElement("span", { className: "dn-sec-hint" }, t2("dndLimitHint"))), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-note" }, dndPreview), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-note" }, t2("dndPreviewNote")), /* @__PURE__ */ React13.createElement("div", { className: "dn-dnd-row", style: { display: "block" } }, /* @__PURE__ */ React13.createElement("span", { className: "dn-dnd-cap" }, t2("dndStillLabel") + ": "), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-allows" }, allowChips), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-allowActions" }, /* @__PURE__ */ React13.createElement(
         "button",
         {
           type: "button",
@@ -3401,7 +3567,7 @@ var KIND_KEY_TABLE = {
           onClick: allowFollowEnabled
         },
         t2("allowFollowEnabled")
-      ), /* @__PURE__ */ React12.createElement(
+      ), /* @__PURE__ */ React13.createElement(
         "button",
         {
           type: "button",
@@ -3414,9 +3580,9 @@ var KIND_KEY_TABLE = {
     }
 
     // src/client/settings/panes/history.tsx
-    var React13 = __toESM(require("react"), 1);
+    var React14 = __toESM(require("react"), 1);
     function historyPane(history, clearArmed, confirmClear, sendTest, loadHistory, severityOf2, t2) {
-      return /* @__PURE__ */ React13.createElement("div", { key: "history" }, /* @__PURE__ */ React13.createElement("div", { className: "dn-set-historyTools" }, /* @__PURE__ */ React13.createElement(
+      return /* @__PURE__ */ React14.createElement("div", { key: "history" }, /* @__PURE__ */ React14.createElement("div", { className: "dn-set-historyTools" }, /* @__PURE__ */ React14.createElement(
         "button",
         {
           type: "button",
@@ -3424,7 +3590,7 @@ var KIND_KEY_TABLE = {
           onClick: confirmClear
         },
         clearArmed ? t2("clearConfirm") : t2("clearLabel")
-      ), /* @__PURE__ */ React13.createElement(
+      ), /* @__PURE__ */ React14.createElement(
         "button",
         {
           type: "button",
@@ -3434,7 +3600,7 @@ var KIND_KEY_TABLE = {
           }
         },
         t2("sendTest")
-      ), /* @__PURE__ */ React13.createElement(
+      ), /* @__PURE__ */ React14.createElement(
         "button",
         {
           type: "button",
@@ -3444,14 +3610,14 @@ var KIND_KEY_TABLE = {
           }
         },
         t2("refresh")
-      ), /* @__PURE__ */ React13.createElement("span", { className: "dn-set-historyCount" }, t2("historyTitle"))), !history || history.length === 0 ? /* @__PURE__ */ React13.createElement("div", { className: "dn-set-note" }, t2("historyEmpty")) : /* @__PURE__ */ React13.createElement("ul", { className: "dn-set-history" }, history.map(function(r, i) {
+      ), /* @__PURE__ */ React14.createElement("span", { className: "dn-set-historyCount" }, t2("historyTitle"))), !history || history.length === 0 ? /* @__PURE__ */ React14.createElement("div", { className: "dn-set-note" }, t2("historyEmpty")) : /* @__PURE__ */ React14.createElement("ul", { className: "dn-set-history" }, history.map(function(r, i) {
         const d = new Date(r.ts);
         const pad = function(n) {
           return n < 10 ? "0" + n : String(n);
         };
         const time = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
         const sev = severityOf2(r.kind);
-        return /* @__PURE__ */ React13.createElement("li", { className: "dn-set-historyItem", key: String(r.ts) + "-" + i }, sevIcon(sev, sev !== "info" ? "dn-sev-" + sev : void 0), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-historyMain" }, /* @__PURE__ */ React13.createElement("div", { className: "dn-set-historyHead" }, /* @__PURE__ */ React13.createElement("span", { className: "dn-set-historyKind" }, KIND_KEYS[r.kind] !== void 0 ? t2(KIND_KEYS[r.kind]) : r.kind), /* @__PURE__ */ React13.createElement("span", { className: "dn-set-historyTime" }, time), r.suppressed === "quiet" ? /* @__PURE__ */ React13.createElement("span", { className: "dn-set-historySuppressed" }, t2("historySuppressed")) : null), /* @__PURE__ */ React13.createElement("div", { className: "dn-set-historyText" }, r.title + ": " + r.message), deliveryLines(r, t2)));
+        return /* @__PURE__ */ React14.createElement("li", { className: "dn-set-historyItem", key: String(r.ts) + "-" + i }, sevIcon(sev, sev !== "info" ? "dn-sev-" + sev : void 0), /* @__PURE__ */ React14.createElement("div", { className: "dn-set-historyMain" }, /* @__PURE__ */ React14.createElement("div", { className: "dn-set-historyHead" }, /* @__PURE__ */ React14.createElement("span", { className: "dn-set-historyKind" }, KIND_KEYS[r.kind] !== void 0 ? t2(KIND_KEYS[r.kind]) : r.kind), /* @__PURE__ */ React14.createElement("span", { className: "dn-set-historyTime" }, time), r.suppressed === "quiet" ? /* @__PURE__ */ React14.createElement("span", { className: "dn-set-historySuppressed" }, t2("historySuppressed")) : null), /* @__PURE__ */ React14.createElement("div", { className: "dn-set-historyText" }, r.title + ": " + r.message), deliveryLines(r, t2)));
       })));
     }
 
@@ -3572,7 +3738,7 @@ var KIND_KEY_TABLE = {
         }
       }
       const fallback = fallbackChannelOf(playOnly, document.visibilityState);
-      if (fallback === "banner") showBanner(kind, title, message);
+      if (fallback === "banner") showBanner(kind, title, message, opts.sessionId);
       else if (fallback === "title") titleFlasher.flash(title, owner);
       if (policy.selfPlay && audioEngine.gate()) audioEngine.playTone(policy.tone);
     }
@@ -3723,24 +3889,24 @@ var KIND_KEY_TABLE = {
       const degradation = [];
       if (meta && meta.writable === false) {
         degradation.push(
-          /* @__PURE__ */ React14.createElement("div", { className: "dn-set-note", key: "settings-unavailable" }, t2("settingsSvcDown"))
+          /* @__PURE__ */ React15.createElement("div", { className: "dn-set-note", key: "settings-unavailable" }, t2("settingsSvcDown"))
         );
       }
       if ("Notification" in window) {
         if (!isSecureContext2()) {
           degradation.push(
-            /* @__PURE__ */ React14.createElement("div", { className: "dn-set-note", key: "insecure" }, t2("httpDegraded"))
+            /* @__PURE__ */ React15.createElement("div", { className: "dn-set-note", key: "insecure" }, t2("httpDegraded"))
           );
         }
       } else {
         degradation.push(
-          /* @__PURE__ */ React14.createElement("div", { className: "dn-set-note", key: "noapi" }, t2("iosUnsupported"))
+          /* @__PURE__ */ React15.createElement("div", { className: "dn-set-note", key: "noapi" }, t2("iosUnsupported"))
         );
       }
       return degradation;
     }
     function tabBar(activeTab, pendingKinds, t2, setActiveTab) {
-      const tab = (which, label, badge) => /* @__PURE__ */ React14.createElement(
+      const tab = (which, label, badge) => /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -3753,22 +3919,23 @@ var KIND_KEY_TABLE = {
         label,
         badge
       );
-      return /* @__PURE__ */ React14.createElement("div", { className: "dn-set-tabs" }, tab(
+      return /* @__PURE__ */ React15.createElement("div", { className: "dn-set-tabs" }, tab(
         "events",
         t2("secEvents"),
-        pendingKinds > 0 ? /* @__PURE__ */ React14.createElement("span", { className: "dn-set-tabBadge" }, String(pendingKinds)) : null
+        pendingKinds > 0 ? /* @__PURE__ */ React15.createElement("span", { className: "dn-set-tabBadge" }, String(pendingKinds)) : null
       ), tab("channels", t2("secChannels"), null), tab("history", t2("secHistory"), null));
     }
     function dryRunStatusTextOf(status, t2) {
       if (status === "ok") return t2("chStatusOk");
       if (status === "failed") return t2("chStatusFailed");
       if (status === "skipped") return t2("chStatusSkipped");
+      if (status === "request-failed") return t2("chStatusSkipped");
       return status;
     }
     function dryRunRowOf(dryRun, saving, t2, saveFor, discard) {
       if (dryRun === null) return null;
-      const result = dryRun.pending ? null : /* @__PURE__ */ React14.createElement("span", { className: "dn-dryrunResult" }, dryRun.channelId + " · " + dryRunStatusTextOf(dryRun.status || "", t2) + (dryRun.reason ? ": " + dryRun.reason : ""));
-      const actions = dryRun.pending ? null : /* @__PURE__ */ React14.createElement("span", { className: "dn-dryrunActions" }, /* @__PURE__ */ React14.createElement(
+      const result = dryRun.pending ? null : /* @__PURE__ */ React15.createElement("span", { className: "dn-dryrunResult" }, dryRun.channelId + " · " + dryRunStatusTextOf(dryRun.status || "", t2) + (dryRun.reason ? ": " + dryRun.reason : ""));
+      const actions = dryRun.pending ? null : /* @__PURE__ */ React15.createElement("span", { className: "dn-dryrunActions" }, /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -3777,7 +3944,7 @@ var KIND_KEY_TABLE = {
           onClick: saveFor
         },
         t2("dryRunGoSave")
-      ), /* @__PURE__ */ React14.createElement(
+      ), /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -3787,7 +3954,7 @@ var KIND_KEY_TABLE = {
         },
         t2("dryRunDiscard")
       ));
-      return /* @__PURE__ */ React14.createElement("div", { className: "dn-dryrun", role: "status", title: t2("chTestDraftTitle") }, /* @__PURE__ */ React14.createElement("span", { className: "dn-dryrunTag" }, t2("dryRunTag")), result === null ? /* @__PURE__ */ React14.createElement("span", { className: "dn-dryrunPending" }, t2("dryRunPending")) : result, actions, /* @__PURE__ */ React14.createElement("div", { className: "dn-dryrunNote" }, t2("dryRunNote")));
+      return /* @__PURE__ */ React15.createElement("div", { className: "dn-dryrun", role: "status", title: t2("chTestDraftTitle") }, /* @__PURE__ */ React15.createElement("span", { className: "dn-dryrunTag" }, t2("dryRunTag")), result === null ? /* @__PURE__ */ React15.createElement("span", { className: "dn-dryrunPending" }, t2("dryRunPending")) : result, actions, /* @__PURE__ */ React15.createElement("div", { className: "dn-dryrunNote" }, t2("dryRunNote")));
     }
     function activePaneOf(activeTab, panes) {
       if (activeTab === "events") return panes.events();
@@ -3796,7 +3963,7 @@ var KIND_KEY_TABLE = {
     }
     function conflictBanner(conflict, saving, t2, loadLatest, overwrite, ignore) {
       if (conflict === null) return null;
-      return /* @__PURE__ */ React14.createElement("div", { className: "dn-conflict", role: "alert" }, /* @__PURE__ */ React14.createElement("span", { className: "dn-conflictText" }, t2(conflict.entry === "channels" ? "conflictChannels" : "conflictTitle")), /* @__PURE__ */ React14.createElement("span", { className: "dn-conflictActions" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "dn-set-btn dn-set-btnSmall", onClick: loadLatest }, t2("conflictLoadLatest")), /* @__PURE__ */ React14.createElement(
+      return /* @__PURE__ */ React15.createElement("div", { className: "dn-conflict", role: "alert" }, /* @__PURE__ */ React15.createElement("span", { className: "dn-conflictText" }, t2(conflict.entry === "channels" ? "conflictChannels" : "conflictTitle")), /* @__PURE__ */ React15.createElement("span", { className: "dn-conflictActions" }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "dn-set-btn dn-set-btnSmall", onClick: loadLatest }, t2("conflictLoadLatest")), /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -3805,16 +3972,16 @@ var KIND_KEY_TABLE = {
           onClick: overwrite
         },
         t2("conflictOverwrite")
-      ), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "dn-set-btn dn-set-btnSmall", onClick: ignore }, t2("conflictIgnore"))));
+      ), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "dn-set-btn dn-set-btnSmall", onClick: ignore }, t2("conflictIgnore"))));
     }
     function saveStatusNode(saved, dirtyText) {
       if (saved !== null) {
-        return /* @__PURE__ */ React14.createElement("span", { className: saved.err ? "dn-set-error" : "dn-set-saved" }, saved.msg);
+        return /* @__PURE__ */ React15.createElement("span", { className: saved.err ? "dn-set-error" : "dn-set-saved" }, saved.msg);
       }
-      return dirtyText === null ? null : /* @__PURE__ */ React14.createElement("span", { className: "dn-dirty" }, dirtyText);
+      return dirtyText === null ? null : /* @__PURE__ */ React15.createElement("span", { className: "dn-dirty" }, dirtyText);
     }
     function SettingsCard() {
-      const ReactHooks = React14;
+      const ReactHooks = React15;
       const useState = ReactHooks.useState;
       const useEffect = ReactHooks.useEffect;
       const draft = useState(null);
@@ -3959,7 +4126,7 @@ var KIND_KEY_TABLE = {
         };
       }, []);
       if (!settings) {
-        return /* @__PURE__ */ React14.createElement("li", { className: "dn-set-card" }, t("settingsLoading"));
+        return /* @__PURE__ */ React15.createElement("li", { className: "dn-set-card" }, saved !== null && saved.err ? saved.msg : t("settingsLoading"));
       }
       function patch(p) {
         setSettings(function(prev) {
@@ -4143,7 +4310,7 @@ var KIND_KEY_TABLE = {
               channelId,
               pending: false,
               status,
-              reason: dryRunReasonText(status, data.reason, t)
+              reason: dryRunReasonText(status, data.reason, t, data.soundWarning)
             });
           }).catch(function(error) {
             const failure = apiFailureOf(error, t);
@@ -4151,7 +4318,9 @@ var KIND_KEY_TABLE = {
               channelId,
               pending: false,
               status: "request-failed",
-              reason: failure.message
+              // 本地化前缀 + 英文原文 (#1016 残留 4): 直接写 `failure.message` 时这一行整句是英文, 
+              // 与紧邻的 toast 两处英文.形态照抄上面那行 toast 的 `testFail`——`{msg}` 留宿主原话供排查.
+              reason: t("testRequestFail", { msg: failure.message, hint: failure.hint })
             });
             toast(t("testFail", { msg: failure.message, hint: failure.hint }));
           });
@@ -4203,7 +4372,7 @@ var KIND_KEY_TABLE = {
           const levels = Object.assign({}, ch.levels || {});
           if (level) levels[kind] = level;
           else delete levels[kind];
-          if (Object.keys(levels).length === 0) delete ch.levels;
+          if (Object.keys(levels).length === 0) ch.levels = null;
           else ch.levels = levels;
           list[idx] = ch;
           return Object.assign({}, prev, { channels: list });
@@ -4231,7 +4400,6 @@ var KIND_KEY_TABLE = {
             id,
             name: t("chNewWebhookName") + " " + seq,
             type: "webhook",
-            url: "",
             auth: "none",
             timeoutSec: 10,
             enabled: false
@@ -4239,7 +4407,6 @@ var KIND_KEY_TABLE = {
             id,
             name: t("chNewBarkName") + " " + seq,
             type: "bark",
-            baseUrl: "",
             enabled: false
           };
           return Object.assign({}, prev, { channels: list.concat([base]) });
@@ -4338,7 +4505,7 @@ var KIND_KEY_TABLE = {
         });
         const chips = options.map(function(o) {
           const on = litSet[o.id] === true;
-          return /* @__PURE__ */ React14.createElement(
+          return /* @__PURE__ */ React15.createElement(
             "button",
             {
               type: "button",
@@ -4356,12 +4523,12 @@ var KIND_KEY_TABLE = {
         });
         staleIds.forEach(function(id) {
           chips.push(
-            /* @__PURE__ */ React14.createElement("span", { key: "stale-" + id, className: "dn-route-chip is-stale", title: t("routeStaleTitle") }, id + " · " + t("routeStaleChip"))
+            /* @__PURE__ */ React15.createElement("span", { key: "stale-" + id, className: "dn-route-chip is-stale", title: t("routeStaleTitle") }, id + " · " + t("routeStaleChip"))
           );
         });
         const isCustom = routes !== void 0;
         chips.push(
-          /* @__PURE__ */ React14.createElement(
+          /* @__PURE__ */ React15.createElement(
             "button",
             {
               type: "button",
@@ -4380,7 +4547,7 @@ var KIND_KEY_TABLE = {
           if (o.enabled && litSet[o.id] === true) litLabels.push(o.label);
         });
         const summaryText = routeSummaryText(litLabels, isCustom, litIds.length - staleIds.length, t);
-        return /* @__PURE__ */ React14.createElement("details", { className: "dn-evt-routeDisc", key: "routes-" + kind }, /* @__PURE__ */ React14.createElement("summary", { className: "dn-evt-routeSum", title: t("routeExpandHint") }, summaryText), /* @__PURE__ */ React14.createElement("div", { className: "dn-evt-routes" }, /* @__PURE__ */ React14.createElement("span", { className: "dn-evt-routesCap" }, t("routeCap")), chips));
+        return /* @__PURE__ */ React15.createElement("details", { className: "dn-evt-routeDisc", key: "routes-" + kind }, /* @__PURE__ */ React15.createElement("summary", { className: "dn-evt-routeSum", title: t("routeExpandHint") }, summaryText), /* @__PURE__ */ React15.createElement("div", { className: "dn-evt-routes" }, /* @__PURE__ */ React15.createElement("span", { className: "dn-evt-routesCap" }, t("routeCap")), chips));
       }
       const diag = clientDiagnosticsOf(diagnostics, clientFacts(), t);
       const degradation = degradationNotes(metaValue, t, isSecureContext);
@@ -4432,7 +4599,7 @@ var KIND_KEY_TABLE = {
         testDirty: channelsDirty,
         t
       };
-      return /* @__PURE__ */ React14.createElement("li", { className: "dn-set-card" }, tabbar, /* @__PURE__ */ React14.createElement("div", { className: "dn-set-body" }, dryRunRow, activePaneOf(activeTab, {
+      return /* @__PURE__ */ React15.createElement("li", { className: "dn-set-card" }, tabbar, /* @__PURE__ */ React15.createElement("div", { className: "dn-set-body" }, dryRunRow, activePaneOf(activeTab, {
         events: function() {
           return eventsPane(settings, kindsList, patch, confirmOne, routeChipsRow, severityOf, t);
         },
@@ -4450,7 +4617,7 @@ var KIND_KEY_TABLE = {
             t
           );
         }
-      }), /* @__PURE__ */ React14.createElement("div", { className: "dn-set-notes" }, degradation), conflictBanner(
+      }), /* @__PURE__ */ React15.createElement("div", { className: "dn-set-notes" }, degradation), conflictBanner(
         conflict,
         saving,
         t,
@@ -4459,7 +4626,7 @@ var KIND_KEY_TABLE = {
         function() {
           setConflict(null);
         }
-      ), /* @__PURE__ */ React14.createElement("div", { className: "dn-set-foot" }, saveStatusNode(saved, dirtyText), /* @__PURE__ */ React14.createElement("span", { className: "dn-spacer" }), /* @__PURE__ */ React14.createElement(
+      ), /* @__PURE__ */ React15.createElement("div", { className: "dn-set-foot" }, saveStatusNode(saved, dirtyText), /* @__PURE__ */ React15.createElement("span", { className: "dn-spacer" }), /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -4468,7 +4635,7 @@ var KIND_KEY_TABLE = {
           onClick: discardChanges
         },
         t("discardChanges")
-      ), /* @__PURE__ */ React14.createElement(
+      ), /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
@@ -4528,7 +4695,7 @@ var KIND_KEY_TABLE = {
                 locale: NS
               },
               function() {
-                return /* @__PURE__ */ React14.createElement(SettingsCard, null);
+                return /* @__PURE__ */ React15.createElement(SettingsCard, null);
               }
             );
           });
@@ -4561,7 +4728,7 @@ var KIND_KEY_TABLE = {
         stack.own(function() {
           closeNotificationsOf(owner);
         });
-        ensureStyle({ id: STYLE_ID, cssText: style_default, version: CSS_VERSION });
+        ensureStyle({ id: STYLE_ID, cssText: ui_default + style_default, version: CSS_VERSION });
         pageOwner.current = owner;
         document.addEventListener("visibilitychange", onVisibilityChange2);
         stack.own(function() {

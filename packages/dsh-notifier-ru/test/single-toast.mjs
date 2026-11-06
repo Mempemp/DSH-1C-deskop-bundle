@@ -51,7 +51,8 @@ function fakeRes() {
 
 const ctx = {
   logger: { info: () => {}, warn: (m) => warnings.push(String(m)), error: () => {}, debug: () => {} },
-  settings: undefined,
+  // 0.2.11 требует службу настроек в inject: локаль берётся из её describe().
+  settings: { describe: () => [] },
   webServer: {
     port: 0,
     register: (route) => routes.set(route.path, route),
@@ -65,7 +66,9 @@ const ctx = {
   dispose: () => {},
 };
 
-apply(ctx, {});
+// 0.2.11 сделал apply() асинхронным (внутри — цепочка обновлений хранилища),
+// маршруты появляются только после await.
+await apply(ctx, {});
 assert.ok(routes.has("/api/dsh-notifier/events"), [...routes.keys()].join(", "));
 
 // Открываем поток событий: ровно так кадр попадает в окно.
@@ -124,9 +127,10 @@ console.log("ok   на виндовом хосте событие показыв
 // --- Второй сценарий: системный канал выключен, уведомление обязано появиться в окне ---
 const second = await import("../lib/index.js?second=1");
 const routes2 = new Map();
-second.apply({
+await second.apply({
   logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
-  settings: undefined,
+  // 0.2.11 требует службу настроек в inject: локаль берётся из её describe().
+  settings: { describe: () => [] },
   webServer: { port: 0, register: (route) => routes2.set(route.path, route) },
   provide: () => {},
   get: () => undefined,

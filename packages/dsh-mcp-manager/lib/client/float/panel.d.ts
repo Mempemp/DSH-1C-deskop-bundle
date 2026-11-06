@@ -11,7 +11,8 @@ import type { McpState, UiActions } from "../core/state.js";
  * 刷新服务器列表与浮窗摘要（单飞：in-flight 复用；#111 变更点驱动）。
  * 返回 true=成功；false=失败（调用方按退避重试）。
  */
-export declare function refresh(state: McpState, actions: UiActions): Promise<boolean>;
+export declare function refresh(state: McpState, actions: UiActions, fresh?: boolean): Promise<boolean>;
+export declare function renderState(state: McpState, actions: UiActions): void;
 /** 切换面板 tab（servers / quick）。 */
 export declare function switchTab(state: McpState, actions: UiActions, tab: string): void;
 /** 关闭模态面板（Fluid：卡片中心收束 + 遮罩淡出；完成后再 hidden）。
