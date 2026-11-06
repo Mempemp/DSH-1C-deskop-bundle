@@ -23,15 +23,6 @@ version: 0.2.2-rc.1-1
 retired:
   - dsh-rlm-tools-bsl
 sources:
-  # Official market host. Pinned exactly, not by range: this is the version the
-  # offline seed installs, so it stays reproducible. Its `@deepseek-ai/dsh-settings`
-  # peer names the 0.2.1 line, which the host gate accepts on the 0.2.2 runtime
-  # (`includePrerelease`), and 1.73.12 is the newest release at the time of the pin.
-  # The app itself depends on no dshmarket copy since upstream #478 (a packaged copy
-  # shadowed the profile one).
-  - kind: plugin
-    from: npm
-    spec: dshmarket@1.73.12
   # Локальная редакция (packages/dsh-mcp-manager), а не установка из git/npm: апстрим
   # держит нагрузку каждого ждущего вызова записи каталога инструментов, и на машине с
   # несколькими MCP-серверами хост умирает по OOM (issue #3 в нашем репозитории).
@@ -99,7 +90,7 @@ sources:
   # карточки.
   # 0.15.0: правила 1С разворачиваются своим слоем (девять плейбуков в самом пакете),
   # comol стал необязательным флажком и правится только по нему; проверка кода —
-  # 210 правил на движке bsl-analyzer (скачивается при включении, в сборке его нет);
+  # 210 правил на движке bsl-analyzer (0.4.3 едет в установщике, в $DSH_HOME/bsl-analyzer);
   # 1С:Напарник отдельным MCP-сервером с одним инструментом, бюджетом ключа и
   # `bsl_review` как «вторым мнением». Всё это выключено по умолчанию, кроме правил.
   # 0.11.0: таймауты индексации выведены в настройки плагина и перестали быть ошибкой —
@@ -108,7 +99,7 @@ sources:
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#07b326d6840d2a8317aa6364448adef431cf876f
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#5e745904f7c2cc42c56e84bfad78534115aa92cf
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -227,10 +218,20 @@ sources:
   # переустановку каталога на уже стоящей машине запускает изменившийся digest.
   - kind: tool
     from: remote
-    id: git
-    name: git
-    version: 2.56.0.4
-    url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-busybox-64-bit.zip
+    id: uv
+    name: uv
+    version: 0.13.7
+    url: https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip
+  # Анализатор кода для «1С: Анализ кода». Один файл, не архив: раскатка кладёт его в
+  # $DSH_HOME/bsl-analyzer/bsl-analyzer-app-windows-amd64.exe, плагин проверяет sha256
+  # и берёт оттуда — вместо прежней кнопки «Скачать» на 76 МБ. Версия закреплена:
+  # набор правил в плагине — снимок именно этого движка.
+  - kind: tool
+    from: remote
+    id: bsl-analyzer
+    name: bsl-analyzer
+    version: 0.4.3
+    url: https://github.com/itrous/bsl-analyzer/releases/download/v0.4.3/bsl-analyzer-app-windows-amd64.exe
 
   # uv ставит Python-инструменты при первой раскатке каталога. Нужен потому, что часть
   # возможностей 1С — Python-пакеты, а не бинарники: у rlm-bsl-index (индекс кода) отдельного
