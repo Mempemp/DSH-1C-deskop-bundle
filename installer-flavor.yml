@@ -131,7 +131,7 @@ sources:
   # контекстное меню сокращено, подсказки над кодом оформлены как сообщения DSH.
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#f2f0790e294077c51f77ffaeac491a8b884b7dd4
+    url: https://github.com/Mempemp/DSH-CodeEditor_BSL.git#b9b18dd81b9b5ca93867d775b1b81d02f6003f9f
     path: dsh-bsl-editor
   # Russian localization for the web UI. Pinned exactly for the same reason as
   # the market above: the offline seed must stay reproducible, and a floating
