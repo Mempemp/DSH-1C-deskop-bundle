@@ -8,14 +8,31 @@
   <a href="https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest"><img alt="Последний релиз" src="https://img.shields.io/github/v/release/Mempemp/DSH-1C-deskop-bundle?label=release" /></a>
   <a href="https://github.com/Mempemp/DSH-1C-deskop-bundle/releases"><img alt="Скачивания" src="https://img.shields.io/github/downloads/Mempemp/DSH-1C-deskop-bundle/total?label=downloads" /></a>
   <img alt="Windows x64" src="https://img.shields.io/badge/Windows-x64-171513.svg" />
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-171513.svg" />
 </p>
 
-**Рабочее место разработчика 1С с ИИ-агентом внутри.** Редактор BSL с деревом метаданных,
-подключение к базе, проверка кода по 210 правилам 1С и справка по API вашей платформы — в одном
-окне на Windows.
+<p align="center">
+  <a href="https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest">Скачать</a> ·
+  <a href="#быстрый-старт">Быстрый старт</a> ·
+  <a href="#что-внутри">Возможности</a> ·
+  <a href="#проверка-кода">Анализ кода</a> ·
+  <a href="#состав-сборки">Состав</a> ·
+  <a href="#сборка-из-исходников">Сборка</a> ·
+  <a href="#благодарности">Благодарности</a>
+</p>
+
+<p align="center">
+  Рабочее место разработчика 1С с ИИ-агентом внутри:<br />
+  редактор BSL с деревом метаданных, подключение к базе, проверка кода по 210 правилам 1С<br />
+  и справка по API вашей платформы — в одном окне на Windows.
+</p>
 
 Скачали `.exe`, запустили, указали базу — работаете. Агент видит код вашей конфигурации, метаданные
 и стандарты ИТС, предлагает правку в модуле и проверяет результат по правилам 1С.
+
+Версия сборки — `<версия ядра>-<номер подрелиза>`: `0.2.2-rc.1-1` — первый подрелиз на ядре
+`0.2.2-rc.1`. Номер подрелиза растёт с изменениями сборки, версия ядра — с обновлением DeepSeek
+Harness.
 
 ## Быстрый старт
 
