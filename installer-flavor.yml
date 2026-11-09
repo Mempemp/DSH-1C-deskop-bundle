@@ -99,7 +99,7 @@ sources:
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#1fe110176cfe8e28c4ab4b080296ceb3c6298787
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#48950b6c054d08ecbb2771f981a59f7a8cfc75ef
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -196,15 +196,15 @@ sources:
   # Pinned to a commit, not `#main`: a floating ref would hand two installs of the
   # same build different rulesets. `version` feeds the catalog fingerprint: bump
   # it (or let the tree digest change) or an existing install keeps its old copy.
-  # 18e3383d — каталог инструментов MCP-сервера KD20 синхронизирован с сервером
-  # 0.5.0 (71 инструмент, песочница принимает `base` вместо URL), плюс правки правил
-  # 1c-metadata-manage и дефолтного адреса поддержки.
+  # ef070d1 — 39 коммитов после 18e3383d: свойства прав и ролей, регистрация форм,
+  # импорт реквизита с uuid, `v8-xsd-fetch`, support-guard hook, agent-desktop вместо
+  # Windows-MCP, пакетные проверки Конфигуратора и тест-клиент дополнены замерами.
   - kind: payload
     from: git
-    url: https://github.com/comol/ai_rules_1c.git#18e3383da1e436ef980440503ae590da9b8722bf
+    url: https://github.com/comol/ai_rules_1c.git#ef070d1955289fa88440a8b85273cdf3b0c31a27
     id: 1c-rules
     name: 1c-rules
-    version: 2026.10.21-18e3383d
+    version: 2026.11.08-ef070d1
 
   # Git для 1С-редактора (dsh-bsl-editor): без него не работают диффы, индикаторы
   # изменений и кнопки «В индекс» / «Коммит». MinGit — тот же git.exe, что ставит
