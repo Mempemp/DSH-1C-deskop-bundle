@@ -99,7 +99,7 @@ sources:
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#5afdc4392ca4a6247948a85985fd32281d366e45
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#1fe110176cfe8e28c4ab4b080296ceb3c6298787
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
