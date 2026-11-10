@@ -99,7 +99,7 @@ sources:
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#594518eff0962f7562b4bb9e4db774e692946900
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#32457b8f9395cda98c9d4d7b91ca167010c9b2bb
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -181,31 +181,7 @@ sources:
   - kind: plugin
     from: git
     url: https://github.com/Mempemp/dsh-engram-memory.git#f2f28e9fb126ea44182f3cedc5410fb35ee3f19e
-  # 1C ruleset as one tree, seeded to $DSH_HOME/1c-rules/payload.json + content/.
-  # Delivered as a payload and nothing else: the skills inside it cross-reference
-  # AGENTS.md, content/rules/* and content/agents/*, so shipping the skills tree
-  # on its own — the global $DSH_HOME/skills, which every project sees — would
-  # hand the agent pointers into files that are not there. The whole tree is
-  # unpacked into a project on demand by dsh-1c-project-properties, which
-  # rewrites the source-repository paths to the project-local ones the header of
-  # each file expects. The desktop never reads this payload itself.
-  # Наши собственные правила едут НЕ этим payload, а внутри плагина параметров
-  # (playbook/ в его пакете): второй копии правил в каталоге быть не должно.
-  # Этот набор — необязательная добавка: разворачивается только при включённом
-  # флажке «Добавить правила comol» в окне проекта, и рассчитан на MCP-серверы comol.
-  # Pinned to a commit, not `#main`: a floating ref would hand two installs of the
-  # same build different rulesets. `version` feeds the catalog fingerprint: bump
-  # it (or let the tree digest change) or an existing install keeps its old copy.
-  # ef070d1 — 39 коммитов после 18e3383d: свойства прав и ролей, регистрация форм,
-  # импорт реквизита с uuid, `v8-xsd-fetch`, support-guard hook, agent-desktop вместо
-  # Windows-MCP, пакетные проверки Конфигуратора и тест-клиент дополнены замерами.
-  - kind: payload
-    from: git
-    url: https://github.com/comol/ai_rules_1c.git#ef070d1955289fa88440a8b85273cdf3b0c31a27
-    id: 1c-rules
-    name: 1c-rules
-    version: 2026.11.08-ef070d1
-
+  
   # Git для 1С-редактора (dsh-bsl-editor): без него не работают диффы, индикаторы
   # изменений и кнопки «В индекс» / «Коммит». MinGit — тот же git.exe, что ставит
   # Git for Windows, но без графического интерфейса, Git Bash, Perl, справки и
