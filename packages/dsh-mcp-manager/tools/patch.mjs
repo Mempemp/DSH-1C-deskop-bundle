@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.12: сборочная копия плагина
+// Локальная редакция `@wingsky-1/dsh-mcp-manager` 0.2.14: сборочная копия плагина
 // плюс дельта против опубликованного апстрима 0.2.11.
 //
 // Исходников апстрима у нас нет (он публикуется уже собранным), поэтому генератор
@@ -10,22 +10,35 @@
 // Манифест — единственное место, где мы правим номер: имя
 // `@wingsky-1/dsh-mcp-manager` не меняется (на нём держатся
 // `$DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json`, сид каталога и профили
-// пользователей), а версия у нас своя — 0.2.12, чтобы пересборку можно было
+// пользователей), а версия у нас своя — 0.2.14, чтобы пересборку можно было
 // отличить от опубликованной 0.2.11. Из-за этого в апгрейд-лестницу добавляется
-// пустой шаг 0.2.11 → 0.2.12: последняя ступень апстрима остаётся 0.2.11, и без
+// пустой шаг 0.2.11 → 0.2.14: последняя ступень апстрима остаётся 0.2.11, и без
 // своего шага `diagnoseGap` предупреждал бы при каждом старте плагина, что
 // хранилище отстало от версии пакета.
 //
 // Запуск:  node tools/patch.mjs [--upstream <каталог|tgz>] [--out <каталог>]
 // Проверка: node tools/patch.mjs --check
 //
-// Дельта (обе части — про очередь записи каталога инструментов, issue #3):
+// Дельта — две темы:
+//
+// Очередь записи каталога инструментов (issue #3, 0.2.13):
 //   1. writeFileAtomic держит одну очередь на файл и только **последнюю** нагрузку
 //      вместо цепочки промисов, где каждый ждущий вызов удерживает свою копию.
 //   2. persistRoot сливает параллельные вызовы на один root: пока идёт цикл,
 //      новые запросы становятся отметкой «ещё один проход», а снимок считается
 //      внутри цикла. Раньше каждый параллельный вызов держал готовую строку
 //      всего root-каталога, и шторм tools/change превращался в гигабайты.
+//
+// Служба `mcpManager` на ядре 0.2.2-rc.3 (0.2.14):
+//   3. С rc.3 ядро само регистрирует `mcpManager` (свой менеджер MCP:
+//      list/register/restart/probe/watch). Наш повторный `ctx.provide` того же
+//      имени бросал `service "mcpManager" has been registered at <...>`, apply
+//      падал целиком — ни одной HTTP-маршруты не появлялось, и панель получала
+//      `HTTP 404` на каждый запрос. Теперь имя занимается только если оно
+//      свободно; на новом ядре недостающие старые методы (registerServer,
+//      unregisterServer, connect, disconnect, reconnect, getStatus, getTools)
+//      дописываются на службу ядра и снимаются при выгрузке, а методы ядра
+//      (list, register, restart, probe, watch) не трогаются.
 
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
@@ -42,7 +55,7 @@ export const UPSTREAM = {
 }
 
 /** Версия нашего пакета: та же сборка, но отличимая от опубликованной апстримом. */
-export const LOCAL_VERSION = '0.2.12'
+export const LOCAL_VERSION = '0.2.14'
 
 // Хеш исходного бандла апстрима: дельта применяется только к ровно этим байтам.
 export const UPSTREAM_SHA256 = {
@@ -52,8 +65,8 @@ export const UPSTREAM_SHA256 = {
 // Хеш нашего результата. Пересчитывается генератором; пин держит провенанс:
 // если апстрим подменит содержимое под тем же номером версии, --check это увидит.
 export const PATCHED_SHA256 = {
-  'lib/index.js': '6626103d88207fe472f68ace36da183b3c9eacf8c27b55f7181eae7874c23ac2',
-  'package.json': '944a8b471bac0562b8ba59fc6146fcb0cccf10011368a514c4fb7b8d6a0cee33'
+  'lib/index.js': '73e76d4c8da46f15cce7f3b38ebca855dd744154af32e1af08362827d744b3d9',
+  'package.json': '051c350979025222020cbce427e080b51a2404e7ae2048e2aad73a4a4f0eb8ac'
 }
 
 export const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -271,6 +284,115 @@ const NEW_PERSIST_ROOT = [
   '  }'
 ].join('\n')
 
+// Служба mcpManager: на ядре 0.2.2-rc.3 имя уже занято ядром — повторный provide ронял apply.
+const OLD_PROVIDE_MCP_MANAGER = [
+  "function provideMcpManagerService(ctx, manager) {",
+  "  if (typeof ctx.provide !== \"function\")",
+  "    return;",
+  "  ctx.provide(\"mcpManager\", {",
+  "    // 注入面（内存态不落盘，同名幂等；toolDefinitions 可选封装定义透传 supervisor）",
+  "    registerServer: (server) => manager.registerServer(server),",
+  "    unregisterServer: (name2) => manager.unregisterServer(name2),",
+  "    // 控制面（通用 MCP 生命周期：注册即连、注销即断的补充控制）",
+  "    connect: (name2, scope) => manager.connect(name2, scope),",
+  "    disconnect: (name2, scope) => manager.disconnect(name2, scope),",
+  "    reconnect: (name2, scope) => manager.reconnect(name2, scope),",
+  "    // 查询面（服务状态感知：连接状态 / 工具列表 / 全量摘要）",
+  "    getStatus: (name2) => {",
+  "      const servers = manager.summary().servers ?? [];",
+  "      const found = servers.find((s) => s.name === name2);",
+  "      if (found === void 0)",
+  "        return void 0;",
+  "      return found;",
+  "    },",
+  "    getTools: (name2) => {",
+  "      return manager.registeredToolsFor(name2);",
+  "    },",
+  "    // 豁免（#770-14 E）：同上，summary() 宽面经 unknown 中转到 McpServerSummary[]；不断言改动、不重构类型。",
+  "    list: () => manager.summary().servers ?? []",
+  "  });",
+  "}"
+].join('\n')
+
+const NEW_PROVIDE_MCP_MANAGER = [
+  "function provideMcpManagerService(ctx, manager) {",
+  "  if (typeof ctx.provide !== \"function\")",
+  "    return;",
+  "  const legacy = {",
+  "    // 注入面（内存态不落盘，同名幂等；toolDefinitions 可选封装定义透传 supervisor）",
+  "    registerServer: (server) => manager.registerServer(server),",
+  "    unregisterServer: (name2) => manager.unregisterServer(name2),",
+  "    // 控制面（通用 MCP 生命周期：注册即连、注销即断的补充控制）",
+  "    connect: (name2, scope) => manager.connect(name2, scope),",
+  "    disconnect: (name2, scope) => manager.disconnect(name2, scope),",
+  "    reconnect: (name2, scope) => manager.reconnect(name2, scope),",
+  "    // 查询面（服务状态感知：连接状态 / 工具列表 / 全量摘要）",
+  "    getStatus: (name2) => {",
+  "      const servers = manager.summary().servers ?? [];",
+  "      const found = servers.find((s) => s.name === name2);",
+  "      if (found === void 0)",
+  "        return void 0;",
+  "      return found;",
+  "    },",
+  "    getTools: (name2) => {",
+  "      return manager.registeredToolsFor(name2);",
+  "    },",
+  "    // 豁免（#770-14 E）：同上，summary() 宽面经 unknown 中转到 McpServerSummary[]；不断言改动、不重构类型。",
+  "    list: () => manager.summary().servers ?? []",
+  "  };",
+  "  // 本地补丁（rc.3）：宿主自 0.2.2-rc.3 起自己注册 mcpManager（核心 MCP 管理器，面是",
+  "  // list/register/restart/probe/watch）。cordis 对同名服务的第二次 provide 直接抛",
+  "  // `service \"mcpManager\" has been registered at <...>`，apply 就此整体失败：一条路由都没",
+  "  // 注册，面板每个请求都落到宿主的 /api 前缀上，回 HTTP 404。故这里改成——名字空着才认领；",
+  "  // 已被占用就只补核心缺的老方法，核心已有的键一律不覆盖，卸载时删掉补上的键。",
+  "  // 服务在其提供者 fiber 激活前对 ctx.get 不可见，故读 strict=false 的形态判断名字是否已被声明。",
+  "  const existing = currentMcpManagerService(ctx);",
+  "  if (existing !== void 0) {",
+  "    augmentMcpManagerService(ctx, existing, legacy);",
+  "    return;",
+  "  }",
+  "  try {",
+  "    ctx.provide(\"mcpManager\", legacy);",
+  "    return;",
+  "  } catch (error) {",
+  "    ctx.logger.warn(`dsh-mcp-manager: mcpManager 已被宿主占用，改为补缺：${msgOf(error)}`);",
+  "  }",
+  "  const late = currentMcpManagerService(ctx);",
+  "  if (late !== void 0)",
+  "    augmentMcpManagerService(ctx, late, legacy);",
+  "}",
+  "/** 宿主当前的 mcpManager（不论其 fiber 是否已激活）；没有同名服务时 undefined。 */",
+  "function currentMcpManagerService(ctx) {",
+  "  if (typeof ctx.get !== \"function\")",
+  "    return void 0;",
+  "  const service = ctx.get(\"mcpManager\", false);",
+  "  return service === null ? void 0 : service;",
+  "}",
+  "/**",
+  " * 在宿主（核心）已注册的 mcpManager 上补上本插件的老接口：只写核心没有的键，写了就在",
+  " * 卸载时删掉。核心的 list / register 与老门面的同名成员语义不同，故一并不动。",
+  " */",
+  "function augmentMcpManagerService(ctx, target, legacy) {",
+  "  const applied = [];",
+  "  for (const [key, method] of Object.entries(legacy)) {",
+  "    if (typeof target[key] === \"function\")",
+  "      continue;",
+  "    try {",
+  "      Object.defineProperty(target, key, { configurable: true, writable: true, value: method });",
+  "      applied.push(key);",
+  "    } catch (error) {",
+  "      ctx.logger.warn(`dsh-mcp-manager: 无法补齐 mcpManager.${key}：${msgOf(error)}`);",
+  "    }",
+  "  }",
+  "  if (applied.length === 0)",
+  "    return;",
+  "  ctx.logger.info(`dsh-mcp-manager: 核心 mcpManager 上补上老接口 ${applied.join(\"/\")}`);",
+  "  ctx.effect(() => () => {",
+  "    for (const key of applied)",
+  "      delete target[key];",
+  "  }, \"dsh-mcp-manager: legacy mcpManager methods\");",
+  "}"
+].join('\n')
 /**
  * Последняя ступень апстримной апгрейд-лестницы и наш пустой шаг поверх неё.
  * Цель апстримной ступени берётся из `UPSTREAM.version`: если апстрим в следующем
@@ -281,7 +403,7 @@ const OLD_LAST_STEP = `  { fromVersion: "0.2.10", targetVersion: "${UPSTREAM.ver
 
 const NEW_LAST_STEP = [
   `  { fromVersion: "0.2.10", targetVersion: "${UPSTREAM.version}", run: tickUpgradeVersion },`,
-  `  // ${UPSTREAM.version} → ${LOCAL_VERSION} 空步（本地补丁：只换写队列，home 级存储形态不变）：run 指共享空函数，只推进刻度。`,
+  `  // ${UPSTREAM.version} → ${LOCAL_VERSION} 空步（本地补丁：写队列 + mcpManager 服务兼容，home 级存储形态不变）：run 指共享空函数，只推进刻度。`,
   `  { fromVersion: "${UPSTREAM.version}", targetVersion: "${LOCAL_VERSION}", run: tickUpgradeVersion }`
 ].join('\n')
 
@@ -292,7 +414,9 @@ export const DELTAS = [
   { label: 'схлопывание writeFileAtomic (drainWriteSlot)', from: OLD_WRITE_FILE_ATOMIC, to: NEW_WRITE_FILE_ATOMIC },
   { label: 'поле persistSlots в CatalogDirectory', from: OLD_DIRTY_FIELD, to: NEW_DIRTY_FIELD },
   { label: 'слияние persistRoot по root', from: OLD_PERSIST_ROOT, to: NEW_PERSIST_ROOT },
-  { label: 'пустой шаг апгрейда до нашей версии', from: OLD_LAST_STEP, to: NEW_LAST_STEP }
+  { label: 'пустой шаг апгрейда до нашей версии', from: OLD_LAST_STEP, to: NEW_LAST_STEP },
+  // Ядро 0.2.2-rc.3 само регистрирует mcpManager: повторный provide ронял apply.
+  { label: 'служба mcpManager на новом ядре', from: OLD_PROVIDE_MCP_MANAGER, to: NEW_PROVIDE_MCP_MANAGER }
 ]
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex')
@@ -326,7 +450,23 @@ function setLocalVersion(bytes) {
   if (first < 0 || text.indexOf(from, first + from.length) >= 0) {
     throw new Error(`package.json: ожидалось единственное поле version ${UPSTREAM.version}`)
   }
-  return Buffer.from(text.replace(from, `"version": "${LOCAL_VERSION}"`), 'utf8')
+  return Buffer.from(relaxCorePins(text.replace(from, `"version": "${LOCAL_VERSION}"`)), 'utf8')
+}
+
+/**
+ * Пиры ядра: апстрим объявляет точную версию ядра, на котором собран его тарбол
+ * (`"@deepseek-ai/dsh-tools": "0.2.2-rc.1"`). Для хоста это требование «ровно этот
+ * релиз»: на следующем rc он отвергает плагин целиком, и панель MCP исчезает.
+ * Пакет тот же, меняется только форма требования — диапазон от той же версии.
+ * Остальные пиры (`react`, `@deepseek-ai/cordis`) не трогаются: их версии свои.
+ * @param {string} text - Манифест апстрима с нашим номером версии.
+ * @returns {string} Манифест с диапазонными пирами ядра.
+ */
+function relaxCorePins(text) {
+  return text.replace(
+    /("(@deepseek-ai\/dsh-[a-z-]+)":\s*")(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(")/gu,
+    (_match, head, _name, version, tail) => `${head}^${version}${tail}`,
+  )
 }
 
 const UPSTREAM_URL = `https://registry.npmjs.org/${UPSTREAM.name}/-/${UPSTREAM.name.split('/').pop()}-${UPSTREAM.version}.tgz`

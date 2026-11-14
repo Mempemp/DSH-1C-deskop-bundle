@@ -15,7 +15,7 @@
 # from: remote, where the URL is the whole source — nothing to download or pack,
 # so the catalog only carries the row the first-run seed mounts.
 name: DSH Desktop
-version: 0.2.2-rc.1-2
+version: 0.2.2-rc.3-1
 
 # Плагины, которые каталог больше не поставляет. Профиль, обновлённый с прошлой сборки,
 # продолжает их грузить иначе: они владеют теми же /rlm/*, что и движок внутри
@@ -28,11 +28,16 @@ sources:
   # несколькими MCP-серверами хост умирает по OOM (issue #3 в нашем репозитории).
   # Сборка — `node packages/dsh-mcp-manager/tools/patch.mjs` поверх опубликованного
   # @wingsky-1/dsh-mcp-manager@0.2.11 с проверкой контрольной суммы архива и бандла;
-  # наш номер 0.2.12 (свой счётчик правок поверх базовой версии апстрима).
+  # наш номер 0.2.14 (свой счётчик правок поверх базовой версии апстрима). Пиры ядра
+  # в нашем пакете — диапазон `^0.2.2-rc.1`, а не точная версия из тарбола апстрима:
+  # на следующем rc хост иначе отвергает плагин, и панель MCP у пользователя исчезает.
   # Имя не меняем: на нём держатся $DSH_HOME/@wingsky-1/dsh-mcp-manager/mcp.json, сид
   # каталога и профили пользователей. База 0.2.11 объявляет пиры 0.2.2-rc.1 — это и есть
   # ядро сборки; у прежней 0.2.10 пиры были точной версией 0.2.1-rc.2, и на новой линии
   # гейт хоста отверг бы плагин целиком, а панель MCP просто исчезла бы.
+  # 0.2.14 — под ядро rc.3: ядро само регистрирует службу mcpManager, и наш повторный
+  # `ctx.provide` того же имени ронял apply целиком — маршруты не появлялись, панель
+  # получала HTTP 404 на каждый запрос.
   - kind: plugin
     from: local
     path: ./packages/dsh-mcp-manager
@@ -43,21 +48,21 @@ sources:
   # the exact pin keeps two installs of one build identical.
   - kind: plugin
     from: npm
-    spec: "@liustack/modsearch@5.10.11"
+    spec: "@liustack/modsearch@5.10.12"
   # v0.30.1 is built for the core line this bundle carries: every host peer is
   # `^0.2.2-rc.1` and Cordis `^4.0.5` (core 0.2.2-rc.1, Cordis 4.1.0). The old pin
   # (v0.28.0) names the 0.2.1 line; keeping it after the core bump would leave the
   # sidebar on APIs the new runtime no longer has.
   - kind: plugin
     from: git
-    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.30.1
+    url: https://github.com/omdsh-dev/DSH-better-sidebar.git#v0.32.1
   # Pinned by commit (v0.4.15, `@linxin666/dsh-client-ui-skill-explorer` 0.4.15).
   # Its host peer is `>=0.2.2-rc.1` — the same statement as the sidebar above:
   # the release is built against the core line this bundle carries, so it moves
   # together with the core bump and not later.
   - kind: plugin
     from: git
-    url: https://github.com/zhu1090093659/dsh-web.git#e8cc1955bab16cd6acecdefd5259d8b2531a98a2
+    url: https://github.com/zhu1090093659/dsh-web.git#b764700c0d039e10ff3ee60b91ce990222e7a258
     path: packages/dsh-skill-explorer
   # From npm, not from the git tree, for the same reason as modsearch below:
   # `integrations/deepseek-harness/skills` is in that directory's .gitignore and
@@ -71,7 +76,7 @@ sources:
   # checked to carry the payload (`skills/archify/**`, `lib/index.js`, LICENSE).
   - kind: plugin
     from: npm
-    spec: "@tt-a1i/archify-dsh@1.0.0"
+    spec: "@tt-a1i/archify-dsh@1.1.0"
   # Наши 1С-плагины. Пин по коммиту, а не `#main`: сборка должна доставать ровно
   # тот код, который в неё попал. 0.9.0 — движок rlm-tools-bsl переехал внутрь этого
   # плагина (бывший отдельный `dsh-rlm-tools-bsl`): автозапуск MCP-сервера анализа
@@ -99,7 +104,7 @@ sources:
   # «состояние неизвестно».
   - kind: plugin
     from: git
-    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#6b61dd79bf29c6497c4b6c078b98d0f10a9f38ba
+    url: https://github.com/Mempemp/DSH-1CProjectProperties.git#1b6fb38e3a3d8b0fdce76b95378b1504fac0c4b6
     path: dsh-1c-project-properties
   # v0.8.1: «не git-репозиторий» — состояние папки, а не отказ git; последняя
   # ошибка привязана к папке проекта и не видна в настройках другого проекта.
@@ -135,7 +140,7 @@ sources:
   # real first run, not by the manifest.
   - kind: plugin
     from: npm
-    spec: "@goodandready/dsh-russian-lang@0.4.22"
+    spec: "@goodandready/dsh-russian-lang@0.4.27"
   # Русские уведомления: наш компонент сборки, а не установка из маркета. Апстрим
   # (@wingsky-1/dsh-notifier 0.2.11, автор тот же, что у mcp-manager и market) отдаёт
   # текст уведомлений и страницу настроек только на китайском и английском, выбора
@@ -159,7 +164,7 @@ sources:
   # использует только node builtins, установки зависимостей плагину не нужно.
   - kind: plugin
     from: git
-    url: https://github.com/hermes-ai-2026/dsh-browser-agent.git#a69f2ca50e21793a7335e5c93be70695f2d4d685
+    url: https://github.com/hermes-ai-2026/dsh-browser-agent.git#6445c687d9404fb7af55f22813ef426903c4583b
   # Public 1C knowledge MCP (v8std): platform documentation search, БСП / SSL and
   # standards. `from: remote` because there is nothing to vendor — the installer
   # seeds the server into the MCP manager's global store
@@ -196,8 +201,8 @@ sources:
     from: remote
     id: git
     name: git
-    version: 2.56.0.4
-    url: https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-busybox-64-bit.zip
+    version: 2.56.1
+    url: https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/MinGit-2.56.1-busybox-64-bit.zip
   # Анализатор кода для «1С: Анализ кода». Один файл, не архив: раскатка кладёт его в
   # $DSH_HOME/bsl-analyzer/bsl-analyzer-app-windows-amd64.exe, плагин проверяет sha256
   # и берёт оттуда — вместо прежней кнопки «Скачать» на 76 МБ. Версия закреплена:
@@ -206,8 +211,8 @@ sources:
     from: remote
     id: bsl-analyzer
     name: bsl-analyzer
-    version: 0.4.3
-    url: https://github.com/itrous/bsl-analyzer/releases/download/v0.4.3/bsl-analyzer-app-windows-amd64.exe
+    version: 0.4.6
+    url: https://github.com/itrous/bsl-analyzer/releases/download/v0.4.6/bsl-analyzer-app-windows-amd64.exe
 
   # uv ставит Python-инструменты при первой раскатке каталога. Нужен потому, что часть
   # возможностей 1С — Python-пакеты, а не бинарники: у rlm-bsl-index (индекс кода) отдельного
@@ -219,14 +224,19 @@ sources:
     from: remote
     id: uv
     name: uv
-    version: 0.13.7
-    url: https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-pc-windows-msvc.zip
+    version: 0.13.8
+    url: https://github.com/astral-sh/uv/releases/download/0.13.8/uv-x86_64-pc-windows-msvc.zip
   # Ставится тем же uv в $DSH_HOME/rlm-tools-bsl/{tool,bin,python} — ровно туда, где плагин
   # dsh-rlm-tools-bsl ищет команду индекса, поэтому сам он уже ничего не докачивает.
+  # 1.51.0 — контракт MCP тот же (шесть инструментов, `tools/list` совпадает с 1.47.0
+  # побайтно; `--transport/--host/--port` и `RLM_CONFIG_FILE`/`RLM_INDEX_DIR` на месте).
+  # Схема индекса v19: индекс v18 читается и отдаёт `index info` как раньше, таблицы v19
+  # появляются только после перестройки — поэтому смена пина не требует переустановки
+  # окружения у пользователя.
   - kind: python
     from: pypi
     id: rlm-tools-bsl
     name: rlm-tools-bsl
     spec: rlm-tools-bsl
-    version: 1.47.0
+    version: 1.51.0
     bin: rlm-bsl-index

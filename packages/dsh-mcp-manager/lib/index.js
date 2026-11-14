@@ -9124,8 +9124,8 @@ var STEPS = [
   { fromVersion: "0.2.9", targetVersion: "0.2.10", run: tickUpgradeVersion },
   // 0.2.10 → 0.2.11 为空步（rc.1 适配不改变 home 级存储形态）：run 指共享空函数，只推进刻度。
   { fromVersion: "0.2.10", targetVersion: "0.2.11", run: tickUpgradeVersion },
-  // 0.2.11 → 0.2.12 空步（本地补丁：只换写队列，home 级存储形态不变）：run 指共享空函数，只推进刻度。
-  { fromVersion: "0.2.11", targetVersion: "0.2.12", run: tickUpgradeVersion }
+  // 0.2.11 → 0.2.14 空步（本地补丁：写队列 + mcpManager 服务兼容，home 级存储形态不变）：run 指共享空函数，只推进刻度。
+  { fromVersion: "0.2.11", targetVersion: "0.2.14", run: tickUpgradeVersion }
 ];
 
 // lib/server/upgrade/impl/version/index.js
@@ -9808,7 +9808,7 @@ function installConfigSettings(ctx, manager, config, syncFromSettings) {
 function provideMcpManagerService(ctx, manager) {
   if (typeof ctx.provide !== "function")
     return;
-  ctx.provide("mcpManager", {
+  const legacy = {
     // 注入面（内存态不落盘，同名幂等；toolDefinitions 可选封装定义透传 supervisor）
     registerServer: (server) => manager.registerServer(server),
     unregisterServer: (name2) => manager.unregisterServer(name2),
@@ -9829,7 +9829,58 @@ function provideMcpManagerService(ctx, manager) {
     },
     // 豁免（#770-14 E）：同上，summary() 宽面经 unknown 中转到 McpServerSummary[]；不断言改动、不重构类型。
     list: () => manager.summary().servers ?? []
-  });
+  };
+  // 本地补丁（rc.3）：宿主自 0.2.2-rc.3 起自己注册 mcpManager（核心 MCP 管理器，面是
+  // list/register/restart/probe/watch）。cordis 对同名服务的第二次 provide 直接抛
+  // `service "mcpManager" has been registered at <...>`，apply 就此整体失败：一条路由都没
+  // 注册，面板每个请求都落到宿主的 /api 前缀上，回 HTTP 404。故这里改成——名字空着才认领；
+  // 已被占用就只补核心缺的老方法，核心已有的键一律不覆盖，卸载时删掉补上的键。
+  // 服务在其提供者 fiber 激活前对 ctx.get 不可见，故读 strict=false 的形态判断名字是否已被声明。
+  const existing = currentMcpManagerService(ctx);
+  if (existing !== void 0) {
+    augmentMcpManagerService(ctx, existing, legacy);
+    return;
+  }
+  try {
+    ctx.provide("mcpManager", legacy);
+    return;
+  } catch (error) {
+    ctx.logger.warn(`dsh-mcp-manager: mcpManager 已被宿主占用，改为补缺：${msgOf(error)}`);
+  }
+  const late = currentMcpManagerService(ctx);
+  if (late !== void 0)
+    augmentMcpManagerService(ctx, late, legacy);
+}
+/** 宿主当前的 mcpManager（不论其 fiber 是否已激活）；没有同名服务时 undefined。 */
+function currentMcpManagerService(ctx) {
+  if (typeof ctx.get !== "function")
+    return void 0;
+  const service = ctx.get("mcpManager", false);
+  return service === null ? void 0 : service;
+}
+/**
+ * 在宿主（核心）已注册的 mcpManager 上补上本插件的老接口：只写核心没有的键，写了就在
+ * 卸载时删掉。核心的 list / register 与老门面的同名成员语义不同，故一并不动。
+ */
+function augmentMcpManagerService(ctx, target, legacy) {
+  const applied = [];
+  for (const [key, method] of Object.entries(legacy)) {
+    if (typeof target[key] === "function")
+      continue;
+    try {
+      Object.defineProperty(target, key, { configurable: true, writable: true, value: method });
+      applied.push(key);
+    } catch (error) {
+      ctx.logger.warn(`dsh-mcp-manager: 无法补齐 mcpManager.${key}：${msgOf(error)}`);
+    }
+  }
+  if (applied.length === 0)
+    return;
+  ctx.logger.info(`dsh-mcp-manager: 核心 mcpManager 上补上老接口 ${applied.join("/")}`);
+  ctx.effect(() => () => {
+    for (const key of applied)
+      delete target[key];
+  }, "dsh-mcp-manager: legacy mcpManager methods");
 }
 function collectCallTimeoutSources(manager, mw) {
   const sources = [];
