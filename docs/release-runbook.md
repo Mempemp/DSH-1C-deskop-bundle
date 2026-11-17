@@ -66,16 +66,16 @@ PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mj
 
 ## 4. Манифесты фида
 
-В релиз кладутся четыре ассета: `.exe`, `.blockmap` и два манифеста.
+В релиз кладутся три ассета: `.exe`, `.blockmap` и один манифест.
 
 | файл | версия | читатель |
 | --- | --- | --- |
-| `dsh1c.yml` | настоящая (`0.2.0-rc.2-N`) | текущая линия (канал `dsh1c`) |
-| `latest.yml` | `0.11.0-3` | установленные `0.11.x` |
+| `dsh1c.yml` | настоящая (`0.2.2-rc.3-N`) | текущая линия (канал `dsh1c`) |
 
-`latest.yml` — копия `dsh1c.yml` с заменённой строкой `version:`; путь, `sha512` и `size`
-указывают на текущий установщик. Без него сборки `0.11.0-2` не увидят обновление: их semver
-считает `0.2.x` более старым, чем `0.11.0-2`.
+`latest.yml` (мост линии `0.11.0-N`) **больше не публикуется**: сборок `0.11.x` в обращении не
+осталось, а лишний манифест — ещё одна пара «путь плюс `sha512`», которую нужно держать в
+согласии с установщиком. Если когда-нибудь понадобится снова, это копия `dsh1c.yml` с
+заменённой строкой `version:` — путь, `sha512` и `size` остаются от текущего установщика.
 
 ## 5. Публикация
 
@@ -87,39 +87,35 @@ PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mj
 собирается и работает, но повторить его из GitHub уже нельзя.
 
 ```sh
-git tag 0.2.0-rc.2-5 && git push origin 0.2.0-rc.2-5
-gh release create 0.2.0-rc.2-5 --latest --notes-file docs/releases/0.2.0-rc.2-5.md \
-  D:/.../DSH-1C-Setup-0.2.0-rc.2-5-win-x64-unsigned.exe \
-  D:/.../DSH-1C-Setup-0.2.0-rc.2-5-win-x64-unsigned.exe.blockmap \
-  D:/.../dsh1c.yml D:/.../latest.yml
+git tag 0.2.2-rc.3-2 && git push origin 0.2.2-rc.3-2
+gh release create 0.2.2-rc.3-2 --latest --notes-file docs/releases/0.2.2-rc.3-2.md \
+  D:/.../DSH-1C-Setup-0.2.2-rc.3-2-win-x64-unsigned.exe \
+  D:/.../DSH-1C-Setup-0.2.2-rc.3-2-win-x64-unsigned.exe.blockmap \
+  D:/.../dsh1c.yml
 ```
 
 - Тег — **без** префикса `v`.
 - Релиз обычный, не pre-release: `releases/latest/download/` работает только для таких.
 - `gh` — нативная программа: пути передавать в виде `D:/...`, иначе не найдёт файл.
-- В `gh release create` суффикс `#имя` — это метка, а не имя ассета: файл должен называться
-  буквально `latest.yml`.
 
 ## 6. Проверка после публикации
 
 ```sh
 curl -sL https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest/download/dsh1c.yml | head -3
-curl -sL https://github.com/Mempemp/DSH-1C-deskop-bundle/releases/latest/download/latest.yml | head -3
 ```
 
-Первая строка — новая версия, вторая — `0.11.0-3` с путём на тот же установщик.
+Первая строка — новая версия, дальше `sha512` и `size` установщика из этого же релиза.
 
 Локальная сверка до загрузки не ловит перепутанные вложения, поэтому после публикации скачать
-манифесты из самого релиза и сравнить с файлом:
+манифест из самого релиза и сравнить с файлом:
 
 ```sh
 cd /tmp && rm -rf relchk && mkdir relchk && cd relchk
 gh release download <тег> --pattern "*.yml"
-grep -E "^version:|^path:|sha512|size:" dsh1c.yml latest.yml
+grep -E "^version:|^path:|sha512|size:" dsh1c.yml
 ```
 
-`sha512` и `size` в обоих файлах должны совпадать с установщиком, `dsh1c.yml` нести версию сборки,
-`latest.yml` — версию линии (`0.11.0-N`) и путь на тот же файл.
+`sha512` и `size` должны совпадать с установщиком, `dsh1c.yml` — нести версию сборки.
 
 Промежуточные сборки удаляются сразу после выхода рабочей версии, чтобы их нельзя было поставить
 случайно: `gh release delete <тег> -y` и `git push origin --delete <тег>`.
