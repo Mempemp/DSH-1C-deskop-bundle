@@ -87,10 +87,10 @@ PATH="/c/Windows/System32:$PATH" node apps/desktop/node_modules/pnpm/bin/pnpm.mj
 собирается и работает, но повторить его из GitHub уже нельзя.
 
 ```sh
-git tag 0.2.2-rc.3-2 && git push origin 0.2.2-rc.3-2
-gh release create 0.2.2-rc.3-2 --latest --notes-file docs/releases/0.2.2-rc.3-2.md \
-  D:/.../DSH-1C-Setup-0.2.2-rc.3-2-win-x64-unsigned.exe \
-  D:/.../DSH-1C-Setup-0.2.2-rc.3-2-win-x64-unsigned.exe.blockmap \
+git tag 0.2.2-rc.3-3 && git push origin 0.2.2-rc.3-3
+gh release create 0.2.2-rc.3-3 --latest --notes-file docs/releases/0.2.2-rc.3-3.md \
+  D:/.../DSH-1C-Setup-0.2.2-rc.3-3-win-x64-unsigned.exe \
+  D:/.../DSH-1C-Setup-0.2.2-rc.3-3-win-x64-unsigned.exe.blockmap \
   D:/.../dsh1c.yml
 ```
 
